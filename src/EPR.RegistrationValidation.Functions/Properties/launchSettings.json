@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "EPR.RegistrationValidation.Functions": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7227"
+    },
+    "Docker": {
+      "commandName": "Docker",
+      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
+      "httpPort": 33250,
+      "useSSL": false
+    }
+  }
+}

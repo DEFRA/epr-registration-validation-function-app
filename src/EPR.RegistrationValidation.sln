@@ -1,0 +1,49 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33213.308
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EPR.RegistrationValidation.Functions", "EPR.RegistrationValidation.Functions\EPR.RegistrationValidation.Functions.csproj", "{869FF504-FF52-47C7-B062-8DE72792B4E1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EPR.RegistrationValidation.UnitTests", "EPR.RegistrationValidation.UnitTests\EPR.RegistrationValidation.UnitTests.csproj", "{24033268-11B5-4636-A8E8-6B1D42ACF322}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EPR.RegistrationValidation.Application", "EPR.RegistrationValidation.Application\EPR.RegistrationValidation.Application.csproj", "{016219BA-D597-4AD8-8FBC-ED5D6DD30BBD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EPR.RegistrationValidation.Data", "EPR.RegistrationValidation.Data\EPR.RegistrationValidation.Data.csproj", "{B284D9EE-E5DF-421D-A0DB-C0B341722438}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EPR.RegistrationValidation.Data.UnitTests", "EPR.RegistrationValidation.Data.UnitTests\EPR.RegistrationValidation.Data.UnitTests.csproj", "{EF36DE94-BA1E-4D49-B2CF-A31EDB8E7263}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{869FF504-FF52-47C7-B062-8DE72792B4E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{869FF504-FF52-47C7-B062-8DE72792B4E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{869FF504-FF52-47C7-B062-8DE72792B4E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{869FF504-FF52-47C7-B062-8DE72792B4E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24033268-11B5-4636-A8E8-6B1D42ACF322}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24033268-11B5-4636-A8E8-6B1D42ACF322}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24033268-11B5-4636-A8E8-6B1D42ACF322}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24033268-11B5-4636-A8E8-6B1D42ACF322}.Release|Any CPU.Build.0 = Release|Any CPU
+		{016219BA-D597-4AD8-8FBC-ED5D6DD30BBD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{016219BA-D597-4AD8-8FBC-ED5D6DD30BBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{016219BA-D597-4AD8-8FBC-ED5D6DD30BBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{016219BA-D597-4AD8-8FBC-ED5D6DD30BBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B284D9EE-E5DF-421D-A0DB-C0B341722438}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B284D9EE-E5DF-421D-A0DB-C0B341722438}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B284D9EE-E5DF-421D-A0DB-C0B341722438}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B284D9EE-E5DF-421D-A0DB-C0B341722438}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EF36DE94-BA1E-4D49-B2CF-A31EDB8E7263}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EF36DE94-BA1E-4D49-B2CF-A31EDB8E7263}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EF36DE94-BA1E-4D49-B2CF-A31EDB8E7263}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EF36DE94-BA1E-4D49-B2CF-A31EDB8E7263}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2D6879C4-A410-4550-ABAE-4EE134E31F0D}
+	EndGlobalSection
+EndGlobal

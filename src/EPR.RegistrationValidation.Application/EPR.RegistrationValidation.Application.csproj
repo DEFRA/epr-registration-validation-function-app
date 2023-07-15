@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.12.0" />
+      <PackageReference Include="Azure.Storage.Blobs" Version="12.14.1" />
+      <PackageReference Include="CsvHelper" Version="30.0.1" />
+      <PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.1.0" />
+      <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Options" Version="6.0.0" />
+      <PackageReference Include="Moq" Version="4.18.4" />
+      <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\EPR.RegistrationValidation.Data\EPR.RegistrationValidation.Data.csproj" />
+    </ItemGroup>
+
+</Project>
