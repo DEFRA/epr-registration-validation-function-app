@@ -1,5 +1,6 @@
 ﻿using EPR.RegistrationValidation.Functions;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
+using Microsoft.FeatureManagement;
 
 [assembly: FunctionsStartup(typeof(Startup))]
 
@@ -21,6 +22,8 @@ namespace EPR.RegistrationValidation.Functions
             var services = builder.Services;
 
             services.AddLogging();
+
+            services.AddFeatureManagement();
             services.AddConfig();
             services.AddAzureClients();
             services.AddApplication();

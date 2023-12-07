@@ -14,6 +14,7 @@
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="FluentAssertions" Version="6.10.0" />
+        <PackageReference Include="ILogger.Moq" Version="1.1.10" />
         <PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.1.0" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2" />
         <PackageReference Include="Moq" Version="4.18.4" />
@@ -28,6 +29,12 @@
     <ItemGroup>
       <ProjectReference Include="..\EPR.RegistrationValidation.Application\EPR.RegistrationValidation.Application.csproj" />
       <ProjectReference Include="..\EPR.RegistrationValidation.Data\EPR.RegistrationValidation.Data.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="SampleFiles\*">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

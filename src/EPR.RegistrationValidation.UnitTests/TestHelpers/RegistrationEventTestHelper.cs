@@ -8,7 +8,7 @@ using FluentAssertions;
 public static class RegistrationEventTestHelper
 {
     public static RegistrationEvent BuildRegistrationEvent(
-        IList<CsvDataRow> csvItems,
+        IList<OrganisationDataRow> csvItems,
         string submissionId,
         string userId,
         string organisationId,

@@ -7,5 +7,9 @@ public class RegistrationValidationError
 {
     public int RowNumber { get; set; }
 
-    public List<string> ErrorCode { get; set; }
+    public string OrganisationId { get; set; }
+
+    public string SubsidiaryId { get; set; }
+
+    public ICollection<ColumnValidationError> ColumnErrors { get; set; } = new List<ColumnValidationError>();
 }

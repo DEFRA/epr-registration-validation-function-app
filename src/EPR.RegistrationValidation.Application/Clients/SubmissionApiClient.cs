@@ -32,8 +32,7 @@ public class SubmissionApiClient : ISubmissionApiClient
         string userType,
         RegistrationEvent registrationEvent)
     {
-        var uriString =
-            $"{_config.BaseUrl}/v{_config.Version}/{_config.SubmissionEndpoint}/{submissionId}/{_config.SubmissionEventEndpoint}";
+        var uriString = $"{_config.BaseUrl}/v1/submissions/{submissionId}/events";
         var httpRequestMessage = new HttpRequestMessage
         {
             Method = HttpMethod.Post,

@@ -1,0 +1,6 @@
+variables:
+  azureSubscription: 'AZR-RWD-PRE1'
+  docker.imageName: 'registrationvalidationrepository'
+  acr.azureContainerRegistryName: 'prerwdinfac1401'
+  acr.repositoryName: 'registrationvalidationrepository'
+  serviceName: 'prerwdwebfa1404'

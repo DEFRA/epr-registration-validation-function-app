@@ -37,17 +37,17 @@ public class BlobReaderTests
     [TestMethod]
     public async Task TestDownloadBlobToStream_WhenDownloadToAssignsAMemoryStream_ReturnsMemoryStream()
     {
-        // ARRANGE
+        // Arrange
         var fileString = "Test";
         var stream = new MemoryStream();
         var writer = new StreamWriter(stream);
         await writer.WriteAsync(fileString);
         await writer.FlushAsync();
 
-        // ACT
+        // Act
         var memoryStream = _sut.DownloadBlobToStream("test");
 
-        // ASSERT
+        // Assert
         StreamReader reader = new StreamReader(memoryStream);
         string text = await reader.ReadToEndAsync();
         text.Should().BeEmpty();
@@ -56,7 +56,7 @@ public class BlobReaderTests
     [TestMethod]
     public async Task TestGetMessageFromJson_WhenMessageIsInvalid_ThrowsError()
     {
-        // ARRANGE
+        // Arrange
         var fileString = "Test";
         var stream = new MemoryStream();
         var writer = new StreamWriter(stream);
@@ -65,10 +65,10 @@ public class BlobReaderTests
         _blobServiceClientMock.Setup(m => m.GetBlobContainerClient(It.IsAny<string>()))
             .Throws(new Exception());
 
-        // ACT
+        // Act
         Action act = () => _sut.DownloadBlobToStream("test");
 
-        // ASSERT
+        // Assert
         act.Should().Throw<Exception>();
     }
 }

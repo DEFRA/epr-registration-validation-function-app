@@ -4,15 +4,8 @@ using System.ComponentModel.DataAnnotations;
 
 public class SubmissionApiConfig
 {
+    public const string Section = "SubmissionApi";
+
     [Required]
     public string BaseUrl { get; init; }
-
-    [Required]
-    public string Version { get; init; }
-
-    [Required]
-    public string SubmissionEndpoint { get; init; }
-
-    [Required]
-    public string SubmissionEventEndpoint { get; init; }
 }

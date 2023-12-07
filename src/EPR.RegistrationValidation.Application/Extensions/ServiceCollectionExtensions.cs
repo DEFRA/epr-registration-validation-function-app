@@ -2,6 +2,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Clients;
+using EPR.RegistrationValidation.Application.Validators;
 using Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Providers;
@@ -14,6 +15,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         // helpers
+        services.AddSingleton<ColumnMetaDataProvider>();
         services.AddSingleton<ICsvStreamParser, CsvStreamParser>();
 
         // services
@@ -21,6 +23,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDequeueProvider, DequeueProvider>();
         services.AddScoped<IBlobReader, BlobReader>();
         services.AddScoped<ISubmissionApiClient, SubmissionApiClient>();
+        services.AddScoped<IValidationService, ValidationService>();
+        services.AddScoped<OrganisationDataRowValidator>();
+
         return services;
     }
 }

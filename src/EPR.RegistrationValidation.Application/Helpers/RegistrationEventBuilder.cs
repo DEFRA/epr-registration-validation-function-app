@@ -6,7 +6,12 @@ using Data.Models.SubmissionApi;
 
 public static class RegistrationEventBuilder
 {
-    public static RegistrationEvent BuildRegistrationEvent(IList<CsvDataRow> csvItems, List<string>? errors, string blobName)
+    public static RegistrationEvent BuildRegistrationEvent(
+        IList<OrganisationDataRow> csvItems,
+        List<string>? errors,
+        List<RegistrationValidationError> validationErrors,
+        string blobName,
+        string blobContainerName)
     {
         var requiresBrandsFile = false;
         var requiresPartnershipsFile = false;
@@ -37,19 +42,21 @@ public static class RegistrationEventBuilder
             Type = EventType.Registration,
             Errors = errors,
             BlobName = blobName,
-            ValidationErrors = new List<RegistrationValidationError>(),
+            BlobContainerName = blobContainerName,
+            ValidationErrors = validationErrors,
             RequiresBrandsFile = requiresBrandsFile,
             RequiresPartnershipsFile = requiresPartnershipsFile,
             IsValid = true,
         };
     }
 
-    public static RegistrationEvent BuildErrorRegistrationEvent(List<string>? errors, string blobName)
+    public static RegistrationEvent BuildErrorRegistrationEvent(List<string>? errors, string blobName, string blobContainerName)
     {
         return new RegistrationEvent
         {
             Type = EventType.Registration,
             BlobName = blobName,
+            BlobContainerName = blobContainerName,
             Errors = errors,
             ValidationErrors = new List<RegistrationValidationError>(),
             IsValid = false,

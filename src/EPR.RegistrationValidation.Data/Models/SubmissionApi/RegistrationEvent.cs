@@ -17,4 +17,6 @@ public class RegistrationEvent
     public bool RequiresPartnershipsFile { get; init; }
 
     public string BlobName { get; set; }
+
+    public string BlobContainerName { get; set; }
 }

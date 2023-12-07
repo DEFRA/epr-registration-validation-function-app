@@ -4,44 +4,36 @@ using Application.Exceptions;
 using Application.Helpers;
 using Data.Enums;
 using Data.Models;
+using EPR.RegistrationValidation.Application;
 using FluentAssertions;
+using Microsoft.FeatureManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using SampleData;
+using Moq;
 using TestHelpers;
 
 [TestClass]
-public class CSVStreamParserTests
+public class CsvStreamParserTests
 {
     private CsvStreamParser _sut;
+    private Mock<IFeatureManager> _featureManagerMock;
 
-    public CSVStreamParserTests(CsvStreamParser sut)
+    [TestInitialize]
+    public void Setup()
     {
-        _sut = sut;
+        _featureManagerMock = new Mock<IFeatureManager>();
+        _sut = new CsvStreamParser(new ColumnMetaDataProvider(), _featureManagerMock.Object);
     }
 
     [TestMethod]
     public async Task TestGetItemsFromCsvStream_WhenStreamIsValid_ReturnsList()
     {
-        // ARRANGE
-        var csvDataRow = CSVRowTestHelper.GenerateCSVDataRowTestHelper(RequiredOrganisationTypeCodeForPartners.PAR.ToString(), RequiredPackagingActivityForBrands.Primary.ToString());
-        var csvDataRow2 = CSVRowTestHelper.GenerateCSVDataRowTestHelper(RequiredOrganisationTypeCodeForPartners.LLP.ToString(), RequiredPackagingActivityForBrands.Secondary.ToString());
-        var csvDataRows = new List<CsvDataRow>
-        {
-            csvDataRow,
-            csvDataRow2,
-        };
+        // Arrange
+        var memoryStream = CsvFileReader.ReadFile("ValidFileWithCorrectHeaders.csv");
 
-        var fileString = SampleCompanyData.GenerateDummyFileString(csvDataRows);
-        var stream = new MemoryStream();
-        var writer = new StreamWriter(stream);
-        await writer.WriteAsync(fileString);
-        await writer.FlushAsync();
-        stream.Position = 0;
+        // Act
+        var response = await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
 
-        // ACT
-        var response = _sut.GetItemsFromCsvStream<CsvDataRow>(stream);
-
-        // ASSERT
+        // Assert
         response[0].OrganisationTypeCode.Should().Be(RequiredOrganisationTypeCodeForPartners.PAR.ToString());
         response[0].PackagingActivitySO.Should().Be(RequiredPackagingActivityForBrands.Primary.ToString());
         response[1].OrganisationTypeCode.Should().Be(RequiredOrganisationTypeCodeForPartners.LLP.ToString());
@@ -51,7 +43,7 @@ public class CSVStreamParserTests
     [TestMethod]
     public async Task TestGetItemsFromCsvStream_WhenStreamIsInvalid_ThrowsNewCsvParseException()
     {
-        // ARRANGE
+        // Arrange
         var fileString = @"error,error,error
 error,
 error, error";
@@ -61,10 +53,156 @@ error, error";
         await writer.FlushAsync();
         stream.Position = 0;
 
-        // ACT
-        Action act = () => _sut.GetItemsFromCsvStream<CsvDataRow>(stream);
+        // Act
+        Func<Task> act = () => _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(stream);
 
-        // ASSERT
-        act.Should().Throw<CsvParseException>();
+        // Assert
+        await act.Should().ThrowAsync<CsvHeaderException>();
+    }
+
+    [TestMethod]
+    [DataRow("InvalidFileWithIncorrectHeaderName.csv")]
+    public async Task TestGetItemsFromCsvStream_WhenCsvHeaderValueIsIncorrect_ThrowsNewCsvHeaderException(string invalidCsvFile)
+    {
+        // Arrange
+        var memoryStream = CsvFileReader.ReadFile(invalidCsvFile);
+
+        // Act
+        Func<Task> act = () => _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+
+        // Assert
+        await act.Should().ThrowAsync<CsvHeaderException>().WithMessage("The CSV file header is invalid.");
+    }
+
+    [TestMethod]
+    public async Task TestGetItemsFromCsvStream_WhenCsvHasTooManyHeaders_ThrowsNewCsvHeaderException()
+    {
+        // Arrange
+        var memoryStream = CsvFileReader.ReadFile("InvalidFileTooManyHeaders.csv");
+
+        // Act
+        Func<Task> act = () => _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+
+        // Assert
+        await act.Should().ThrowAsync<CsvHeaderException>().WithMessage("The CSV file header is invalid.");
+    }
+
+    [TestMethod]
+    public async Task TestGetItemsFromCsvStream_WhenCsvHasTooFewHeaders_ThrowsNewCsvHeaderException()
+    {
+        // Arrange
+        var memoryStream = CsvFileReader.ReadFile("InvalidFileTooFewHeaders.csv");
+
+        // Act
+        Func<Task> act = () => _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+
+        // Assert
+        await act.Should().ThrowAsync<CsvHeaderException>().WithMessage("The CSV file header is invalid.");
+    }
+
+    [TestMethod]
+    public async Task GetItemsFromCsvStream_WhenCsvHeaderOrderIsIncorrect_ThrowsNewCsvHeaderException()
+    {
+        // Arrange
+        var memoryStream = CsvFileReader.ReadFile("FileWithIncorrectHeaderOrder.csv");
+
+        // Act
+        Func<Task> act = async () =>
+        {
+            await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+        };
+
+        // Assert
+        await act.Should().ThrowAsync<CsvHeaderException>().WithMessage("The CSV file header is invalid.");
+    }
+
+    [TestMethod]
+    public async Task GetItemsFromCsvStream_WhenCsvHeaderIsValid_ValidateExpectedItemCount()
+    {
+        // Arrange
+        using var memoryStream = CsvFileReader.ReadFile("ValidFileWithCorrectHeaders.csv");
+
+        // Act
+        var items = await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+
+        // Assert
+        items.Should().HaveCount(2);
+    }
+
+    [TestMethod]
+    public async Task GetItemsFromCsvStream_WhenCsvHeaderIsValid_ValidateMinimalPropertiesAreMapped()
+    {
+        // Arrange
+        using var memoryStream = CsvFileReader.ReadFile("ValidFileWithCorrectHeaders.csv");
+
+        // Act
+        var items = await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+
+        // Assert minimal set of properties are not empty
+        foreach (var row in items)
+        {
+            row.DefraId.Should().NotBeNullOrEmpty();
+            row.SubsidiaryId.Should().NotBeNullOrEmpty();
+            row.OrganisationTypeCode.Should().NotBeNullOrEmpty();
+            row.PackagingActivitySO.Should().NotBeNullOrEmpty();
+        }
+    }
+
+    [TestMethod]
+    public async Task GetItemsFromCsvStream_WithBrandFile_ValidatePropertiesAreMapped()
+    {
+        // Arrange
+        string defraId = "145879";
+        string subsidiaryId = "123456";
+        string brandName = "Brand Name";
+        string brandTypeCode = "Brand Type Code";
+
+        // Build csv string with header
+        string header = "organisation_id,subsidiary_id,brand_name,brand_type_code";
+        var csvString = $"{header}{Environment.NewLine}{defraId},{subsidiaryId},{brandName},{brandTypeCode}";
+        using var memoryStream = CsvFileReader.ReadString(csvString);
+
+        // Act
+        var items = await _sut.GetItemsFromCsvStreamAsync<BrandDataRow>(memoryStream);
+
+        // Assert
+        foreach (var row in items)
+        {
+            items.First().DefraId.Should().Be(defraId);
+            items.First().SubsidiaryId.Should().Be(subsidiaryId);
+            items.First().BrandName.Should().Be(brandName);
+            items.First().BrandTypeCode.Should().Be(brandTypeCode);
+        }
+    }
+
+    [TestMethod]
+    public async Task GetItemsFromCsvStream_WithPartnerFile_ValidatePropertiesAreMapped()
+    {
+        // Arrange
+        string defraId = "145879";
+        string subsidiaryId = "123456";
+        string partnerFirstName = "Partner First Name";
+        string partnerLastName = "Partner Last Name";
+        string partnerPhoneNumber = "Partner Phone Number";
+        string partnerEmail = "Partner Email";
+
+        // Build csv string with header
+        string header = "organisation_id,subsidiary_id,partner_first_name,partner_last_name,partner_phone_number,partner_email";
+        var csvString = $"{header}{Environment.NewLine}{defraId},{subsidiaryId},{partnerFirstName},{partnerLastName},{partnerPhoneNumber},{partnerEmail}";
+        using var memoryStream = CsvFileReader.ReadString(csvString);
+
+        // Act
+        var items = await _sut.GetItemsFromCsvStreamAsync<PartnersDataRow>(memoryStream);
+
+        // Assert
+        foreach (var row in items)
+        {
+            items.First().DefraId.Should().Be(defraId);
+            items.First().SubsidiaryId.Should().Be(subsidiaryId);
+            items.First().PartnerFirstName.Should().Be(partnerFirstName);
+            items.First().PartnerLastName.Should().Be(partnerLastName);
+            items.First().PartnerPhoneNumber.Should().Be(partnerPhoneNumber);
+            items.First().PartnerEmail.Should().Be(partnerEmail);
+        }
     }
 }

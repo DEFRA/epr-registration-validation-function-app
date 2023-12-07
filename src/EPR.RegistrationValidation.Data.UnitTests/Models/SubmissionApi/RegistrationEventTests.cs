@@ -1,8 +1,9 @@
-﻿namespace EPR.RegistrationValidation.Data.UnitTests.Models.QueueMessages.SubmissionApi;
+﻿namespace EPR.RegistrationValidation.Data.UnitTests.Models.SubmissionApi;
 
-using Constants;
-using Data.Enums;
-using Data.Models.SubmissionApi;
+using EPR.RegistrationValidation.Data.Constants;
+using EPR.RegistrationValidation.Data.Enums;
+using EPR.RegistrationValidation.Data.Models;
+using EPR.RegistrationValidation.Data.Models.SubmissionApi;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -24,11 +25,16 @@ public class RegistrationEventTests
             },
             ValidationErrors = new List<RegistrationValidationError>
             {
-                new RegistrationValidationError
+                new()
                 {
-                    ErrorCode = new List<string>
+                    ColumnErrors = new List<ColumnValidationError>
                     {
-                        ErrorCodes.FileFormatInvalid,
+                        new()
+                        {
+                            ColumnIndex = 0,
+                            ErrorCode = ErrorCodes.FileFormatInvalid,
+                            ColumnName = "column_name",
+                        },
                     },
                     RowNumber = 1,
                 },

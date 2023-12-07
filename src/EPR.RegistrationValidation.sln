@@ -13,6 +13,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EPR.RegistrationValidation.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EPR.RegistrationValidation.Data.UnitTests", "EPR.RegistrationValidation.Data.UnitTests\EPR.RegistrationValidation.Data.UnitTests.csproj", "{EF36DE94-BA1E-4D49-B2CF-A31EDB8E7263}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BD86A972-E63E-4CF5-9C8A-51D925E43212}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+		stylecop.ruleset = stylecop.ruleset
+		..\CONTRIBUTING.md = ..\CONTRIBUTING.md
+		..\LICENCE.md = ..\LICENCE.md
+		..\README.md = ..\README.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

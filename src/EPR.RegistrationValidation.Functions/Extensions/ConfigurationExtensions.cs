@@ -13,9 +13,11 @@ public static class ConfigurationExtensions
 {
     public static IServiceCollection AddConfig(this IServiceCollection services)
     {
-        services.ConfigureSection<ServiceBusConfig>("ServiceBus");
-        services.ConfigureSection<StorageAccountConfig>("StorageAccount");
-        services.ConfigureSection<SubmissionApiConfig>("SubmissionApi");
+        services.ConfigureSection<ServiceBusConfig>(ServiceBusConfig.Section);
+        services.ConfigureSection<StorageAccountConfig>(StorageAccountConfig.Section);
+        services.ConfigureSection<SubmissionApiConfig>(SubmissionApiConfig.Section);
+        services.ConfigureSection<FeatureManagementConfig>(FeatureManagementConfig.Section);
+        services.ConfigureSection<ValidationSettings>(ValidationSettings.Section);
 
         return services;
     }

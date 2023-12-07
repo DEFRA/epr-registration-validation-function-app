@@ -4,9 +4,9 @@ using Data.Models;
 
 public class CSVRowTestHelper
 {
-    public static CsvDataRow GenerateCSVDataRowTestHelper(string organisationTypeCode, string packagingActivitySO)
+    public static OrganisationDataRow GenerateCSVDataRowTestHelper(string organisationTypeCode, string packagingActivitySO)
     {
-        var csvDataRow = new CsvDataRow
+        var csvDataRow = new OrganisationDataRow
         {
             DefraId = Guid.NewGuid().ToString(),
             OrganisationTypeCode = organisationTypeCode,

@@ -24,13 +24,7 @@ public class SubmissionApiClientTests
     [TestInitialize]
     public void Setup()
     {
-        _config = new SubmissionApiConfig
-        {
-            BaseUrl = "https://www.testurl.com",
-            Version = "1",
-            SubmissionEndpoint = "submission",
-            SubmissionEventEndpoint = "event",
-        };
+        _config = new SubmissionApiConfig { BaseUrl = "https://www.testurl.com" };
         _submissionApiOptionsMock.Setup(x => x.Value).Returns(_config);
     }
 
@@ -39,7 +33,7 @@ public class SubmissionApiClientTests
     [DataRow(RequiredPackagingActivityForBrands.Secondary)]
     public async Task TestSendEventRegistrationMessage_WhenSendAsyncIsSuccessful_DoesNotThrowError(RequiredPackagingActivityForBrands packagingActivity)
     {
-        // ARRANGE
+        // Arrange
         var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
         handlerMock
             .Protected()
@@ -61,7 +55,7 @@ public class SubmissionApiClientTests
         var csvDataRow = CSVRowTestHelper.GenerateCSVDataRowTestHelper(
             RequiredOrganisationTypeCodeForPartners.PAR.ToString(),
             packagingActivity.ToString());
-        var csvDataRows = new List<CsvDataRow>
+        var csvDataRows = new List<OrganisationDataRow>
         {
             csvDataRow,
         };
@@ -74,7 +68,7 @@ public class SubmissionApiClientTests
             true,
             null);
 
-        // ACT
+        // Act
         try
         {
             await sut.SendEventRegistrationMessage(
@@ -86,7 +80,7 @@ public class SubmissionApiClientTests
         }
         catch (Exception ex)
         {
-            // ASSERT
+            // Assert
             Assert.Fail("Expected no exception, but got: " + ex.Message);
         }
     }
@@ -98,7 +92,7 @@ public class SubmissionApiClientTests
     [TestMethod]
     public async Task TestSendEventRegistrationMessage_WhenSendAsyncNotSuccessful_ThrowsError(HttpStatusCode statusCode)
     {
-        // ARRANGE
+        // Arrange
         var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
         handlerMock
             .Protected()
@@ -120,7 +114,7 @@ public class SubmissionApiClientTests
         var csvDataRow = CSVRowTestHelper.GenerateCSVDataRowTestHelper(
             RequiredOrganisationTypeCodeForPartners.PAR.ToString(),
             RequiredPackagingActivityForBrands.Primary.ToString());
-        var csvDataRows = new List<CsvDataRow>
+        var csvDataRows = new List<OrganisationDataRow>
         {
             csvDataRow,
         };
@@ -134,7 +128,7 @@ public class SubmissionApiClientTests
             true,
             null);
 
-        // ACT
+        // Act
         Func<Task> act = () => sut.SendEventRegistrationMessage(
             Guid.NewGuid().ToString(),
             Guid.NewGuid().ToString(),
@@ -142,7 +136,7 @@ public class SubmissionApiClientTests
             userType,
             regEvent);
 
-        // ASSERT
+        // Assert
         await act.Should().ThrowAsync<HttpRequestException>();
     }
 
@@ -151,7 +145,7 @@ public class SubmissionApiClientTests
     [DataRow(RequiredPackagingActivityForBrands.Secondary)]
     public async Task TestBuildRequestMessage_WhenParametersAreValid_BuildsCorrectHTTPRequestMessage(RequiredPackagingActivityForBrands packagingActivity)
     {
-        // ARRANGE
+        // Arrange
         var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
         handlerMock
             .Protected()
@@ -173,7 +167,7 @@ public class SubmissionApiClientTests
         var csvDataRow = CSVRowTestHelper.GenerateCSVDataRowTestHelper(
             RequiredOrganisationTypeCodeForPartners.PAR.ToString(),
             packagingActivity.ToString());
-        var csvDataRows = new List<CsvDataRow>
+        var csvDataRows = new List<OrganisationDataRow>
         {
             csvDataRow,
         };
@@ -199,7 +193,7 @@ public class SubmissionApiClientTests
             "application/json").ReadAsStringAsync();
         var userType = UserType.Producer.ToString();
 
-        // ACT
+        // Act
         var response = sut.BuildRequestMessage(
             orgId.ToString(),
             userId.ToString(),
@@ -207,7 +201,7 @@ public class SubmissionApiClientTests
             userType,
             regEvent);
 
-        // ASSERT
+        // Assert
         response.Method.Should().Be(HttpMethod.Post);
         response.Headers.GetValues("organisationId").Should().BeEquivalentTo(orgId.ToString());
         response.Headers.GetValues("userId").Should().BeEquivalentTo(userId.ToString());
