@@ -1,5 +1,6 @@
 ﻿namespace EPR.RegistrationValidation.UnitTests.Validators;
 
+using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Application.Validators;
 using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
@@ -18,7 +19,7 @@ public class RegisteredAddressValidatorTests
         var orgDataRow = new OrganisationDataRow
         {
             DefraId = "01582",
-            OrganisationTypeCode = "LTD",
+            OrganisationTypeCode = IncorporationTypeCodes.LimitedCompany,
             RegisteredAddressPostcode = "WF3 8IP",
             RegisteredAddressPhoneNumber = "012397824",
         };
@@ -41,7 +42,7 @@ public class RegisteredAddressValidatorTests
         var orgDataRow = new OrganisationDataRow
         {
             DefraId = "01582",
-            OrganisationTypeCode = "LTD",
+            OrganisationTypeCode = IncorporationTypeCodes.LimitedCompany,
             RegisteredAddressLine1 = "1, street",
             RegisteredAddressPhoneNumber = "012397824",
         };
@@ -64,7 +65,7 @@ public class RegisteredAddressValidatorTests
         var orgDataRow = new OrganisationDataRow
         {
             DefraId = "01582",
-            OrganisationTypeCode = "LTD",
+            OrganisationTypeCode = IncorporationTypeCodes.LimitedCompany,
             RegisteredAddressLine1 = "1, street",
             RegisteredAddressPostcode = "WF4 2PR",
         };
@@ -87,7 +88,7 @@ public class RegisteredAddressValidatorTests
         var orgDataRow = new OrganisationDataRow
         {
             DefraId = "01582",
-            OrganisationTypeCode = "PAR",
+            OrganisationTypeCode = "InvalidCode",
         };
 
         // Act
@@ -109,7 +110,7 @@ public class RegisteredAddressValidatorTests
         var orgDataRow = new OrganisationDataRow
         {
             DefraId = "01582",
-            OrganisationTypeCode = "LTD",
+            OrganisationTypeCode = IncorporationTypeCodes.LimitedCompany,
             RegisteredAddressLine1 = "2, street",
             RegisteredAddressPostcode = "WF3 8IP",
             RegisteredAddressPhoneNumber = "012397824",
