@@ -19,4 +19,9 @@ public static class ErrorCodes
     public const string MissingRegisteredAddressLine1 = "809";
     public const string MissingRegisteredAddressPostcode = "810";
     public const string MissingRegisteredAddressPhoneNumber = "811";
+    public const string InvalidAuditAddressCountry = "812";
+    public const string MissingPrincipalAddressLine1 = "816";
+    public const string MissingPrincipalAddressPostcode = "817";
+    public const string MissingPrincipalAddressPhoneNumber = "818";
+    public const string DuplicateOrganisationIdSubsidiaryId = "815";
 }

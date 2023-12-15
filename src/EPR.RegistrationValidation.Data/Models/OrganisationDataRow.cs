@@ -7,6 +7,9 @@ using CsvHelper.Configuration.Attributes;
 [ExcludeFromCodeCoverage]
 public class OrganisationDataRow
 {
+    [LineNumber]
+    public int LineNumber { get; set; }
+
     [Name("organisation_id")]
     [Column(0)]
     public string DefraId { get; set; }

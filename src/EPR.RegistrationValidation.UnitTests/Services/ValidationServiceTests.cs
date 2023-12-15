@@ -1,5 +1,6 @@
 ﻿namespace EPR.RegistrationValidation.UnitTests.Services;
 
+using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Application.Helpers;
 using EPR.RegistrationValidation.Application.Services;
 using EPR.RegistrationValidation.Application.Validators;
@@ -53,6 +54,7 @@ public class ValidationServiceTests
                 PrimaryContactPersonFirstName = "Fname",
                 PrimaryContactPersonEmail = "test@test.com",
                 PrimaryContactPersonPhoneNumber = "01237946",
+                AuditAddressCountry = AuditingCountryCodes.England,
             },
         };
 
@@ -61,22 +63,6 @@ public class ValidationServiceTests
 
         // Assert
         results.Should().BeEmpty();
-    }
-
-    [TestMethod]
-    public async Task Validate_WithAllInvalidRows_AndRowCountGreaterThanErrorLimit_ReturnsLimitedErrors()
-    {
-        // Arrange
-        int rowCount = 20;
-        int maxErrors = 10;
-        var dataRows = RowDataTestHelper.GenerateInvalidOrgs(rowCount);
-        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
-
-        // Act
-        var results = await service.ValidateAsync(dataRows.ToList());
-
-        // Assert
-        results.Sum(x => x.ColumnErrors.Count).Should().Be(maxErrors);
     }
 
     [TestMethod]
@@ -93,6 +79,95 @@ public class ValidationServiceTests
 
         // Assert
         results.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task Validate_WithNoDuplicateOrganisationIdSubsidiaryId_ExpectNoValidationErrors()
+    {
+        // Arrange
+        int rowCount = 6;
+        int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateOrgIdSubId(rowCount);
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        // Act
+        var results = await service.ValidateAsync(dataRows.ToList());
+
+        // Assert
+        results.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task Validate_WithDuplicateOrganisationIdSubsidiaryId_ExpectValidationErrors()
+    {
+        // Arrange
+        int rowCount = 6;
+        int maxErrors = 20;
+        var dataRows = RowDataTestHelper.GenerateDuplicateOrgIdSubId(rowCount);
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        // Act
+        var results = await service.ValidateAsync(dataRows.ToList());
+
+        // Assert
+        var validationError = results.First(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.DuplicateOrganisationIdSubsidiaryId));
+        validationError.Should().NotBeNull();
+    }
+
+    [TestMethod]
+    public async Task Validate_WithDuplicateRows_AndRowCountGreaterThanErrorLimit_ReturnsLimitedErrors()
+    {
+        // Arrange
+        int rowCount = 20;
+        int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateDuplicateOrgIdSubId(rowCount);
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        // Act
+        var results = await service.ValidateAsync(dataRows.ToList());
+
+        // Assert
+        results.Sum(x => x.ColumnErrors.Count).Should().Be(maxErrors);
+    }
+
+    [TestMethod]
+    public async Task ValidateRowsAsync_WithInvalidRows_AndRowCountGreaterThanErrorLimit_ReturnsLimitedErrors()
+    {
+        // Arrange
+        int rowCount = 20;
+        int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateInvalidOrgs(rowCount);
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        // Act
+        var results = await service.ValidateRowsAsync(dataRows.ToList());
+
+        // Assert
+        results.TotalErrors.Should().Be(maxErrors);
+    }
+
+    [TestMethod]
+    public async Task ValidateDuplicates_WithDuplicateRows_AndRowCountGreaterThanErrorLimit_ReturnsLimitedErrors()
+    {
+        // Arrange
+        int rowCount = 20;
+        int maxErrors = 10;
+        int initialTotalErrors = 5;
+        int expectedDuplicateErrors = 5;
+        var dataRows = RowDataTestHelper.GenerateDuplicateOrgIdSubId(rowCount);
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        // Act
+        var results = service.ValidateDuplicates(dataRows.ToList(), initialTotalErrors);
+
+        // Assert
+        results.TotalErrors.Should().Be(maxErrors);
+        results.ValidationErrors.SelectMany(x => x.ColumnErrors)
+            .Count(x => x.ErrorCode == ErrorCodes.DuplicateOrganisationIdSubsidiaryId).Should()
+            .Be(expectedDuplicateErrors);
     }
 
     private static ValidationService CreateService(ValidationSettings? settings = null)

@@ -15,5 +15,7 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
         Include(new HomeNationCodeValidator());
         Include(new PrimaryContactValidator());
         Include(new RegisteredAddressValidator());
+        Include(new AuditCountryValidator());
+        Include(new PrincipalAddressValidator());
     }
 }

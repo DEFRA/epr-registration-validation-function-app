@@ -4,7 +4,7 @@ using Application.Exceptions;
 using Application.Helpers;
 using Data.Enums;
 using Data.Models;
-using EPR.RegistrationValidation.Application;
+using EPR.RegistrationValidation.Data.Constants;
 using FluentAssertions;
 using Microsoft.FeatureManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -25,9 +25,15 @@ public class CsvStreamParserTests
     }
 
     [TestMethod]
-    public async Task TestGetItemsFromCsvStream_WhenStreamIsValid_ReturnsList()
+    [DataRow(true, DisplayName = "RowValidationEnabled")]
+    [DataRow(false, DisplayName = "RowValidationDisabled")]
+    public async Task TestGetItemsFromCsvStream_WhenStreamIsValid_ReturnsList(bool rowValidationEnabled)
     {
         // Arrange
+        _featureManagerMock
+            .Setup(x => x.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(rowValidationEnabled);
+
         var memoryStream = CsvFileReader.ReadFile("ValidFileWithCorrectHeaders.csv");
 
         // Act
@@ -117,9 +123,15 @@ error, error";
     }
 
     [TestMethod]
-    public async Task GetItemsFromCsvStream_WhenCsvHeaderIsValid_ValidateExpectedItemCount()
+    [DataRow(true, DisplayName = "RowValidationEnabled")]
+    [DataRow(false, DisplayName = "RowValidationDisabled")]
+    public async Task GetItemsFromCsvStream_WhenCsvHeaderIsValid_ValidateExpectedItemCount(bool rowValidationEnabled)
     {
         // Arrange
+        _featureManagerMock
+            .Setup(x => x.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(rowValidationEnabled);
+
         using var memoryStream = CsvFileReader.ReadFile("ValidFileWithCorrectHeaders.csv");
 
         // Act
@@ -130,9 +142,34 @@ error, error";
     }
 
     [TestMethod]
+    [DataRow(true, DisplayName = "RowValidationEnabled")]
+    [DataRow(false, DisplayName = "RowValidationDisabled")]
+    public async Task GetItemsFromCsvStream_WithValidCsv_ValidateLineNumbers(bool rowValidationEnabled)
+    {
+        // Arrange
+        _featureManagerMock
+            .Setup(x => x.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(rowValidationEnabled);
+
+        using var memoryStream = CsvFileReader.ReadFile("ValidFileWithCorrectHeaders.csv");
+
+        // Act
+        var items = await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+
+        // Assert
+        items.Should().HaveCount(2);
+        items.Should().Contain(x => x.LineNumber == 2);
+        items.Should().Contain(x => x.LineNumber == 3);
+    }
+
+    [TestMethod]
     public async Task GetItemsFromCsvStream_WhenCsvHeaderIsValid_ValidateMinimalPropertiesAreMapped()
     {
         // Arrange
+        _featureManagerMock
+            .Setup(x => x.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(false);
+
         using var memoryStream = CsvFileReader.ReadFile("ValidFileWithCorrectHeaders.csv");
 
         // Act
@@ -149,13 +186,19 @@ error, error";
     }
 
     [TestMethod]
-    public async Task GetItemsFromCsvStream_WithBrandFile_ValidatePropertiesAreMapped()
+    [DataRow(true, DisplayName = "RowValidationEnabled")]
+    [DataRow(false, DisplayName = "RowValidationDisabled")]
+    public async Task GetItemsFromCsvStream_WithBrandFile_ValidatePropertiesAreMapped(bool rowValidationEnabled)
     {
         // Arrange
         string defraId = "145879";
         string subsidiaryId = "123456";
         string brandName = "Brand Name";
         string brandTypeCode = "Brand Type Code";
+
+        _featureManagerMock
+            .Setup(x => x.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(rowValidationEnabled);
 
         // Build csv string with header
         string header = "organisation_id,subsidiary_id,brand_name,brand_type_code";
@@ -176,7 +219,9 @@ error, error";
     }
 
     [TestMethod]
-    public async Task GetItemsFromCsvStream_WithPartnerFile_ValidatePropertiesAreMapped()
+    [DataRow(true, DisplayName = "RowValidationEnabled")]
+    [DataRow(false, DisplayName = "RowValidationDisabled")]
+    public async Task GetItemsFromCsvStream_WithPartnerFile_ValidatePropertiesAreMapped(bool rowValidationEnabled)
     {
         // Arrange
         string defraId = "145879";
@@ -185,6 +230,10 @@ error, error";
         string partnerLastName = "Partner Last Name";
         string partnerPhoneNumber = "Partner Phone Number";
         string partnerEmail = "Partner Email";
+
+        _featureManagerMock
+            .Setup(x => x.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(rowValidationEnabled);
 
         // Build csv string with header
         string header = "organisation_id,subsidiary_id,partner_first_name,partner_last_name,partner_phone_number,partner_email";
