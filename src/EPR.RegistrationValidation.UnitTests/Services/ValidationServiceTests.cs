@@ -170,6 +170,25 @@ public class ValidationServiceTests
             .Be(expectedDuplicateErrors);
     }
 
+    [TestMethod]
+    public async Task OrganisationMainActivitySicValidation_WhenMainActivitySicInvalid_ThenError()
+    {
+        // Arrange
+        var dataRow = RowDataTestHelper.GenerateOrgs(1).First();
+        var service = CreateService();
+
+        dataRow.MainActivitySic = "123456";
+
+        // Act
+        var errors = await service.ValidateAsync(new[] { dataRow });
+
+        // Assert
+        var columnError = errors.Single().ColumnErrors.Single();
+
+        columnError.ColumnName.Should().Be("main_activity_sic");
+        columnError.ErrorCode.Should().Be(ErrorCodes.MainActivitySicNotFiveDigitsInteger);
+    }
+
     private static ValidationService CreateService(ValidationSettings? settings = null)
     {
         return new ValidationService(

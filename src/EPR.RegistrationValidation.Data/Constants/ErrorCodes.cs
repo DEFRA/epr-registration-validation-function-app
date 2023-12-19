@@ -24,4 +24,5 @@ public static class ErrorCodes
     public const string MissingPrincipalAddressPostcode = "817";
     public const string MissingPrincipalAddressPhoneNumber = "818";
     public const string DuplicateOrganisationIdSubsidiaryId = "815";
+    public const string MainActivitySicNotFiveDigitsInteger = "819";
 }

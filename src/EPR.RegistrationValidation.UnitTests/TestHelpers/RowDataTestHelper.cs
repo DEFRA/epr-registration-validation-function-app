@@ -24,6 +24,7 @@ public static class RowDataTestHelper
                 DefraId = "12345" + i,
                 OrganisationName = $"{i} ltd",
                 HomeNationCode = "EN",
+                MainActivitySic = "99999", // Dormant Company
                 PrimaryContactPersonFirstName = $"{i}FName",
                 PrimaryContactPersonLastName = $"{i}LName",
                 PrimaryContactPersonEmail = $"email{i}@test.com",

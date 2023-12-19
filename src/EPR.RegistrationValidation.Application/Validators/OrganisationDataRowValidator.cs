@@ -13,6 +13,7 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
         Include(new OrganisationIdValidator());
         Include(new OrganisationNameValidator());
         Include(new HomeNationCodeValidator());
+        Include(new OrganisationMainActivitySicValidator());
         Include(new PrimaryContactValidator());
         Include(new RegisteredAddressValidator());
         Include(new AuditCountryValidator());
