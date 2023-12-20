@@ -1,6 +1,6 @@
 ﻿namespace EPR.RegistrationValidation.Application.Constants;
 
-public struct AuditingCountryCodes
+public static class AuditingCountryCodes
 {
     public const string En = "EN";
     public const string Ni = "NI";

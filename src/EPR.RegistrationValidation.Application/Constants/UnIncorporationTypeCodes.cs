@@ -1,6 +1,6 @@
 ﻿namespace EPR.RegistrationValidation.Application.Constants;
 
-public struct UnIncorporationTypeCodes
+public static class UnIncorporationTypeCodes
 {
         public static readonly string CoOperative = "COP";
         public static readonly string SoleTrader = "SOL";

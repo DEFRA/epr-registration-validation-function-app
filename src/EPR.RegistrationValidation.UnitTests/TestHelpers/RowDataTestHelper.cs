@@ -31,6 +31,13 @@ public static class RowDataTestHelper
                 PrimaryContactPersonEmail = $"email{i}@test.com",
                 PrimaryContactPersonPhoneNumber = $"07895462{i}",
                 AuditAddressCountry = AuditingCountryCodes.England,
+                PackagingActivitySO = "Primary",
+                PackagingActivityHl = "Secondary",
+                PackagingActivityPf = "Secondary",
+                PackagingActivitySl = "Secondary",
+                PackagingActivityIm = "No",
+                PackagingActivityOm = "No",
+                PackagingActivitySe = "Secondary",
             };
         }
     }
@@ -49,6 +56,13 @@ public static class RowDataTestHelper
                 PrimaryContactPersonLastName = $"{i}LName",
                 PrimaryContactPersonEmail = $"email{i}@test.com",
                 PrimaryContactPersonPhoneNumber = $"07895462{i}",
+                PackagingActivitySO = "Primary",
+                PackagingActivityHl = "Secondary",
+                PackagingActivityPf = "Secondary",
+                PackagingActivitySl = "Secondary",
+                PackagingActivityIm = "No",
+                PackagingActivityOm = "No",
+                PackagingActivitySe = "Secondary",
             };
         }
     }
@@ -66,6 +80,13 @@ public static class RowDataTestHelper
                 PrimaryContactPersonLastName = $"{i}LName",
                 PrimaryContactPersonEmail = $"email{i}@test.com",
                 PrimaryContactPersonPhoneNumber = $"07895462{i}",
+                PackagingActivitySO = "Primary",
+                PackagingActivityHl = "Secondary",
+                PackagingActivityPf = "Secondary",
+                PackagingActivitySl = "Secondary",
+                PackagingActivityIm = "No",
+                PackagingActivityOm = "No",
+                PackagingActivitySe = "Secondary",
             };
         }
     }

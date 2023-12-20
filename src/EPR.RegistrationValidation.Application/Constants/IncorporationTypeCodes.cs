@@ -1,6 +1,6 @@
 ﻿namespace EPR.RegistrationValidation.Application.Constants;
 
-public struct IncorporationTypeCodes
+public static class IncorporationTypeCodes
 {
     public static readonly string LimitedLiabilityPartnership = "LLP";
     public static readonly string LimitedCompany = "LTD";

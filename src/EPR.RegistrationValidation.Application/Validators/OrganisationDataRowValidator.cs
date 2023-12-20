@@ -1,7 +1,6 @@
 ﻿namespace EPR.RegistrationValidation.Application.Validators;
 
 using System.Diagnostics.CodeAnalysis;
-using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
 using FluentValidation;
 
@@ -19,5 +18,6 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
         Include(new RegisteredAddressValidator());
         Include(new AuditCountryValidator());
         Include(new PrincipalAddressValidator());
+        Include(new PackagingActivityValidator());
     }
 }

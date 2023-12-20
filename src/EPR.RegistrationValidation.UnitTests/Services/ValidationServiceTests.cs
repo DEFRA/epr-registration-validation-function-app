@@ -55,6 +55,13 @@ public class ValidationServiceTests
                 PrimaryContactPersonEmail = "test@test.com",
                 PrimaryContactPersonPhoneNumber = "01237946",
                 AuditAddressCountry = AuditingCountryCodes.England,
+                PackagingActivitySO = "Primary",
+                PackagingActivityHl = "Secondary",
+                PackagingActivityPf = "Secondary",
+                PackagingActivitySl = "Secondary",
+                PackagingActivityIm = "No",
+                PackagingActivityOm = "No",
+                PackagingActivitySe = "Secondary",
             },
         };
 
