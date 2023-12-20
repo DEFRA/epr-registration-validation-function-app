@@ -23,6 +23,7 @@ public static class RowDataTestHelper
             {
                 DefraId = "12345" + i,
                 OrganisationName = $"{i} ltd",
+                TradingName = $"{i} trading name",
                 HomeNationCode = "EN",
                 MainActivitySic = "99999", // Dormant Company
                 PrimaryContactPersonFirstName = $"{i}FName",

@@ -189,6 +189,25 @@ public class ValidationServiceTests
         columnError.ErrorCode.Should().Be(ErrorCodes.MainActivitySicNotFiveDigitsInteger);
     }
 
+    [TestMethod]
+    public async Task OrganisationTradingNameValidation_WhenTradingNameSameAsOrganisationName_ThenError()
+    {
+        // Arrange
+        var dataRow = RowDataTestHelper.GenerateOrgs(1).First();
+        var service = CreateService();
+
+        dataRow.TradingName = dataRow.OrganisationName;
+
+        // Act
+        var errors = await service.ValidateAsync(new[] { dataRow });
+
+        // Assert
+        var columnError = errors.Single().ColumnErrors.Single();
+
+        columnError.ColumnName.Should().Be("trading_name");
+        columnError.ErrorCode.Should().Be(ErrorCodes.TradingNameSameAsOrganisationName);
+    }
+
     private static ValidationService CreateService(ValidationSettings? settings = null)
     {
         return new ValidationService(

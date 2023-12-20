@@ -25,4 +25,5 @@ public static class ErrorCodes
     public const string MissingPrincipalAddressPhoneNumber = "818";
     public const string DuplicateOrganisationIdSubsidiaryId = "815";
     public const string MainActivitySicNotFiveDigitsInteger = "819";
+    public const string TradingNameSameAsOrganisationName = "840";
 }
