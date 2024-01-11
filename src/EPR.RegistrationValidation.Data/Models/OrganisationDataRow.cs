@@ -5,7 +5,7 @@ using Attributes;
 using CsvHelper.Configuration.Attributes;
 
 [ExcludeFromCodeCoverage]
-public class OrganisationDataRow
+public class OrganisationDataRow : ICsvDataRow
 {
     [LineNumber]
     public int LineNumber { get; set; }

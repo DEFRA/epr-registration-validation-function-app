@@ -20,6 +20,7 @@ public static class ErrorCodes
     public const string MissingRegisteredAddressPostcode = "810";
     public const string MissingRegisteredAddressPhoneNumber = "811";
     public const string InvalidAuditAddressCountry = "812";
+    public const string CharacterLengthExceeded = "813";
     public const string MissingPrincipalAddressLine1 = "816";
     public const string MissingPrincipalAddressPostcode = "817";
     public const string MissingPrincipalAddressPhoneNumber = "818";

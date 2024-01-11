@@ -18,9 +18,14 @@ public class SubmissionApiClient : ISubmissionApiClient
         _config = options.Value;
     }
 
-    public async Task SendEventRegistrationMessage(string orgId, string userId, string submissionId, string userType, RegistrationEvent registrationEvent)
+    public async Task SendEventRegistrationMessage(
+        string orgId,
+        string userId,
+        string submissionId,
+        string userType,
+        ValidationEvent validationEvent)
     {
-        var request = BuildRequestMessage(orgId, userId, submissionId, userType, registrationEvent);
+        var request = BuildRequestMessage(orgId, userId, submissionId, userType, validationEvent);
         var res = await _httpClient.SendAsync(request);
         res.EnsureSuccessStatusCode();
     }
@@ -30,7 +35,7 @@ public class SubmissionApiClient : ISubmissionApiClient
         string userId,
         string submissionId,
         string userType,
-        RegistrationEvent registrationEvent)
+        ValidationEvent validationEvent)
     {
         var uriString = $"{_config.BaseUrl}/v1/submissions/{submissionId}/events";
         var httpRequestMessage = new HttpRequestMessage
@@ -51,7 +56,7 @@ public class SubmissionApiClient : ISubmissionApiClient
             },
             Content = new StringContent(
                 JsonConvert.SerializeObject(
-                    registrationEvent,
+                    validationEvent,
                     new JsonSerializerSettings
                     {
                         ContractResolver = new CamelCasePropertyNamesContractResolver(),

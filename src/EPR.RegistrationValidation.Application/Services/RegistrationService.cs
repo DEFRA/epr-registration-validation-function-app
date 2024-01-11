@@ -51,43 +51,41 @@ public class RegistrationService : IRegistrationService
     {
         var blobQueueMessage = _dequeueProvider.GetMessageFromJson<BlobQueueMessage>(message);
 
-        if (blobQueueMessage.SubmissionSubType != SubmissionSubType.CompanyDetails.ToString())
-        {
-            _logger.LogWarning("Submission sub type is not CompanyDetails");
-            return;
-        }
-
-        RegistrationEvent registrationEvent;
+        ValidationEvent validationEvent = null;
         try
         {
-            using var blobMemoryStream = _blobReader.DownloadBlobToStream(blobQueueMessage.BlobName);
-            var csvItems = await _csvStreamParser.GetItemsFromCsvStreamAsync<OrganisationDataRow>(blobMemoryStream);
-            var errors = new List<string>();
-            if (!csvItems.Any())
+            switch (blobQueueMessage.SubmissionSubType)
             {
-                _logger.LogInformation("The CSV file for submission ID {submissionId} is empty", blobQueueMessage.SubmissionId);
-                errors.Add(ErrorCodes.CsvFileEmptyErrorCode);
+                case nameof(SubmissionSubType.CompanyDetails):
+                    validationEvent = await ValidateRegistrationFile(blobQueueMessage);
+                    break;
+                case nameof(SubmissionSubType.Brands):
+                    validationEvent = await ValidateFile<BrandDataRow>(blobQueueMessage);
+                    break;
+                case nameof(SubmissionSubType.Partnerships):
+                    validationEvent = await ValidateFile<PartnersDataRow>(blobQueueMessage);
+                    break;
             }
-
-            var validationErrors = new List<RegistrationValidationError>();
-            if (await _featureManager.IsEnabledAsync(FeatureFlags.EnableRowValidation))
-            {
-                validationErrors = await _validationService.ValidateAsync(csvItems);
-            }
-
-            registrationEvent = BuildRegistrationEvent(csvItems, errors, validationErrors, blobQueueMessage.BlobName, _options.BlobContainerName);
         }
         catch (CsvParseException ex)
         {
-            var errors = new List<string> { ErrorCodes.FileFormatInvalid };
-            registrationEvent = BuildErrorRegistrationEvent(errors, blobQueueMessage.BlobName, _options.BlobContainerName);
             _logger.LogCritical(ex, ex.Message);
+
+            validationEvent = CreateValidationEvent(
+                GetEventType(blobQueueMessage.SubmissionSubType),
+                blobQueueMessage.BlobName,
+                _options.BlobContainerName,
+                ErrorCodes.FileFormatInvalid);
         }
         catch (CsvHeaderException ex)
         {
-            var errors = new List<string> { ErrorCodes.CsvFileInvalidHeaderErrorCode };
-            registrationEvent = BuildErrorRegistrationEvent(errors, blobQueueMessage.BlobName, _options.BlobContainerName);
             _logger.LogCritical(ex, ex.Message);
+
+            validationEvent = CreateValidationEvent(
+                GetEventType(blobQueueMessage.SubmissionSubType),
+                blobQueueMessage.BlobName,
+                _options.BlobContainerName,
+                ErrorCodes.CsvFileInvalidHeaderErrorCode);
         }
         catch (Exception ex)
         {
@@ -102,11 +100,95 @@ public class RegistrationService : IRegistrationService
                 blobQueueMessage.UserId,
                 blobQueueMessage.SubmissionId,
                 blobQueueMessage.UserType,
-                registrationEvent);
+                validationEvent);
         }
         catch (HttpRequestException exception)
         {
             _logger.LogError(exception, "Error sending event registration message");
         }
+    }
+
+    private async Task<ValidationEvent> ValidateRegistrationFile(BlobQueueMessage blobQueueMessage)
+    {
+        var csvRows = await ParseFile<OrganisationDataRow>(blobQueueMessage);
+
+        if (!csvRows.Any())
+        {
+            _logger.LogInformation(
+                "The CSV file for submission ID {SubmissionId} is empty",
+                blobQueueMessage.SubmissionId);
+
+            return CreateValidationEvent(
+                EventType.Registration,
+                blobQueueMessage.BlobName,
+                _options.BlobContainerName,
+                ErrorCodes.CsvFileEmptyErrorCode);
+        }
+
+        var validationErrors = new List<RegistrationValidationError>();
+        if (await _featureManager.IsEnabledAsync(FeatureFlags.EnableRowValidation) &&
+            await _featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationDataRowValidation))
+        {
+            validationErrors = await _validationService.ValidateOrganisationsAsync(csvRows);
+        }
+
+        return CreateValidationEvent(
+            csvRows,
+            validationErrors,
+            blobQueueMessage.BlobName,
+            _options.BlobContainerName);
+    }
+
+    private async Task<ValidationEvent> ValidateFile<T>(BlobQueueMessage blobQueueMessage)
+        where T : ICsvDataRow
+    {
+        var csvRows = await ParseFile<T>(blobQueueMessage);
+
+        if (!csvRows.Any())
+        {
+            _logger.LogInformation(
+                "The CSV file for submission ID {SubmissionId} is empty",
+                blobQueueMessage.SubmissionId);
+
+            return CreateValidationEvent(
+                GetEventType(blobQueueMessage.SubmissionSubType),
+                blobQueueMessage.BlobName,
+                _options.BlobContainerName,
+                ErrorCodes.CsvFileEmptyErrorCode);
+        }
+
+        List<string> fileErrors = new();
+        if (await _featureManager.IsEnabledAsync(FeatureFlags.EnableRowValidation) &&
+            await _featureManager.IsEnabledAsync(FeatureFlags.EnableBrandPartnerDataRowValidation))
+        {
+            fileErrors = await _validationService.ValidateAppendedFileAsync(csvRows);
+        }
+
+        return CreateValidationEvent(
+            GetEventType(blobQueueMessage.SubmissionSubType),
+            blobQueueMessage.BlobName,
+            _options.BlobContainerName,
+            fileErrors.ToArray());
+    }
+
+    private async Task<List<T>> ParseFile<T>(BlobQueueMessage blobQueueMessage)
+    {
+        using var blobMemoryStream = _blobReader.DownloadBlobToStream(blobQueueMessage.BlobName);
+        return await _csvStreamParser.GetItemsFromCsvStreamAsync<T>(blobMemoryStream);
+    }
+
+    private EventType GetEventType(string submissionSubType)
+    {
+        switch (submissionSubType)
+        {
+            case nameof(SubmissionSubType.CompanyDetails):
+                return EventType.Registration;
+            case nameof(SubmissionSubType.Brands):
+                return EventType.BrandValidation;
+            case nameof(SubmissionSubType.Partnerships):
+                return EventType.PartnerValidation;
+        }
+
+        throw new Exception("Invalid submissionSubType");
     }
 }

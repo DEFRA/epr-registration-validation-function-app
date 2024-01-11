@@ -25,7 +25,7 @@ public class CsvStreamParser : ICsvStreamParser
         HasHeaderRecord = true,
     };
 
-    public async Task<IList<T>> GetItemsFromCsvStreamAsync<T>(MemoryStream memoryStream)
+    public async Task<List<T>> GetItemsFromCsvStreamAsync<T>(MemoryStream memoryStream)
     {
         try
         {

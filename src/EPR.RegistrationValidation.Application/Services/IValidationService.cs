@@ -5,5 +5,8 @@ using EPR.RegistrationValidation.Data.Models.SubmissionApi;
 
 public interface IValidationService
 {
-    Task<List<RegistrationValidationError>> ValidateAsync(IList<OrganisationDataRow> rows);
+    Task<List<RegistrationValidationError>> ValidateOrganisationsAsync(List<OrganisationDataRow> rows);
+
+    Task<List<string>> ValidateAppendedFileAsync<T>(List<T> rows)
+        where T : ICsvDataRow;
 }

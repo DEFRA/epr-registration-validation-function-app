@@ -90,4 +90,84 @@ public static class RowDataTestHelper
             };
         }
     }
+
+    public static IEnumerable<BrandDataRow> GenerateBrand(int total)
+    {
+        for (int i = 0; i < total; i++)
+        {
+            yield return new BrandDataRow()
+            {
+                DefraId = $"{_randomizer.Next(100, 100 + total)}",
+                SubsidiaryId = $"{_randomizer.Next(100, 100 + total)}",
+                BrandName = $"{i}BrandName",
+                BrandTypeCode = $"{i}BrandTypeCode",
+            };
+        }
+    }
+
+    public static List<BrandDataRow> GenerateBrandWithExceededCharacterLimit(int columnIndex)
+    {
+        var brandData = GenerateBrand(1).First();
+        switch (columnIndex)
+        {
+            case 0:
+                brandData.DefraId = new string('a', CharacterLimits.MaxLength + 1);
+                break;
+            case 1:
+                brandData.SubsidiaryId = new string('a', CharacterLimits.MaxLength + 1);
+                break;
+            case 2:
+                brandData.BrandName = new string('a', CharacterLimits.MaxLength + 1);
+                break;
+            case 3:
+                brandData.BrandTypeCode = new string('a', CharacterLimits.MaxLength + 1);
+                break;
+        }
+
+        return new List<BrandDataRow> { brandData };
+    }
+
+    public static IEnumerable<PartnersDataRow> GeneratePartner(int total)
+    {
+        for (int i = 0; i < total; i++)
+        {
+            yield return new PartnersDataRow()
+            {
+                DefraId = $"{_randomizer.Next(100, 100 + total)}",
+                SubsidiaryId = $"{_randomizer.Next(100, 100 + total)}",
+                PartnerFirstName = $"{i}PartnerFirstName",
+                PartnerLastName = $"{i}PartnerLastName",
+                PartnerPhoneNumber = $"{i}PartnerPhoneNumber",
+                PartnerEmail = $"{i}PartnerEmail",
+            };
+        }
+    }
+
+    public static List<PartnersDataRow> GeneratePartnerWithExceededCharacterLimit(int columnIndex)
+    {
+        var partnerData = GeneratePartner(1).First();
+        switch (columnIndex)
+        {
+            case 0:
+                partnerData.DefraId = new string('a', CharacterLimits.MaxLength + 1);
+                break;
+            case 1:
+                partnerData.SubsidiaryId = new string('a', CharacterLimits.MaxLength + 1);
+                break;
+            case 2:
+                partnerData.PartnerFirstName = new string('a', CharacterLimits.MaxLength + 1);
+                break;
+            case 3:
+                partnerData.PartnerLastName = new string('a', CharacterLimits.MaxLength + 1);
+                break;
+            case 5:
+                partnerData.PartnerPhoneNumber = new string('a', CharacterLimits.MaxLength + 1);
+                break;
+            case 6:
+                partnerData.PartnerEmail = new string('a', CharacterLimits.MaxLength + 1);
+                break;
+        }
+
+        return new List<PartnersDataRow> { partnerData };
+    }
 }

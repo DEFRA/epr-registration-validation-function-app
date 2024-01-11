@@ -2,5 +2,5 @@
 
 public interface ICsvStreamParser
 {
-    Task<IList<T>> GetItemsFromCsvStreamAsync<T>(MemoryStream memoryStream);
+    Task<List<T>> GetItemsFromCsvStreamAsync<T>(MemoryStream memoryStream);
 }

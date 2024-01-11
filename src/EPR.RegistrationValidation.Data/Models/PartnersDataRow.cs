@@ -5,8 +5,11 @@ using Attributes;
 using CsvHelper.Configuration.Attributes;
 
 [ExcludeFromCodeCoverage]
-public class PartnersDataRow
+public class PartnersDataRow : ICsvDataRow
 {
+    [LineNumber]
+    public int LineNumber { get; set; }
+
     [Name("organisation_id")]
     [Column(0)]
     public string DefraId { get; set; }

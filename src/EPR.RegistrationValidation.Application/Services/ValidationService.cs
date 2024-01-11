@@ -12,24 +12,30 @@ using Microsoft.Extensions.Options;
 
 public class ValidationService : IValidationService
 {
-    private readonly OrganisationDataRowValidator _rowValidator;
+    private readonly OrganisationDataRowValidator _organisationDataRowValidator;
+    private readonly BrandDataRowValidator _brandDataRowValidator;
+    private readonly PartnerDataRowValidator _partnerDataRowValidator;
     private readonly ColumnMetaDataProvider _metaDataProvider;
     private readonly ValidationSettings _validationSettings;
     private readonly ILogger<ValidationService> _logger;
 
     public ValidationService(
-        OrganisationDataRowValidator rowValidator,
+        OrganisationDataRowValidator organisationDataRowValidator,
+        BrandDataRowValidator brandDataRowValidator,
+        PartnerDataRowValidator partnerDataRowValidator,
         ColumnMetaDataProvider metaDataProvider,
         IOptions<ValidationSettings> validationSettings,
         ILogger<ValidationService> logger)
     {
-        _rowValidator = rowValidator;
+        _organisationDataRowValidator = organisationDataRowValidator;
+        _brandDataRowValidator = brandDataRowValidator;
+        _partnerDataRowValidator = partnerDataRowValidator;
         _metaDataProvider = metaDataProvider;
         _logger = logger;
         _validationSettings = validationSettings.Value;
     }
 
-    public async Task<List<RegistrationValidationError>> ValidateAsync(IList<OrganisationDataRow> rows)
+    public async Task<List<RegistrationValidationError>> ValidateOrganisationsAsync(List<OrganisationDataRow> rows)
     {
         List<RegistrationValidationError> validationErrors = new();
 
@@ -49,7 +55,7 @@ public class ValidationService : IValidationService
         int totalErrors = 0;
         foreach (var row in rows.TakeWhile(_ => totalErrors < _validationSettings.ErrorLimit))
         {
-            var result = await _rowValidator.ValidateAsync(row);
+            var result = await _organisationDataRowValidator.ValidateAsync(row);
 
             if (result.IsValid)
             {
@@ -121,6 +127,44 @@ public class ValidationService : IValidationService
         }
 
         return (totalErrors, validationErrors);
+    }
+
+    public async Task<List<string>> ValidateAppendedFileAsync<T>(List<T> rows)
+        where T : ICsvDataRow
+    {
+        List<string> errors = new();
+        foreach (var row in rows.TakeWhile(_ => errors.Count < _validationSettings.ErrorLimit))
+        {
+            var result = await ValidateRowAsync(row);
+
+            if (result.IsValid)
+            {
+                _logger.LogInformation("Row {Row} validated successfully", row.LineNumber);
+                continue;
+            }
+
+            foreach (var validationError in result.Errors)
+            {
+                if (!errors.Contains(validationError.ErrorCode))
+                {
+                    errors.Add(validationError.ErrorCode);
+                }
+
+                LogValidationWarning(row.LineNumber, validationError);
+            }
+        }
+
+        return errors;
+    }
+
+    private async Task<ValidationResult> ValidateRowAsync<T>(T row)
+    {
+        return row switch
+        {
+            BrandDataRow dataRow => await _brandDataRowValidator.ValidateAsync(dataRow),
+            PartnersDataRow dataRow => await _partnerDataRowValidator.ValidateAsync(dataRow),
+            _ => throw new ArgumentException("Unsupported row type"),
+        };
     }
 
     private void LogValidationWarning(int row, ValidationFailure validationError)

@@ -11,18 +11,12 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class RegistrationEventTests
 {
     [TestMethod]
-    public void RegistrationEvent_PropertyValidation_ReturnsExpectedResults()
+    public void RegistrationValidationEvent_PropertyValidation_ReturnsExpectedResults()
     {
         // Arrange
-        var errorCode = "99";
-
-        var registrationEvent = new RegistrationEvent
+        var registrationEvent = new RegistrationValidationEvent
         {
             Type = EventType.Registration,
-            Errors = new List<string>
-            {
-                errorCode,
-            },
             ValidationErrors = new List<RegistrationValidationError>
             {
                 new()
@@ -45,17 +39,50 @@ public class RegistrationEventTests
 
         // Act
         var eventType = registrationEvent.Type;
-        var errors = registrationEvent.Errors;
         var validationErrors = registrationEvent.ValidationErrors;
         var requiresBrandsFile = registrationEvent.RequiresBrandsFile;
         var requiresPartnershipsFile = registrationEvent.RequiresPartnershipsFile;
 
         // Assert
         eventType.Should().Be(EventType.Registration);
-        errors.Should().HaveCount(1);
-        errors.Should().ContainSingle(errorCode);
         validationErrors.Should().HaveCount(1);
         requiresBrandsFile.Should().BeTrue();
         requiresPartnershipsFile.Should().BeFalse();
+    }
+
+    [TestMethod]
+    [DataRow(EventType.BrandValidation)]
+    [DataRow(EventType.PartnerValidation)]
+    public void ValidationEvent_PropertyValidation_ReturnsExpectedResults(EventType eventTypeValue)
+    {
+        // Arrange
+        var errorCode = "99";
+
+        var registrationEvent = new ValidationEvent
+        {
+            Type = eventTypeValue,
+            Errors = new List<string>
+            {
+                errorCode,
+            },
+            IsValid = false,
+            BlobName = "blobName",
+            BlobContainerName = "blobContainerName",
+        };
+
+        // Act
+        var eventType = registrationEvent.Type;
+        var errors = registrationEvent.Errors;
+        var isValid = registrationEvent.IsValid;
+        var blobName = registrationEvent.BlobName;
+        var blobContainerName = registrationEvent.BlobContainerName;
+
+        // Assert
+        eventType.Should().Be(eventTypeValue);
+        errors.Should().HaveCount(1);
+        errors.Should().ContainSingle(errorCode);
+        isValid.Should().Be(isValid);
+        blobName.Should().Be(blobName);
+        blobContainerName.Should().Be(blobContainerName);
     }
 }

@@ -6,60 +6,49 @@ using Data.Models.SubmissionApi;
 
 public static class RegistrationEventBuilder
 {
-    public static RegistrationEvent BuildRegistrationEvent(
-        IList<OrganisationDataRow> csvItems,
-        List<string>? errors,
-        List<RegistrationValidationError> validationErrors,
+    public static ValidationEvent CreateValidationEvent(
+        EventType eventType,
         string blobName,
-        string blobContainerName)
+        string blobContainerName,
+        params string[] errorCodes)
     {
-        var requiresBrandsFile = false;
-        var requiresPartnershipsFile = false;
-
-        // Goes through each row of the CSV and checks two fields
-        // - Packaging Activity SO, this determines whether the brands file is required
-        // - Organisation Type Code, this determines whether the partnerships file is required
-        foreach (var row in csvItems)
+        return new ValidationEvent
         {
-            if (Enum.IsDefined(typeof(RequiredPackagingActivityForBrands), row.PackagingActivitySO))
-            {
-                requiresBrandsFile = true;
-            }
-
-            if (Enum.IsDefined(typeof(RequiredOrganisationTypeCodeForPartners), row.OrganisationTypeCode))
-            {
-                requiresPartnershipsFile = true;
-            }
-
-            if (requiresPartnershipsFile && requiresBrandsFile)
-            {
-                break;
-            }
-        }
-
-        return new RegistrationEvent
-        {
-            Type = EventType.Registration,
-            Errors = errors,
+            Type = eventType,
             BlobName = blobName,
             BlobContainerName = blobContainerName,
-            ValidationErrors = validationErrors,
-            RequiresBrandsFile = requiresBrandsFile,
-            RequiresPartnershipsFile = requiresPartnershipsFile,
-            IsValid = true,
+            Errors = errorCodes.ToList(),
+            IsValid = !errorCodes.Any(),
         };
     }
 
-    public static RegistrationEvent BuildErrorRegistrationEvent(List<string>? errors, string blobName, string blobContainerName)
+    public static ValidationEvent CreateValidationEvent(
+        List<OrganisationDataRow> csvItems,
+        List<RegistrationValidationError>? validationErrors,
+        string blobName,
+        string blobContainerName)
     {
-        return new RegistrationEvent
+        return BuildRegistrationValidationEvent(csvItems, validationErrors: validationErrors, blobName, blobContainerName);
+    }
+
+    private static ValidationEvent BuildRegistrationValidationEvent(
+        List<OrganisationDataRow> csvItems,
+        IList<RegistrationValidationError> validationErrors,
+        string blobName,
+        string blobContainerName)
+    {
+        bool requiresPartnershipsFile = csvItems.Exists(row => Enum.IsDefined(typeof(RequiredOrganisationTypeCodeForPartners), row.OrganisationTypeCode));
+        bool requiresBrandsFile = csvItems.Exists(row => Enum.IsDefined(typeof(RequiredPackagingActivityForBrands), row.PackagingActivitySO));
+
+        return new RegistrationValidationEvent
         {
             Type = EventType.Registration,
             BlobName = blobName,
             BlobContainerName = blobContainerName,
-            Errors = errors,
-            ValidationErrors = new List<RegistrationValidationError>(),
-            IsValid = false,
+            ValidationErrors = validationErrors.ToList(),
+            RequiresBrandsFile = requiresBrandsFile,
+            RequiresPartnershipsFile = requiresPartnershipsFile,
+            IsValid = validationErrors.Count == 0,
         };
     }
 }

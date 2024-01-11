@@ -25,6 +25,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISubmissionApiClient, SubmissionApiClient>();
         services.AddScoped<IValidationService, ValidationService>();
         services.AddScoped<OrganisationDataRowValidator>();
+        services.AddScoped<BrandDataRowValidator>();
+        services.AddScoped<PartnerDataRowValidator>();
 
         return services;
     }

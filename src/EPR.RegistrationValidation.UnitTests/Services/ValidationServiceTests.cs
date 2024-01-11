@@ -28,7 +28,7 @@ public class ValidationServiceTests
         var dataRows = new List<OrganisationDataRow> { new() };
 
         // Act
-        var results = await service.ValidateAsync(dataRows);
+        var results = await service.ValidateOrganisationsAsync(dataRows);
 
         // Assert
         var validationError = results.First(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.MissingOrganisationId));
@@ -66,7 +66,7 @@ public class ValidationServiceTests
         };
 
         // Act
-        var results = await service.ValidateAsync(dataRows);
+        var results = await service.ValidateOrganisationsAsync(dataRows);
 
         // Assert
         results.Should().BeEmpty();
@@ -82,7 +82,7 @@ public class ValidationServiceTests
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
         // Act
-        var results = await service.ValidateAsync(dataRows.ToList());
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList());
 
         // Assert
         results.Should().BeEmpty();
@@ -98,7 +98,7 @@ public class ValidationServiceTests
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
         // Act
-        var results = await service.ValidateAsync(dataRows.ToList());
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList());
 
         // Assert
         results.Should().BeEmpty();
@@ -115,7 +115,7 @@ public class ValidationServiceTests
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
         // Act
-        var results = await service.ValidateAsync(dataRows.ToList());
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList());
 
         // Assert
         var validationError = results.First(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.DuplicateOrganisationIdSubsidiaryId));
@@ -132,7 +132,7 @@ public class ValidationServiceTests
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
         // Act
-        var results = await service.ValidateAsync(dataRows.ToList());
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList());
 
         // Assert
         results.Sum(x => x.ColumnErrors.Count).Should().Be(maxErrors);
@@ -187,7 +187,7 @@ public class ValidationServiceTests
         dataRow.MainActivitySic = "123456";
 
         // Act
-        var errors = await service.ValidateAsync(new[] { dataRow });
+        var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow });
 
         // Assert
         var columnError = errors.Single().ColumnErrors.Single();
@@ -206,7 +206,7 @@ public class ValidationServiceTests
         dataRow.TradingName = dataRow.OrganisationName;
 
         // Act
-        var errors = await service.ValidateAsync(new[] { dataRow });
+        var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow });
 
         // Assert
         var columnError = errors.Single().ColumnErrors.Single();
@@ -215,12 +215,122 @@ public class ValidationServiceTests
         columnError.ErrorCode.Should().Be(ErrorCodes.TradingNameSameAsOrganisationName);
     }
 
+    [TestMethod]
+    public async Task Validate_BrandFile_ExpectNoValidationError()
+    {
+        // Arrange
+        int rowCount = 10;
+        var dataRows = RowDataTestHelper.GenerateBrand(rowCount);
+        var service = CreateService();
+
+        // Act
+        var results = await service.ValidateAppendedFileAsync(dataRows.ToList());
+
+        // Assert
+        results.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    [DataRow(0)]
+    [DataRow(1)]
+    [DataRow(2)]
+    [DataRow(3)]
+    public async Task Validate_BrandFile_AndCharacterLimitExceeded_ExpectValidationError(int columnIndex)
+    {
+        // Arrange
+        var service = CreateService();
+        var dataRows = RowDataTestHelper.GenerateBrandWithExceededCharacterLimit(columnIndex);
+
+        // Act
+        var results = await service.ValidateAppendedFileAsync(dataRows);
+
+        // Assert
+        results.Should().NotBeNull();
+        results[0].Should().Be(ErrorCodes.CharacterLengthExceeded);
+    }
+
+    [TestMethod]
+    public async Task Validate_PartnerFile_ExpectNoValidationError()
+    {
+        // Arrange
+        int rowCount = 10;
+        var dataRows = RowDataTestHelper.GeneratePartner(rowCount);
+        var service = CreateService();
+
+        // Act
+        var results = await service.ValidateAppendedFileAsync(dataRows.ToList());
+
+        // Assert
+        results.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    [DataRow(0)]
+    [DataRow(1)]
+    [DataRow(2)]
+    [DataRow(3)]
+    [DataRow(5)]
+    [DataRow(6)]
+    public async Task Validate_PartnerFile_AndCharacterLimitExceeded_ExpectValidationError(int index)
+    {
+        // Arrange
+        var service = CreateService();
+        var dataRows = RowDataTestHelper.GeneratePartnerWithExceededCharacterLimit(index);
+
+        // Act
+        var results = await service.ValidateAppendedFileAsync(dataRows);
+
+        // Assert
+        results.Should().NotBeNull();
+        results[0].Should().Be(ErrorCodes.CharacterLengthExceeded);
+    }
+
+    [TestMethod]
+    public void ValidateAppendedFileAsync_WithInvalidRowType_ThrowsException()
+    {
+        // Arrange
+        var service = CreateService();
+        var invalidRowTypes = new[] { new InvalidRowType() };
+
+        // Act
+        var act = async () => await service.ValidateAppendedFileAsync(invalidRowTypes.ToList());
+
+        // Assert
+        act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [TestMethod]
+    public async Task ValidateAppendedFileAsync_WithSameErrorInMultipleRows_OnlyAddsErrorOnce()
+    {
+        // Arrange
+        int rowCount = 2;
+        var dataRows = RowDataTestHelper.GeneratePartner(rowCount).ToList();
+        dataRows[0].DefraId = new string('a', CharacterLimits.MaxLength + 1);
+        dataRows[1].DefraId = new string('b', CharacterLimits.MaxLength + 1);
+        var service = CreateService();
+
+        // Act
+        var results = await service.ValidateAppendedFileAsync(dataRows);
+
+        // Assert
+        results.Should().NotBeNull();
+        results[0].Should().Be(ErrorCodes.CharacterLengthExceeded);
+        results.Count.Should().Be(1);
+    }
+
     private static ValidationService CreateService(ValidationSettings? settings = null)
     {
         return new ValidationService(
             new OrganisationDataRowValidator(),
+            new BrandDataRowValidator(),
+            new PartnerDataRowValidator(),
             new ColumnMetaDataProvider(),
             Options.Create(settings ?? new ValidationSettings()),
             Mock.Of<ILogger<ValidationService>>());
+    }
+
+    private class InvalidRowType : ICsvDataRow
+    {
+        public int LineNumber { get; set; }
     }
 }

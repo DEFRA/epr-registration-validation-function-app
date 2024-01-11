@@ -22,13 +22,12 @@ public class RegistrationEventBuilderTests
     [DataRow(RequiredOrganisationTypeCodeForPartners.LLP, RequiredPackagingActivityForBrands.Secondary)]
     [DataRow(RequiredOrganisationTypeCodeForPartners.LPA, RequiredPackagingActivityForBrands.Primary)]
     [DataRow(RequiredOrganisationTypeCodeForPartners.LPA, RequiredPackagingActivityForBrands.Secondary)]
-    public void TestBuildRegistrationEvent_WhenCsvItemHasBrandsAndPartners_ReturnsCorrectRegistrationEvent(
+    public void TestBuildRegistrationValidationEvent_WhenCsvItemHasBrandsAndPartners_ReturnsCorrectRegistrationEvent(
         RequiredOrganisationTypeCodeForPartners organisationTypeCode,
         RequiredPackagingActivityForBrands packagingActivity)
     {
         // Arrange
         var validationErrors = new List<RegistrationValidationError>();
-        var errors = new List<string>();
         var csvDataRow = CSVRowTestHelper.GenerateCSVDataRowTestHelper(organisationTypeCode.ToString(), packagingActivity.ToString());
         var csvDataRows = new List<OrganisationDataRow>
         {
@@ -36,20 +35,19 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.BuildRegistrationEvent(csvDataRows, errors, validationErrors, BlobName, ContainerName);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName);
 
         // Assert
-        RegistrationEventTestHelper.AssertRegEvent(regEvent, errors, validationErrors, true, true, BlobName);
+        RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, true, true, BlobName);
     }
 
     [TestMethod]
     [DataRow(RequiredPackagingActivityForBrands.Primary)]
     [DataRow(RequiredPackagingActivityForBrands.Secondary)]
-    public void TestBuildRegistrationEvent_WhenCsvItemHasBrandsAndNoPartners_ReturnsCorrectRegistrationEvent(RequiredPackagingActivityForBrands brands)
+    public void TestBuildRegistrationValidationEvent_WhenCsvItemHasBrandsAndNoPartners_ReturnsCorrectRegistrationEvent(RequiredPackagingActivityForBrands brands)
     {
         // Arrange
         var validationErrors = new List<RegistrationValidationError>();
-        var errors = new List<string>();
         var csvDataRow =
             CSVRowTestHelper.GenerateCSVDataRowTestHelper(IncorrectPackagingActivity, brands.ToString());
         var csvDataRows = new List<OrganisationDataRow>
@@ -58,21 +56,20 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.BuildRegistrationEvent(csvDataRows, errors, validationErrors,  BlobName, ContainerName);
+        RegistrationValidationEvent regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors,  BlobName, ContainerName) as RegistrationValidationEvent;
 
         // Assert
-        RegistrationEventTestHelper.AssertRegEvent(regEvent, errors, validationErrors, true, false, BlobName);
+        RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, true, false, BlobName);
     }
 
     [TestMethod]
     [DataRow(RequiredOrganisationTypeCodeForPartners.LLP)]
     [DataRow(RequiredOrganisationTypeCodeForPartners.LPA)]
     [DataRow(RequiredOrganisationTypeCodeForPartners.PAR)]
-    public void TestBuildRegistrationEvent_WhenCsvItemHasNoBrandsAndPartners_ReturnsCorrectRegistrationEvent(RequiredOrganisationTypeCodeForPartners partners)
+    public void TestBuildRegistrationValidationEvent_WhenCsvItemHasNoBrandsAndPartners_ReturnsCorrectRegistrationEvent(RequiredOrganisationTypeCodeForPartners partners)
     {
         // Arrange
         var validationErrors = new List<RegistrationValidationError>();
-        var errors = new List<string>();
         var csvDataRow =
             CSVRowTestHelper.GenerateCSVDataRowTestHelper(partners.ToString(), IncorrectOrganisationTypeCode);
         var csvDataRows = new List<OrganisationDataRow>
@@ -81,18 +78,17 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.BuildRegistrationEvent(csvDataRows, errors, validationErrors, BlobName, ContainerName);
+        RegistrationValidationEvent regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors,  BlobName, ContainerName) as RegistrationValidationEvent;
 
         // Assert
-        RegistrationEventTestHelper.AssertRegEvent(regEvent, errors, validationErrors, false, true, BlobName);
+        RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, false, true, BlobName);
     }
 
     [TestMethod]
-    public void TestBuildRegistrationEvent_WhenCsvItemHasNoBrandsAndNoPartners_ReturnsCorrectRegistrationEvent()
+    public void TestBuildRegistrationValidationEvent_WhenCsvItemHasNoBrandsAndNoPartners_ReturnsCorrectRegistrationEvent()
     {
         // Arrange
         var validationErrors = new List<RegistrationValidationError>();
-        var errors = new List<string>();
         var csvDataRow = CSVRowTestHelper.GenerateCSVDataRowTestHelper(IncorrectOrganisationTypeCode, IncorrectPackagingActivity);
 
         var csvDataRows = new List<OrganisationDataRow>
@@ -101,18 +97,17 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.BuildRegistrationEvent(csvDataRows, errors,  validationErrors, BlobName, ContainerName);
+        RegistrationValidationEvent regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors,  BlobName, ContainerName) as RegistrationValidationEvent;
 
         // Assert
-        RegistrationEventTestHelper.AssertRegEvent(regEvent, errors, validationErrors, false, false, BlobName);
+        RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, false, false, BlobName);
     }
 
     [TestMethod]
-    public void TestBuildRegistrationEvent_WhenHasMultipleLines_ReturnsCorrectRegistrationEvent()
+    public void TestBuildRegistrationValidationEvent_WhenHasMultipleLines_ReturnsCorrectRegistrationEvent()
     {
         // Arrange
         var validationErrors = new List<RegistrationValidationError>();
-        var errors = new List<string>();
         var csvDataRow =
             CSVRowTestHelper.GenerateCSVDataRowTestHelper(IncorrectOrganisationTypeCode, RequiredPackagingActivityForBrands.Primary.ToString());
         var csvDataRow2 =
@@ -124,33 +119,27 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.BuildRegistrationEvent(csvDataRows, errors, validationErrors, BlobName, ContainerName);
+        RegistrationValidationEvent regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors,  BlobName, ContainerName) as RegistrationValidationEvent;
 
         // Assert
-        RegistrationEventTestHelper.AssertRegEvent(regEvent, errors, validationErrors, true, true, BlobName);
+        RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, true, true, BlobName);
     }
 
     [TestMethod]
-    public void TestBuildErrorRegistrationEvent_WhenErrorsParameterIsPassed_ReturnsCorrectRegistrationEvent()
+    [DataRow(EventType.BrandValidation)]
+    [DataRow(EventType.PartnerValidation)]
+    public void TestBuildValidationEvent_WhenBrandOrPartner_ReturnsCorrectRegistrationEvent(EventType eventTypeValue)
     {
         // Arrange
-        var validationErrors = new List<RegistrationValidationError>();
-        var errors = new List<string>
-        {
-            "99",
-        };
-        var csvDataRow = CSVRowTestHelper.GenerateCSVDataRowTestHelper(
-            RequiredOrganisationTypeCodeForPartners.LLP.ToString(),
-            RequiredPackagingActivityForBrands.Primary.ToString());
-        var csvDataRows = new List<OrganisationDataRow>
-        {
-            csvDataRow,
-        };
+        var eventType = eventTypeValue;
+        var blobName = "BlobName";
+        var blobContainerName = "BlobContainerName";
+        string[] errors = { "812", "813" };
 
         // Act
-        var regEvent = RegistrationEventBuilder.BuildRegistrationEvent(csvDataRows, errors, validationErrors, BlobName, ContainerName);
+        ValidationEvent regEvent = RegistrationEventBuilder.CreateValidationEvent(eventType,  blobName, blobContainerName, errors);
 
         // Assert
-        RegistrationEventTestHelper.AssertRegEvent(regEvent, errors, validationErrors, true, true, BlobName);
+        RegistrationEventTestHelper.AssertValidationEvent(regEvent, eventTypeValue, blobName, blobContainerName, errors);
     }
 }

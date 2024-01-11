@@ -15,4 +15,30 @@ public class CSVRowTestHelper
         };
         return csvDataRow;
     }
+
+    public static BrandDataRow GenerateBrandCSVDataRowTestHelper()
+    {
+        var csvDataRow = new BrandDataRow()
+        {
+            DefraId = Guid.NewGuid().ToString(),
+            SubsidiaryId = Guid.NewGuid().ToString(),
+            BrandName = "brandName",
+            BrandTypeCode = "brandTypeCode",
+        };
+        return csvDataRow;
+    }
+
+    public static PartnersDataRow GeneratePartnershipCSVDataRowTestHelper()
+    {
+        var csvDataRow = new PartnersDataRow
+        {
+            DefraId = Guid.NewGuid().ToString(),
+            SubsidiaryId = Guid.NewGuid().ToString(),
+            PartnerFirstName = "partnerFirstName",
+            PartnerLastName = "partnerLastName",
+            PartnerPhoneNumber = "partnerPhoneNumber",
+            PartnerEmail = "partnerEmail",
+        };
+        return csvDataRow;
+    }
 }

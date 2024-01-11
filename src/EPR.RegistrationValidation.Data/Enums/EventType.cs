@@ -6,4 +6,6 @@ public enum EventType
     CheckSplitter = 2,
     ProducerValidation = 3,
     Registration = 4,
+    BrandValidation = 8,
+    PartnerValidation = 9,
 }
