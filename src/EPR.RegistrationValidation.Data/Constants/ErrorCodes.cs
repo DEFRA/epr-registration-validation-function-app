@@ -29,6 +29,13 @@ public static class ErrorCodes
     public const string MissingPrimaryActivity = "820";
     public const string MultiplePrimaryActivity = "821";
     public const string InvalidPackagingActivity = "822";
-    public const string MissingPackagingActivity = "823";
+    public const string MissingPackagingActivitySo = "823";
+    public const string MissingPackagingActivityPf = "824";
+    public const string MissingPackagingActivityIm = "825";
+    public const string MissingPackagingActivitySe = "826";
+    public const string MissingPackagingActivityHl = "827";
+    public const string MissingPackagingActivityOm = "828";
+    public const string MissingPackagingActivitySl = "829";
     public const string TradingNameSameAsOrganisationName = "840";
+    public const string HeadOrganisationMissingSubOrganisation = "848";
 }

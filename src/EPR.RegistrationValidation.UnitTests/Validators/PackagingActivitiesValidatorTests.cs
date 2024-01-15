@@ -30,7 +30,13 @@ public class PackagingActivitiesValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.PackagingActivityIm);
         result.ShouldHaveValidationErrorFor(x => x.PackagingActivitySe);
         result.ShouldHaveValidationErrorFor(x => x.PackagingActivityOm);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.MissingPackagingActivity);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.MissingPackagingActivitySo);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.MissingPackagingActivityHl);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.MissingPackagingActivityPf);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.MissingPackagingActivitySl);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.MissingPackagingActivityIm);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.MissingPackagingActivitySe);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.MissingPackagingActivityOm);
     }
 
     [TestMethod]
@@ -94,10 +100,7 @@ public class PackagingActivitiesValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.PackagingActivitySl);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.InvalidPackagingActivity);
-        result.Errors.Should().NotContain(err => err.ErrorCode == ErrorCodes.MissingPackagingActivity);
-        result.Errors.Should().NotContain(err => err.ErrorCode == ErrorCodes.MultiplePrimaryActivity);
-        result.Errors.Should().NotContain(err => err.ErrorCode == ErrorCodes.MissingPrimaryActivity);
+        result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.InvalidPackagingActivity);
     }
 
     [TestMethod]
@@ -131,10 +134,7 @@ public class PackagingActivitiesValidatorTests
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.PackagingActivitySl);
         result.ShouldHaveValidationErrorFor(x => x.PackagingActivitySO);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.MultiplePrimaryActivity);
-        result.Errors.Should().NotContain(err => err.ErrorCode == ErrorCodes.MissingPackagingActivity);
-        result.Errors.Should().NotContain(err => err.ErrorCode == ErrorCodes.InvalidPackagingActivity);
-        result.Errors.Should().NotContain(err => err.ErrorCode == ErrorCodes.MissingPrimaryActivity);
+        result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.MultiplePrimaryActivity);
     }
 
     [TestMethod]
@@ -173,9 +173,6 @@ public class PackagingActivitiesValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.PackagingActivityIm);
         result.ShouldHaveValidationErrorFor(x => x.PackagingActivitySe);
         result.ShouldHaveValidationErrorFor(x => x.PackagingActivityOm);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.MissingPrimaryActivity);
-        result.Errors.Should().NotContain(err => err.ErrorCode == ErrorCodes.MissingPackagingActivity);
-        result.Errors.Should().NotContain(err => err.ErrorCode == ErrorCodes.MultiplePrimaryActivity);
-        result.Errors.Should().NotContain(err => err.ErrorCode == ErrorCodes.InvalidPackagingActivity);
+        result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.MissingPrimaryActivity);
     }
 }

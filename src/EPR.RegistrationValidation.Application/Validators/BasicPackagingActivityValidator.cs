@@ -17,37 +17,37 @@ public class BasicPackagingActivityValidator : AbstractValidator<OrganisationDat
     public BasicPackagingActivityValidator()
     {
        RuleFor(x => x.PackagingActivitySO)
-           .NotEmpty().WithErrorCode(ErrorCodes.MissingPackagingActivity)
+           .NotEmpty().WithErrorCode(ErrorCodes.MissingPackagingActivitySo)
            .Must(act => _activities.Contains(act, StringComparer.OrdinalIgnoreCase))
            .WithErrorCode(ErrorCodes.InvalidPackagingActivity);
 
        RuleFor(x => x.PackagingActivitySe)
-           .NotEmpty().WithErrorCode(ErrorCodes.MissingPackagingActivity)
+           .NotEmpty().WithErrorCode(ErrorCodes.MissingPackagingActivitySe)
            .Must(act => _activities.Contains(act, StringComparer.OrdinalIgnoreCase))
            .WithErrorCode(ErrorCodes.InvalidPackagingActivity);
 
        RuleFor(x => x.PackagingActivityHl)
-           .NotEmpty().WithErrorCode(ErrorCodes.MissingPackagingActivity)
+           .NotEmpty().WithErrorCode(ErrorCodes.MissingPackagingActivityHl)
            .Must(act => _activities.Contains(act, StringComparer.OrdinalIgnoreCase))
            .WithErrorCode(ErrorCodes.InvalidPackagingActivity);
 
        RuleFor(x => x.PackagingActivityIm)
-           .NotEmpty().WithErrorCode(ErrorCodes.MissingPackagingActivity)
+           .NotEmpty().WithErrorCode(ErrorCodes.MissingPackagingActivityIm)
            .Must(act => _activities.Contains(act, StringComparer.OrdinalIgnoreCase))
            .WithErrorCode(ErrorCodes.InvalidPackagingActivity);
 
        RuleFor(x => x.PackagingActivityOm)
-           .NotEmpty().WithErrorCode(ErrorCodes.MissingPackagingActivity)
+           .NotEmpty().WithErrorCode(ErrorCodes.MissingPackagingActivityOm)
            .Must(act => _activities.Contains(act, StringComparer.OrdinalIgnoreCase))
            .WithErrorCode(ErrorCodes.InvalidPackagingActivity);
 
        RuleFor(x => x.PackagingActivityPf)
-           .NotEmpty().WithErrorCode(ErrorCodes.MissingPackagingActivity)
+           .NotEmpty().WithErrorCode(ErrorCodes.MissingPackagingActivityPf)
            .Must(act => _activities.Contains(act, StringComparer.OrdinalIgnoreCase))
            .WithErrorCode(ErrorCodes.InvalidPackagingActivity);
 
        RuleFor(x => x.PackagingActivitySl)
-           .NotEmpty().WithErrorCode(ErrorCodes.MissingPackagingActivity)
+           .NotEmpty().WithErrorCode(ErrorCodes.MissingPackagingActivitySl)
            .Must(act => _activities.Contains(act, StringComparer.OrdinalIgnoreCase))
            .WithErrorCode(ErrorCodes.InvalidPackagingActivity);
     }
