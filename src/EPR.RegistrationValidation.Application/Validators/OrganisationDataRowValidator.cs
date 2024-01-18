@@ -16,8 +16,11 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
         Include(new OrganisationMainActivitySicValidator());
         Include(new PrimaryContactValidator());
         Include(new RegisteredAddressValidator());
-        Include(new AuditCountryValidator());
+        Include(new AuditAddressValidator());
         Include(new PrincipalAddressValidator());
         Include(new PackagingActivityValidator());
+        Include(new ProduceBlankPackagingValidator());
+        Include(new TurnoverValueValidator());
+        Include(new ServiceOfNoticeAddressValidator());
     }
 }

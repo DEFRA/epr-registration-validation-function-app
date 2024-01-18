@@ -54,7 +54,6 @@ public class ValidationServiceTests
                 PrimaryContactPersonFirstName = "Fname",
                 PrimaryContactPersonEmail = "test@test.com",
                 PrimaryContactPersonPhoneNumber = "01237946",
-                AuditAddressCountry = AuditingCountryCodes.England,
                 PackagingActivitySO = "Primary",
                 PackagingActivityHl = "Secondary",
                 PackagingActivityPf = "Secondary",
@@ -62,6 +61,14 @@ public class ValidationServiceTests
                 PackagingActivityIm = "No",
                 PackagingActivityOm = "No",
                 PackagingActivitySe = "Secondary",
+                ProduceBlankPackagingFlag = "No",
+                Turnover = $"99.99",
+                ServiceOfNoticeAddressLine1 = "9 Surrey",
+                ServiceOfNoticeAddressPostcode = "KT5 8JU",
+                ServiceOfNoticeAddressPhoneNumber = "0123456789",
+                AuditAddressLine1 = "10 Southcote",
+                AuditAddressCountry = AuditingCountryCodes.England,
+                AuditAddressPostcode = "KT5 9UW",
             },
         };
 

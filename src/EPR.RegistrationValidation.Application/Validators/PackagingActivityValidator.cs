@@ -63,7 +63,7 @@ public class PackagingActivityValidator : AbstractValidator<OrganisationDataRow>
         });
     }
 
-    private int PrimaryPackagingActivityCount(OrganisationDataRow row)
+    private static int PrimaryPackagingActivityCount(OrganisationDataRow row)
     {
         var packagingActivities = new[]
         {

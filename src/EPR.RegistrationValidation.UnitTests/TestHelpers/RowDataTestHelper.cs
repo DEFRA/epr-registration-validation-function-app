@@ -30,7 +30,6 @@ public static class RowDataTestHelper
                 PrimaryContactPersonLastName = $"{i}LName",
                 PrimaryContactPersonEmail = $"email{i}@test.com",
                 PrimaryContactPersonPhoneNumber = $"07895462{i}",
-                AuditAddressCountry = AuditingCountryCodes.England,
                 PackagingActivitySO = "Primary",
                 PackagingActivityHl = "Secondary",
                 PackagingActivityPf = "Secondary",
@@ -38,6 +37,14 @@ public static class RowDataTestHelper
                 PackagingActivityIm = "No",
                 PackagingActivityOm = "No",
                 PackagingActivitySe = "Secondary",
+                ProduceBlankPackagingFlag = "Yes",
+                Turnover = "9.99",
+                ServiceOfNoticeAddressLine1 = "9 Surrey",
+                ServiceOfNoticeAddressPostcode = "KT5 8JU",
+                ServiceOfNoticeAddressPhoneNumber = "0123456789",
+                AuditAddressLine1 = "10 Southcote",
+                AuditAddressCountry = AuditingCountryCodes.England,
+                AuditAddressPostcode = "KT5 9UW",
             };
         }
     }
@@ -63,6 +70,14 @@ public static class RowDataTestHelper
                 PackagingActivityIm = "No",
                 PackagingActivityOm = "No",
                 PackagingActivitySe = "Secondary",
+                ProduceBlankPackagingFlag = "Yes",
+                Turnover = "9.99",
+                ServiceOfNoticeAddressLine1 = "9 Surrey",
+                ServiceOfNoticeAddressPostcode = "KT5 8JU",
+                ServiceOfNoticeAddressPhoneNumber = "0123456789",
+                AuditAddressLine1 = "10 Southcote",
+                AuditAddressCountry = AuditingCountryCodes.England.ToLower(),
+                AuditAddressPostcode = "KT5 9UW",
             };
         }
     }
@@ -87,6 +102,10 @@ public static class RowDataTestHelper
                 PackagingActivityIm = "No",
                 PackagingActivityOm = "No",
                 PackagingActivitySe = "Secondary",
+                Turnover = "9.99",
+                ServiceOfNoticeAddressLine1 = "9 Surrey",
+                ServiceOfNoticeAddressPostcode = "KT5 8JU",
+                ServiceOfNoticeAddressPhoneNumber = "0123456789",
             };
         }
     }
