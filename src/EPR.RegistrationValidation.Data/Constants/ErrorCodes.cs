@@ -48,4 +48,7 @@ public static class ErrorCodes
     public const string InvalidTurnoverDecimalValues = "856";
     public const string TurnoverHasZeroOrNegativeValue = "857";
     public const string InvalidTurnoverDigits = "858";
+    public const string TotalTonnageMustBeGreaterThanZero = "865";
+    public const string TotalTonnageIncludesComma = "867";
+    public const string TotalTonnageIsNotNumber = "868";
 }

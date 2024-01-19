@@ -22,5 +22,6 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
         Include(new ProduceBlankPackagingValidator());
         Include(new TurnoverValueValidator());
         Include(new ServiceOfNoticeAddressValidator());
+        Include(new TotalTonnageValidator());
     }
 }

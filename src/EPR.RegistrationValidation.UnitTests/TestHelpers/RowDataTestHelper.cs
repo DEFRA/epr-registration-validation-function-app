@@ -45,6 +45,7 @@ public static class RowDataTestHelper
                 AuditAddressLine1 = "10 Southcote",
                 AuditAddressCountry = AuditingCountryCodes.England,
                 AuditAddressPostcode = "KT5 9UW",
+                TotalTonnage = "25",
             };
         }
     }
@@ -78,6 +79,7 @@ public static class RowDataTestHelper
                 AuditAddressLine1 = "10 Southcote",
                 AuditAddressCountry = AuditingCountryCodes.England.ToLower(),
                 AuditAddressPostcode = "KT5 9UW",
+                TotalTonnage = "25",
             };
         }
     }
@@ -106,6 +108,7 @@ public static class RowDataTestHelper
                 ServiceOfNoticeAddressLine1 = "9 Surrey",
                 ServiceOfNoticeAddressPostcode = "KT5 8JU",
                 ServiceOfNoticeAddressPhoneNumber = "0123456789",
+                TotalTonnage = "25",
             };
         }
     }

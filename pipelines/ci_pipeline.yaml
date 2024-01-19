@@ -7,18 +7,6 @@ trigger:
       - 'src/*'
 
 parameters:
-- name: teamName
-  displayName: 'Load default variables from Team-1_Pi file'
-  default: 'Team-1_Pi'
-  type: string
-  values:
-    - Team-1_Pi
-- name: envToDeploy
-  displayName: 'Image created for development first'
-  type: string
-  values:
-    - development
-  default: development
 - name: runTests
   displayName: Run tests
   type: boolean
@@ -27,8 +15,7 @@ parameters:
 pool: DEFRA-COMMON-ubuntu2004-SSV3
 
 variables:
-  - ${{ if eq(parameters.envToDeploy, 'development') }}:
-    - template: vars/${{ parameters.teamName }}-${{ parameters.envToDeploy }}.yaml
+  - template: vars/Team-4_QA-development.yaml
   - name: solutionFolder
     value: src
   - name: projectFolder
@@ -63,3 +50,4 @@ extends:
     acrRepositoryName: $(acr.repositoryName)
     branchName: ${{ replace(replace(variables['Build.SourceBranch'], 'refs/heads/', ''), '/', '_') }}
     runNugetTasks: ${{ variables.runNugetTasks }}
+    serviceName: $(serviceName)
