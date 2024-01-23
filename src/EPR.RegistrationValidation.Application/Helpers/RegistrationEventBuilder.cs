@@ -26,29 +26,35 @@ public static class RegistrationEventBuilder
         List<OrganisationDataRow> csvItems,
         List<RegistrationValidationError>? validationErrors,
         string blobName,
-        string blobContainerName)
+        string blobContainerName,
+        int errorLimit)
     {
-        return BuildRegistrationValidationEvent(csvItems, validationErrors: validationErrors, blobName, blobContainerName);
+        return BuildRegistrationValidationEvent(csvItems, validationErrors: validationErrors, blobName, blobContainerName, errorLimit);
     }
 
     private static ValidationEvent BuildRegistrationValidationEvent(
         List<OrganisationDataRow> csvItems,
-        IList<RegistrationValidationError> validationErrors,
+        List<RegistrationValidationError>? validationErrors,
         string blobName,
-        string blobContainerName)
+        string blobContainerName,
+        int errorLimit)
     {
         bool requiresPartnershipsFile = csvItems.Exists(row => Enum.IsDefined(typeof(RequiredOrganisationTypeCodeForPartners), row.OrganisationTypeCode));
         bool requiresBrandsFile = csvItems.Exists(row => Enum.IsDefined(typeof(RequiredPackagingActivityForBrands), row.PackagingActivitySO));
 
-        return new RegistrationValidationEvent
+        var validationEvent = new RegistrationValidationEvent
         {
             Type = EventType.Registration,
-            BlobName = blobName,
-            BlobContainerName = blobContainerName,
-            ValidationErrors = validationErrors.ToList(),
+            ValidationErrors = validationErrors,
             RequiresBrandsFile = requiresBrandsFile,
             RequiresPartnershipsFile = requiresPartnershipsFile,
-            IsValid = validationErrors.Count == 0,
+            IsValid = validationErrors?.Count == 0,
+            BlobName = blobName,
+            BlobContainerName = blobContainerName,
         };
+
+        validationEvent.HasMaxRowErrors = validationEvent.RowErrorCount == errorLimit;
+
+        return validationEvent;
     }
 }

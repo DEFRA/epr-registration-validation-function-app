@@ -52,7 +52,7 @@ public class SubmissionApiClientTests
             BaseAddress = new Uri(_config!.BaseUrl),
         };
         var sut = new SubmissionApiClient(httpClient, _submissionApiOptionsMock.Object);
-        var csvDataRow = CSVRowTestHelper.GenerateCSVDataRowTestHelper(
+        var csvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(
             RequiredOrganisationTypeCodeForPartners.PAR.ToString(),
             packagingActivity.ToString());
         var csvDataRows = new List<OrganisationDataRow>
@@ -111,7 +111,7 @@ public class SubmissionApiClientTests
             BaseAddress = new Uri(_config!.BaseUrl),
         };
         var sut = new SubmissionApiClient(httpClient, _submissionApiOptionsMock.Object);
-        var csvDataRow = CSVRowTestHelper.GenerateCSVDataRowTestHelper(
+        var csvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(
             RequiredOrganisationTypeCodeForPartners.PAR.ToString(),
             RequiredPackagingActivityForBrands.Primary.ToString());
         var csvDataRows = new List<OrganisationDataRow>
@@ -164,7 +164,7 @@ public class SubmissionApiClientTests
             BaseAddress = new Uri(_config!.BaseUrl),
         };
         var sut = new SubmissionApiClient(httpClient, _submissionApiOptionsMock.Object);
-        var csvDataRow = CSVRowTestHelper.GenerateCSVDataRowTestHelper(
+        var csvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(
             RequiredOrganisationTypeCodeForPartners.PAR.ToString(),
             packagingActivity.ToString());
         var csvDataRows = new List<OrganisationDataRow>

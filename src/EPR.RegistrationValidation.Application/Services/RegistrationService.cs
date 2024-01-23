@@ -26,6 +26,7 @@ public class RegistrationService : IRegistrationService
     private readonly ILogger<RegistrationService> _logger;
     private readonly IFeatureManager _featureManager;
     private readonly IValidationService _validationService;
+    private readonly ValidationSettings _validationSettings;
 
     public RegistrationService(
         IDequeueProvider dequeueProvider,
@@ -35,7 +36,8 @@ public class RegistrationService : IRegistrationService
         IOptions<StorageAccountConfig> options,
         IFeatureManager featureManager,
         IValidationService validationService,
-        ILogger<RegistrationService> logger)
+        ILogger<RegistrationService> logger,
+        IOptions<ValidationSettings> validationSettings)
     {
         _dequeueProvider = dequeueProvider;
         _blobReader = blobReader;
@@ -45,6 +47,7 @@ public class RegistrationService : IRegistrationService
         _featureManager = featureManager;
         _validationService = validationService;
         _logger = logger;
+        _validationSettings = validationSettings.Value;
     }
 
     public async Task ProcessServiceBusMessage(string message)
@@ -59,12 +62,15 @@ public class RegistrationService : IRegistrationService
                 case nameof(SubmissionSubType.CompanyDetails):
                     validationEvent = await ValidateRegistrationFile(blobQueueMessage);
                     break;
-                case nameof(SubmissionSubType.Brands):
+                case nameof(SubmissionSubType.Brands) when blobQueueMessage.RequiresRowValidation == true:
                     validationEvent = await ValidateFile<BrandDataRow>(blobQueueMessage);
                     break;
-                case nameof(SubmissionSubType.Partnerships):
+                case nameof(SubmissionSubType.Partnerships) when blobQueueMessage.RequiresRowValidation == true:
                     validationEvent = await ValidateFile<PartnersDataRow>(blobQueueMessage);
                     break;
+                default:
+                    _logger.LogWarning("Submission sub type {Type} is not supported or validation for this type is disabled", blobQueueMessage.SubmissionSubType);
+                    return;
             }
         }
         catch (CsvParseException ex)
@@ -126,8 +132,7 @@ public class RegistrationService : IRegistrationService
         }
 
         var validationErrors = new List<RegistrationValidationError>();
-        if (await _featureManager.IsEnabledAsync(FeatureFlags.EnableRowValidation) &&
-            await _featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationDataRowValidation))
+        if (await IsOrgDataValidationEnabledAsync(blobQueueMessage))
         {
             validationErrors = await _validationService.ValidateOrganisationsAsync(csvRows);
         }
@@ -136,31 +141,31 @@ public class RegistrationService : IRegistrationService
             csvRows,
             validationErrors,
             blobQueueMessage.BlobName,
-            _options.BlobContainerName);
+            _options.BlobContainerName,
+            _validationSettings.ErrorLimit);
     }
 
     private async Task<ValidationEvent> ValidateFile<T>(BlobQueueMessage blobQueueMessage)
         where T : ICsvDataRow
     {
-        var csvRows = await ParseFile<T>(blobQueueMessage);
-
-        if (!csvRows.Any())
-        {
-            _logger.LogInformation(
-                "The CSV file for submission ID {SubmissionId} is empty",
-                blobQueueMessage.SubmissionId);
-
-            return CreateValidationEvent(
-                GetEventType(blobQueueMessage.SubmissionSubType),
-                blobQueueMessage.BlobName,
-                _options.BlobContainerName,
-                ErrorCodes.CsvFileEmptyErrorCode);
-        }
-
         List<string> fileErrors = new();
-        if (await _featureManager.IsEnabledAsync(FeatureFlags.EnableRowValidation) &&
-            await _featureManager.IsEnabledAsync(FeatureFlags.EnableBrandPartnerDataRowValidation))
+
+        if (await IsBrandPartnerValidationEnabledAsync())
         {
+            var csvRows = await ParseFile<T>(blobQueueMessage);
+            if (!csvRows.Any())
+            {
+                _logger.LogInformation(
+                    "The CSV file for submission ID {SubmissionId} is empty",
+                    blobQueueMessage.SubmissionId);
+
+                return CreateValidationEvent(
+                    GetEventType(blobQueueMessage.SubmissionSubType),
+                    blobQueueMessage.BlobName,
+                    _options.BlobContainerName,
+                    ErrorCodes.CsvFileEmptyErrorCode);
+            }
+
             fileErrors = await _validationService.ValidateAppendedFileAsync(csvRows);
         }
 
@@ -190,5 +195,18 @@ public class RegistrationService : IRegistrationService
         }
 
         throw new Exception("Invalid submissionSubType");
+    }
+
+    private async Task<bool> IsOrgDataValidationEnabledAsync(BlobQueueMessage blobQueueMessage)
+    {
+        return blobQueueMessage.RequiresRowValidation == true &&
+            await _featureManager.IsEnabledAsync(FeatureFlags.EnableRowValidation) &&
+            await _featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationDataRowValidation);
+    }
+
+    private async Task<bool> IsBrandPartnerValidationEnabledAsync()
+    {
+        return await _featureManager.IsEnabledAsync(FeatureFlags.EnableRowValidation) &&
+            await _featureManager.IsEnabledAsync(FeatureFlags.EnableBrandPartnerDataRowValidation);
     }
 }

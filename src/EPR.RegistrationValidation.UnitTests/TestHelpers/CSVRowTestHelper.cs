@@ -1,22 +1,25 @@
 ﻿namespace EPR.RegistrationValidation.UnitTests.TestHelpers;
 
 using Data.Models;
+using EPR.RegistrationValidation.Application.Constants;
 
-public class CSVRowTestHelper
+public static class CSVRowTestHelper
 {
-    public static OrganisationDataRow GenerateCSVDataRowTestHelper(string organisationTypeCode, string packagingActivitySO)
+    public static OrganisationDataRow GenerateOrgCsvDataRow(
+        string? organisationTypeCode = null,
+        string? packagingActivitySo = null)
     {
         var csvDataRow = new OrganisationDataRow
         {
             DefraId = Guid.NewGuid().ToString(),
-            OrganisationTypeCode = organisationTypeCode,
+            OrganisationTypeCode = organisationTypeCode ?? IncorporationTypeCodes.LimitedCompany,
             SubsidiaryId = Guid.NewGuid().ToString(),
-            PackagingActivitySO = packagingActivitySO,
+            PackagingActivitySO = packagingActivitySo ?? PackagingActivities.No,
         };
         return csvDataRow;
     }
 
-    public static BrandDataRow GenerateBrandCSVDataRowTestHelper()
+    public static BrandDataRow GenerateBrandCsvDataRow()
     {
         var csvDataRow = new BrandDataRow()
         {
@@ -28,7 +31,7 @@ public class CSVRowTestHelper
         return csvDataRow;
     }
 
-    public static PartnersDataRow GeneratePartnershipCSVDataRowTestHelper()
+    public static PartnersDataRow GeneratePartnershipCsvDataRow()
     {
         var csvDataRow = new PartnersDataRow
         {

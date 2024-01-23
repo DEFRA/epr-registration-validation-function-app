@@ -16,4 +16,6 @@ public class BlobQueueMessage
     public string UserId { get; init; }
 
     public string OrganisationId { get; init; }
+
+    public bool? RequiresRowValidation { get; init; }
 }

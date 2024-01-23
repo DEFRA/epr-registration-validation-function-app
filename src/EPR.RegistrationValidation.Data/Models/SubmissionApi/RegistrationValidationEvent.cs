@@ -7,4 +7,8 @@ public class RegistrationValidationEvent : ValidationEvent
     public bool RequiresBrandsFile { get; init; }
 
     public bool RequiresPartnershipsFile { get; init; }
+
+    public bool? HasMaxRowErrors { get; set; }
+
+    public int? RowErrorCount => ValidationErrors?.SelectMany(x => x.ColumnErrors).Count();
 }
