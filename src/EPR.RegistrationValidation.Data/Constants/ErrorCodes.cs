@@ -51,4 +51,6 @@ public static class ErrorCodes
     public const string TotalTonnageMustBeGreaterThanZero = "865";
     public const string TotalTonnageIncludesComma = "867";
     public const string TotalTonnageIsNotNumber = "868";
+    public const string InvalidCompanyHouseNumber = "859";
+    public const string CompanyHouseNumberMustBeEmpty = "860";
 }
