@@ -24,5 +24,6 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
         Include(new ServiceOfNoticeAddressValidator());
         Include(new TotalTonnageValidator());
         Include(new CompanyHouseValidator());
+        Include(new OrganisationTypeValidator());
     }
 }

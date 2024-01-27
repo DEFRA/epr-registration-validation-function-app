@@ -53,4 +53,6 @@ public static class ErrorCodes
     public const string TotalTonnageIsNotNumber = "868";
     public const string InvalidCompanyHouseNumber = "859";
     public const string CompanyHouseNumberMustBeEmpty = "860";
+    public const string MissingOrganisationTypeCode = "880";
+    public const string InvalidOrganisationTypeCode = "881";
 }

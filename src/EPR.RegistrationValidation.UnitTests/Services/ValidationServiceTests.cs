@@ -69,6 +69,10 @@ public class ValidationServiceTests
                 AuditAddressLine1 = "10 Southcote",
                 AuditAddressCountry = AuditingCountryCodes.England,
                 AuditAddressPostcode = "KT5 9UW",
+                PrincipalAddressLine1 = "Principal Address Line 1",
+                PrincipalAddressPostcode = "Principal Address Postcode",
+                PrincipalAddressPhoneNumber = "01237946",
+                OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
             },
         };
 

@@ -46,6 +46,10 @@ public static class RowDataTestHelper
                 AuditAddressCountry = AuditingCountryCodes.England,
                 AuditAddressPostcode = "KT5 9UW",
                 TotalTonnage = "25",
+                PrincipalAddressLine1 = "Principal Address Line 1",
+                PrincipalAddressPostcode = "Principal Address Postcode",
+                PrincipalAddressPhoneNumber = "01237946",
+                OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
             };
         }
     }
@@ -80,6 +84,10 @@ public static class RowDataTestHelper
                 AuditAddressCountry = AuditingCountryCodes.England.ToLower(),
                 AuditAddressPostcode = "KT5 9UW",
                 TotalTonnage = "25",
+                PrincipalAddressLine1 = "Principal Address Line 1",
+                PrincipalAddressPostcode = "Principal Address Postcode",
+                PrincipalAddressPhoneNumber = "01237946",
+                OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
             };
         }
     }
@@ -109,6 +117,10 @@ public static class RowDataTestHelper
                 ServiceOfNoticeAddressPostcode = "KT5 8JU",
                 ServiceOfNoticeAddressPhoneNumber = "0123456789",
                 TotalTonnage = "25",
+                PrincipalAddressLine1 = "Principal Address Line 1",
+                PrincipalAddressPostcode = "Principal Address Postcode",
+                PrincipalAddressPhoneNumber = "01237946",
+                OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
             };
         }
     }
