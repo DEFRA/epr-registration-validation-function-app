@@ -1,8 +1,11 @@
 ﻿namespace EPR.RegistrationValidation.Application.Services;
 
+using System.Reflection;
+using CsvHelper.Configuration.Attributes;
 using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Application.Helpers;
 using EPR.RegistrationValidation.Application.Validators;
+using EPR.RegistrationValidation.Data.Attributes;
 using EPR.RegistrationValidation.Data.Config;
 using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
@@ -214,6 +217,38 @@ public class ValidationService : IValidationService
         }
 
         return (totalErrors, validationErrors);
+    }
+
+    public bool IsColumnLengthExceeded(List<OrganisationDataRow> rows)
+    {
+        var columnProperties = typeof(OrganisationDataRow)
+            .GetProperties()
+            .Where(x => x.GetCustomAttribute<ColumnAttribute>() != null)
+            .ToList();
+
+        foreach (var dataRow in rows)
+        {
+            if (DoesExceedMaxCharacterLength(dataRow, columnProperties))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool DoesExceedMaxCharacterLength(OrganisationDataRow row, List<PropertyInfo> columnProperties)
+    {
+        foreach (var property in columnProperties)
+        {
+            var propertyValue = property.GetValue(row);
+            if (propertyValue != null && (propertyValue.ToString().Length > CharacterLimits.MaxLength))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private async Task<ValidationResult> ValidateRowAsync<T>(T row)

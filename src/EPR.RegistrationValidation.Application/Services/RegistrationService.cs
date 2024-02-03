@@ -134,6 +134,15 @@ public class RegistrationService : IRegistrationService
         var validationErrors = new List<RegistrationValidationError>();
         if (await IsOrgDataValidationEnabledAsync(blobQueueMessage))
         {
+            if (_validationService.IsColumnLengthExceeded(csvRows))
+            {
+                return CreateValidationEvent(
+                    EventType.Registration,
+                    blobQueueMessage.BlobName,
+                    _options.BlobContainerName,
+                    ErrorCodes.CharacterLengthExceeded);
+            }
+
             validationErrors = await _validationService.ValidateOrganisationsAsync(csvRows);
         }
 

@@ -54,7 +54,6 @@ public static class RegistrationEventBuilder
         };
 
         validationEvent.HasMaxRowErrors = validationEvent.RowErrorCount == errorLimit;
-
         return validationEvent;
     }
 }

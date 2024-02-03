@@ -44,4 +44,19 @@ public static class CSVRowTestHelper
         };
         return csvDataRow;
     }
+
+    public static OrganisationDataRow GenerateOrgCsvDataRowWithTooManyCharacters(
+        string? organisationTypeCode = null,
+        string? packagingActivitySo = null)
+    {
+        var csvDataRow = new OrganisationDataRow
+        {
+            DefraId = Guid.NewGuid().ToString(),
+            OrganisationTypeCode = organisationTypeCode ?? IncorporationTypeCodes.LimitedCompany,
+            SubsidiaryId = Guid.NewGuid().ToString(),
+            PackagingActivitySO = packagingActivitySo ?? PackagingActivities.No,
+            TradingName = new string('a', CharacterLimits.MaxLength + 1),
+        };
+        return csvDataRow;
+    }
 }

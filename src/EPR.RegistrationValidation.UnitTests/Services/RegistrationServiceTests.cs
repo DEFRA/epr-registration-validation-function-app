@@ -190,10 +190,10 @@ public class RegistrationServiceTests
                     It.IsAny<string>(),
                     It.Is<ValidationEvent>(
                         x =>
-                        x.BlobContainerName == ContainerName
-                        && x.BlobName == blobName
-                        && x.Errors.Count == 1 && x.Errors[0] == ErrorCodes.FileFormatInvalid
-                        && !x.IsValid)),
+                            x.BlobContainerName == ContainerName
+                            && x.BlobName == blobName
+                            && x.Errors.Count == 1 && x.Errors[0] == ErrorCodes.FileFormatInvalid
+                            && !x.IsValid)),
             Times.Once);
     }
 
@@ -895,5 +895,69 @@ public class RegistrationServiceTests
             m => m.GetItemsFromCsvStreamAsync<PartnersDataRow>(It.IsAny<MemoryStream>()),
             Times.Once);
         _validationServiceMock.Verify(v => v.ValidateAppendedFileAsync(It.IsAny<List<PartnersDataRow>>()), Times.Once);
+    }
+
+    [TestMethod]
+    public void ProcessServiceBusMessage_WhenOrgCSVFileColumnHasTooManyCharacters_CallsValidateEventWithErrorExpected()
+    {
+        // Arrange
+        var blobName = "test";
+        var submissionId = Guid.NewGuid().ToString();
+        var userId = Guid.NewGuid().ToString();
+        var organisationId = Guid.NewGuid().ToString();
+        var submissionSubType = SubmissionSubType.CompanyDetails;
+
+        var csvDataRow =
+            CSVRowTestHelper.GenerateOrgCsvDataRowWithTooManyCharacters(
+                IncorrectOrganisationTypeCode,
+                IncorrectPackagingActivity);
+        _blobQueueMessage = new BlobQueueMessage
+        {
+            UserId = userId,
+            OrganisationId = organisationId,
+            SubmissionId = submissionId,
+            SubmissionSubType = submissionSubType.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>()))
+            .ReturnsAsync(
+                new List<OrganisationDataRow>
+                {
+                    csvDataRow,
+                });
+
+        _validationServiceMock
+            .Setup(x => x.IsColumnLengthExceeded(It.IsAny<List<OrganisationDataRow>>())).Returns(true);
+
+        var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
+
+        _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation)).ReturnsAsync(true);
+        _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableOrganisationDataRowValidation))
+            .ReturnsAsync(true);
+
+        // Act
+        Func<Task> f = async () => await _sut.ProcessServiceBusMessage(serialisedMessage);
+
+        // Assert
+        f.Should().NotThrowAsync<Exception>();
+        _submissionApiClientMock.Verify(
+            m =>
+                m.SendEventRegistrationMessage(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.Is<ValidationEvent>(x =>
+                        x.Type == EventType.Registration
+                        && x.Errors.Count == 1 && x.Errors[0] == ErrorCodes.CharacterLengthExceeded
+                        && x.BlobContainerName == ContainerName
+                        && x.BlobName == blobName
+                        && !x.IsValid)),
+            Times.Once);
     }
 }

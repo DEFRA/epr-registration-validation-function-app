@@ -287,6 +287,37 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
+    public async Task IsColumnLengthExceeded_WhenRowDoesNotExceedCharacterLimit_ReturnsFalse()
+    {
+        // Arrange
+        int rowCount = 10;
+        var dataRows = RowDataTestHelper.GenerateOrganisationCSVFile(rowCount);
+        var service = CreateService();
+
+        // Act
+        var results = service.IsColumnLengthExceeded(dataRows.ToList());
+
+        // Assert
+        results.Should().BeFalse();
+    }
+
+    [TestMethod]
+    [DataRow(0)]
+    [DataRow(1)]
+    public async Task IsColumnLengthExceeded_WhenRowExceedsCharacterLimit_ReturnsTrue(int index)
+    {
+        // Arrange
+        var service = CreateService();
+        var dataRows = RowDataTestHelper.GenerateOrganisationWithExceededCharacterLimit(index);
+
+        // Act
+        var results = service.IsColumnLengthExceeded(dataRows);
+
+        // Assert
+        results.Should().BeTrue();
+    }
+
+    [TestMethod]
     public async Task Validate_BrandFile_ExpectNoValidationError()
     {
         // Arrange

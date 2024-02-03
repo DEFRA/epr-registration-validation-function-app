@@ -128,24 +128,6 @@ public class RegistrationEventBuilderTests
     }
 
     [TestMethod]
-    [DataRow(EventType.BrandValidation)]
-    [DataRow(EventType.PartnerValidation)]
-    public void CreateValidationEvent_WhenBrandOrPartner_ReturnsCorrectRegistrationEvent(EventType eventTypeValue)
-    {
-        // Arrange
-        var eventType = eventTypeValue;
-        var blobName = "BlobName";
-        var blobContainerName = "BlobContainerName";
-        string[] errors = { "812", "813" };
-
-        // Act
-        ValidationEvent regEvent = RegistrationEventBuilder.CreateValidationEvent(eventType, blobName, blobContainerName, errors);
-
-        // Assert
-        RegistrationEventTestHelper.AssertValidationEvent(regEvent, eventTypeValue, blobName, blobContainerName, errors);
-    }
-
-    [TestMethod]
     public void CreateValidationEvent_WhenOrganisationDataHasValidationErrors_AndLessThanMaxNumberOfErrors_VerifyHasMaxRowErrorsIsFalse()
     {
         // Arrange
@@ -233,17 +215,35 @@ public class RegistrationEventBuilderTests
     {
         // Arrange
         var csvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(IncorrectOrganisationTypeCode, IncorrectPackagingActivity);
-
         var csvDataRows = new List<OrganisationDataRow>
         {
             csvDataRow,
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors: null, BlobName, ContainerName, ErrorLimit);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows,  validationErrors: null, BlobName, ContainerName, ErrorLimit);
 
         // Assert
         regEvent.Should().BeOfType<RegistrationValidationEvent>();
         regEvent.As<RegistrationValidationEvent>().RowErrorCount.Should().BeNull();
+    }
+
+    [TestMethod]
+    [DataRow(EventType.BrandValidation)]
+    [DataRow(EventType.PartnerValidation)]
+    [DataRow(EventType.Registration)]
+    public void CreateValidationEvent_WithEventType_ReturnsCorrectTypeOfRegistrationEvent(EventType eventTypeValue)
+    {
+        // Arrange
+        var eventType = eventTypeValue;
+        var blobName = "BlobName";
+        var blobContainerName = "BlobContainerName";
+        string[] errors = { "813" };
+
+        // Act
+        ValidationEvent regEvent = RegistrationEventBuilder.CreateValidationEvent(eventType, blobName, blobContainerName, errors);
+
+        // Assert
+        RegistrationEventTestHelper.AssertValidationEvent(regEvent, eventTypeValue, blobName, blobContainerName, errors);
     }
 }

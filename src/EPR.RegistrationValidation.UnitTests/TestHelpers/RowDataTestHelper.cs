@@ -204,4 +204,35 @@ public static class RowDataTestHelper
 
         return new List<PartnersDataRow> { partnerData };
     }
+
+    public static List<OrganisationDataRow> GenerateOrganisationWithExceededCharacterLimit(int columnIndex)
+    {
+        var organisationData = GenerateOrgs(1).First();
+        switch (columnIndex)
+        {
+            case 0:
+                organisationData.DefraId = new string('a', CharacterLimits.MaxLength + 1);
+                break;
+            case 1:
+                organisationData.SubsidiaryId = new string('a', CharacterLimits.MaxLength + 1);
+                break;
+            case 2:
+                organisationData.OrganisationName = new string('a', CharacterLimits.MaxLength + 1);
+                break;
+        }
+
+        return new List<OrganisationDataRow> { organisationData };
+    }
+
+    public static IEnumerable<OrganisationDataRow> GenerateOrganisationCSVFile(int total)
+    {
+        for (int i = 0; i < total; i++)
+        {
+            yield return new OrganisationDataRow()
+            {
+                DefraId = $"{_randomizer.Next(100, 100 + total)}",
+                SubsidiaryId = $"{_randomizer.Next(100, 100 + total)}",
+            };
+        }
+    }
 }
