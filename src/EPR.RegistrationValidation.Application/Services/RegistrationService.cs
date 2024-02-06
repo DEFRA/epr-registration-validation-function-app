@@ -131,6 +131,8 @@ public class RegistrationService : IRegistrationService
                 ErrorCodes.CsvFileEmptyErrorCode);
         }
 
+        int? organisationMemberCount = null;
+
         var validationErrors = new List<RegistrationValidationError>();
         if (await IsOrgDataValidationEnabledAsync(blobQueueMessage))
         {
@@ -146,12 +148,18 @@ public class RegistrationService : IRegistrationService
             validationErrors = await _validationService.ValidateOrganisationsAsync(csvRows);
         }
 
+        if (!validationErrors.Any())
+        {
+            organisationMemberCount = csvRows.GroupBy(row => row?.DefraId).Count();
+        }
+
         return CreateValidationEvent(
             csvRows,
             validationErrors,
             blobQueueMessage.BlobName,
             _options.BlobContainerName,
-            _validationSettings.ErrorLimit);
+            _validationSettings.ErrorLimit,
+            organisationMemberCount);
     }
 
     private async Task<ValidationEvent> ValidateFile<T>(BlobQueueMessage blobQueueMessage)

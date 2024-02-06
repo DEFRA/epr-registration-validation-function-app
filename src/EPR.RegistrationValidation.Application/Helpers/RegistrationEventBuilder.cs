@@ -27,9 +27,10 @@ public static class RegistrationEventBuilder
         List<RegistrationValidationError>? validationErrors,
         string blobName,
         string blobContainerName,
-        int errorLimit)
+        int errorLimit,
+        int? organisationMemberCount)
     {
-        return BuildRegistrationValidationEvent(csvItems, validationErrors: validationErrors, blobName, blobContainerName, errorLimit);
+        return BuildRegistrationValidationEvent(csvItems, validationErrors: validationErrors, blobName, blobContainerName, errorLimit, organisationMemberCount);
     }
 
     private static ValidationEvent BuildRegistrationValidationEvent(
@@ -37,7 +38,8 @@ public static class RegistrationEventBuilder
         List<RegistrationValidationError>? validationErrors,
         string blobName,
         string blobContainerName,
-        int errorLimit)
+        int errorLimit,
+        int? organisationMemberCount)
     {
         bool requiresPartnershipsFile = csvItems.Exists(row => Enum.IsDefined(typeof(RequiredOrganisationTypeCodeForPartners), row.OrganisationTypeCode));
         bool requiresBrandsFile = csvItems.Exists(row => Enum.IsDefined(typeof(RequiredPackagingActivityForBrands), row.PackagingActivitySO));
@@ -51,6 +53,7 @@ public static class RegistrationEventBuilder
             IsValid = validationErrors?.Count == 0,
             BlobName = blobName,
             BlobContainerName = blobContainerName,
+            OrganisationMemberCount = organisationMemberCount,
         };
 
         validationEvent.HasMaxRowErrors = validationEvent.RowErrorCount == errorLimit;

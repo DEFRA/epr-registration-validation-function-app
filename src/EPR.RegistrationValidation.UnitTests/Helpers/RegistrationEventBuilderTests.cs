@@ -37,7 +37,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, true, true, BlobName);
@@ -58,7 +58,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, true, false, BlobName);
@@ -80,7 +80,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, false, true, BlobName);
@@ -99,7 +99,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, false, false, BlobName);
@@ -121,7 +121,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, true, true, BlobName);
@@ -151,7 +151,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         regEvent.Should().BeOfType<RegistrationValidationEvent>();
@@ -182,7 +182,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         regEvent.Should().BeOfType<RegistrationValidationEvent>();
@@ -203,7 +203,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, emptyValidationErrors, BlobName, ContainerName, ErrorLimit);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, emptyValidationErrors, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         regEvent.Should().BeOfType<RegistrationValidationEvent>();
@@ -221,7 +221,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows,  validationErrors: null, BlobName, ContainerName, ErrorLimit);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows,  validationErrors: null, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         regEvent.Should().BeOfType<RegistrationValidationEvent>();

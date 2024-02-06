@@ -43,6 +43,7 @@ public static class RegistrationEventTestHelper
             ValidationErrors = new List<RegistrationValidationError>(),
             RequiresBrandsFile = requiresBrandsFile,
             RequiresPartnershipsFile = requiresPartnershipsFile,
+            OrganisationMemberCount = 2,
         };
     }
 

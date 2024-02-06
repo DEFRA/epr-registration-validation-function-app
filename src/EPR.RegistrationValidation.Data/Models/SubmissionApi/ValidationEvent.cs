@@ -13,4 +13,6 @@ public class ValidationEvent
     public string BlobName { get; set; }
 
     public string BlobContainerName { get; set; }
+
+    public int? OrganisationMemberCount { get; set; }
 }

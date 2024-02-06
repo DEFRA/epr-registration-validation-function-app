@@ -48,6 +48,7 @@ public class RegistrationEventTests
         validationErrors.Should().HaveCount(1);
         requiresBrandsFile.Should().BeTrue();
         requiresPartnershipsFile.Should().BeFalse();
+        registrationEvent.OrganisationMemberCount.Should().BeNull();
     }
 
     [TestMethod]

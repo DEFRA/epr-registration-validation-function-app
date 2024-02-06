@@ -275,7 +275,9 @@ public class RegistrationServiceTests
                     e.BlobContainerName == ContainerName
                     && e.BlobName == _blobQueueMessage.BlobName
                     && e.Errors.Count == 1 && e.Errors[0] == ErrorCodes.CsvFileEmptyErrorCode
-                    && !e.IsValid)),
+                    && !e.IsValid
+                    && e.OrganisationMemberCount == (int?)null
+                    && e.Type == EventType.Registration)),
             Times.Once);
         _loggerMock.VerifyLog(logger => logger.LogInformation("The CSV file for submission ID {SubmissionId} is empty", _blobQueueMessage.SubmissionId));
     }
