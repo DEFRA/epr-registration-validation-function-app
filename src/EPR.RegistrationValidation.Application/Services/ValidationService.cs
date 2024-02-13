@@ -192,7 +192,9 @@ public class ValidationService : IValidationService
                 .Where(row => subOrgTypeCodes.Contains(row.OrganisationSubTypeCode) && !string.IsNullOrEmpty(row.SubsidiaryId))
                 .Select(x => x.DefraId).ToHashSet();
 
-        foreach (var invalidHeadOrg in headOrgs.Where(x => !childOrgsIds.Contains(x.DefraId)))
+        foreach (var invalidHeadOrg in headOrgs
+            .Where(x => !childOrgsIds.Contains(x.DefraId))
+            .TakeWhile(_ => totalErrors < _validationSettings.ErrorLimit))
         {
             var orgSubTypeCodeValidationError = new ColumnValidationError
             {

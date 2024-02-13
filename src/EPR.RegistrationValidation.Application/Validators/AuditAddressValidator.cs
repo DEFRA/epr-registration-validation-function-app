@@ -13,6 +13,7 @@ public class AuditAddressValidator : AbstractValidator<OrganisationDataRow>
         AuditingCountryCodes.NorthernIreland,
         AuditingCountryCodes.Scotland,
         AuditingCountryCodes.Wales,
+        AuditingCountryCodes.UnitedKingdom,
         AuditingCountryCodes.En,
         AuditingCountryCodes.Uk,
         AuditingCountryCodes.Ws,
