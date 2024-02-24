@@ -27,7 +27,7 @@ public class TotalTonnageValidatorTest
         // Assert
         result.IsValid.Should().BeFalse();
         result.ShouldHaveValidationErrorFor(x => x.TotalTonnage);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.TotalTonnageMustBeGreaterThanZero);
+        result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.TotalTonnageMustBeGreaterThanZero);
     }
 
     [TestMethod]
@@ -46,7 +46,7 @@ public class TotalTonnageValidatorTest
         // Assert
         result.IsValid.Should().BeFalse();
         result.ShouldHaveValidationErrorFor(x => x.TotalTonnage);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.TotalTonnageMustBeGreaterThanZero);
+        result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.TotalTonnageMustBeGreaterThanZero);
     }
 
     [TestMethod]
@@ -65,7 +65,7 @@ public class TotalTonnageValidatorTest
         // Assert
         result.IsValid.Should().BeFalse();
         result.ShouldHaveValidationErrorFor(x => x.TotalTonnage);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.TotalTonnageMustBeGreaterThanZero);
+        result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.TotalTonnageMustBeGreaterThanZero);
     }
 
     [TestMethod]
@@ -84,7 +84,7 @@ public class TotalTonnageValidatorTest
         // Assert
         result.IsValid.Should().BeFalse();
         result.ShouldHaveValidationErrorFor(x => x.TotalTonnage);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.TotalTonnageIncludesComma);
+        result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.TotalTonnageIncludesComma);
     }
 
     [TestMethod]
@@ -111,7 +111,6 @@ public class TotalTonnageValidatorTest
     [TestMethod]
     [DataRow("0 5")]
     [DataRow("1 1")]
-    [DataRow("1,1")]
     [DataRow("£1.10")]
     [DataRow("ABC123")]
     [DataRow(" 14 ")]
@@ -130,6 +129,6 @@ public class TotalTonnageValidatorTest
         // Assert
         result.IsValid.Should().BeFalse();
         result.ShouldHaveValidationErrorFor(x => x.TotalTonnage);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.TotalTonnageIsNotNumber);
+        result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.TotalTonnageIsNotNumber);
     }
 }

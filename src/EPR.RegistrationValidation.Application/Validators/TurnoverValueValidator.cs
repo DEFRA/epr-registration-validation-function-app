@@ -10,32 +10,35 @@ public class TurnoverValueValidator : AbstractValidator<OrganisationDataRow>
     public TurnoverValueValidator()
     {
         RuleFor(turnoverValue => turnoverValue.Turnover)
-            .Must(NotContainComma).WithErrorCode(ErrorCodes.TurnoverHasComma);
-
-        RuleFor(turnoverValue => turnoverValue.Turnover)
-            .Must(BeGreaterThanZero).WithErrorCode(ErrorCodes.TurnoverHasZeroOrNegativeValue);
-
-        RuleFor(turnoverValue => turnoverValue.Turnover)
-            .Must(BeNumeric).WithErrorCode(ErrorCodes.InvalidTurnoverDigits);
-
-        RuleFor(turnoverValue => turnoverValue.Turnover)
-            .Must(BeMaxTwoDecimalPlaces).WithErrorCode(ErrorCodes.InvalidTurnoverDecimalValues);
+            .Cascade(CascadeMode.StopOnFirstFailure)
+            .Must(NotContainComma).WithErrorCode(ErrorCodes.TurnoverHasComma)
+            .Must(BeNumeric).WithErrorCode(ErrorCodes.InvalidTurnoverDigits)
+            .Must(BeGreaterThanZero).WithErrorCode(ErrorCodes.TurnoverHasZeroOrNegativeValue)
+            .Must(BeMaxTwoDecimalPlaces).WithErrorCode(ErrorCodes.InvalidTurnoverDecimalValues)
+            .When(orgRow => !string.IsNullOrEmpty(orgRow.Turnover));
     }
 
     private static bool NotContainComma(string number)
     {
-        return !string.IsNullOrEmpty(number) &&
-              !number.Contains(',');
+        return !number.Contains(',');
     }
 
     private static bool BeGreaterThanZero(string number)
     {
-        return decimal.TryParse(number, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out decimal decimalValue) && decimalValue > 0;
+        return decimal.TryParse(
+            number,
+            NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign,
+            CultureInfo.InvariantCulture,
+            out decimal decimalValue) && decimalValue > 0;
     }
 
     private static bool BeMaxTwoDecimalPlaces(string number)
     {
-        if (decimal.TryParse(number, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out decimal decimalValue))
+        if (decimal.TryParse(
+            number,
+            NumberStyles.AllowDecimalPoint,
+            CultureInfo.InvariantCulture,
+            out decimal decimalValue))
         {
             return decimalValue == decimal.Round(decimalValue, 2);
         }
@@ -45,6 +48,10 @@ public class TurnoverValueValidator : AbstractValidator<OrganisationDataRow>
 
     private static bool BeNumeric(string number)
     {
-        return decimal.TryParse(number, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out _);
+        return decimal.TryParse(
+            number,
+            NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign,
+            CultureInfo.InvariantCulture,
+            out _);
     }
 }

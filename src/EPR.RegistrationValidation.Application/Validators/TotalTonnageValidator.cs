@@ -10,15 +10,20 @@ public class TotalTonnageValidator : AbstractValidator<OrganisationDataRow>
     public TotalTonnageValidator()
     {
         RuleFor(x => x.TotalTonnage)
-            .Must(BeNumeric).WithErrorCode(ErrorCodes.TotalTonnageIsNotNumber)
+            .Cascade(CascadeMode.StopOnFirstFailure)
             .Must(NotContainComma).WithErrorCode(ErrorCodes.TotalTonnageIncludesComma)
+            .Must(BeNumeric).WithErrorCode(ErrorCodes.TotalTonnageIsNotNumber)
             .Must(BeGreaterThanZero).WithErrorCode(ErrorCodes.TotalTonnageMustBeGreaterThanZero)
             .When(orgRow => !string.IsNullOrEmpty(orgRow.TotalTonnage));
     }
 
     private static bool BeNumeric(string number)
     {
-        return decimal.TryParse(number, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out _);
+        return decimal.TryParse(
+            number,
+            NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign,
+            CultureInfo.InvariantCulture,
+            out _);
     }
 
     private static bool NotContainComma(string number)
@@ -28,6 +33,10 @@ public class TotalTonnageValidator : AbstractValidator<OrganisationDataRow>
 
     private static bool BeGreaterThanZero(string number)
     {
-        return decimal.TryParse(number, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out decimal decimalValue) && decimalValue > 0;
+        return decimal.TryParse(
+            number,
+            NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign,
+            CultureInfo.InvariantCulture,
+            out decimal decimalValue) && decimalValue > 0;
     }
 }

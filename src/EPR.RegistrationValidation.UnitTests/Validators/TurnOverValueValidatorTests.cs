@@ -1,6 +1,5 @@
 ﻿namespace EPR.RegistrationValidation.UnitTests.Validators;
 
-using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Application.Validators;
 using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
@@ -27,7 +26,7 @@ public class TurnOverValueValidatorTests
         // Assert
         result.IsValid.Should().BeFalse();
         result.ShouldHaveValidationErrorFor(x => x.Turnover);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.TurnoverHasZeroOrNegativeValue);
+        result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.TurnoverHasZeroOrNegativeValue);
     }
 
     [TestMethod]
@@ -46,7 +45,7 @@ public class TurnOverValueValidatorTests
         // Assert
         result.IsValid.Should().BeFalse();
         result.ShouldHaveValidationErrorFor(x => x.Turnover);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.TurnoverHasComma);
+        result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.TurnoverHasComma);
     }
 
     [TestMethod]
@@ -65,29 +64,7 @@ public class TurnOverValueValidatorTests
         // Assert
         result.IsValid.Should().BeFalse();
         result.ShouldHaveValidationErrorFor(x => x.Turnover);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.TurnoverHasZeroOrNegativeValue);
-    }
-
-    [TestMethod]
-    public async Task Validate_InvalidTurnover_IsNotValid()
-    {
-        // Arrange
-        var validator = new TurnoverValueValidator();
-        var orgDataRow = new OrganisationDataRow
-        {
-            Turnover = "-19,00o.999",
-        };
-
-        // Act
-        var result = await validator.TestValidateAsync(orgDataRow);
-
-        // Assert
-        result.IsValid.Should().BeFalse();
-        result.ShouldHaveValidationErrorFor(x => x.Turnover);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.InvalidTurnoverDecimalValues);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.InvalidTurnoverDigits);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.TurnoverHasZeroOrNegativeValue);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.TurnoverHasComma);
+        result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.TurnoverHasZeroOrNegativeValue);
     }
 
     [TestMethod]
@@ -115,7 +92,6 @@ public class TurnOverValueValidatorTests
 
     [TestMethod]
     [DataRow("1 2")]
-    [DataRow("12,5")]
     [DataRow("12u55")]
     [DataRow(" 12345 ")]
     [DataRow("£12345")]
@@ -134,7 +110,7 @@ public class TurnOverValueValidatorTests
         // Assert
         result.IsValid.Should().BeFalse();
         result.ShouldHaveValidationErrorFor(x => x.Turnover);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.InvalidTurnoverDigits);
+        result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.InvalidTurnoverDigits);
     }
 
     [TestMethod]
@@ -154,6 +130,6 @@ public class TurnOverValueValidatorTests
         // Assert
         result.IsValid.Should().BeFalse();
         result.ShouldHaveValidationErrorFor(x => x.Turnover);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.InvalidTurnoverDecimalValues);
+        result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.InvalidTurnoverDecimalValues);
     }
 }
