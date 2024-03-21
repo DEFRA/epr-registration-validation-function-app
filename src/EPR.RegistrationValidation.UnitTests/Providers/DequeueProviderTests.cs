@@ -11,7 +11,7 @@ using TestHelpers;
 [TestClass]
 public class DequeueProviderTests
 {
-    private DequeueProvider _sut = new DequeueProvider();
+    private DequeueProvider _sut = new();
 
     [TestInitialize]
     public void SetUp()
@@ -25,16 +25,18 @@ public class DequeueProviderTests
         var submissionId = Guid.NewGuid().ToString();
         var userId = Guid.NewGuid().ToString();
         var organisationId = Guid.NewGuid().ToString();
+        var complianceSchemeId = Guid.NewGuid().ToString();
         var submissionSubType = SubmissionSubType.CompanyDetails;
         var userType = UserType.Producer.ToString();
         var blobName = "BN";
-        var message = QueueMessageTestHelper.GenerateMessage(blobName, submissionId, submissionSubType.ToString(), userId, organisationId, userType);
+        var message = QueueMessageTestHelper.GenerateMessage(blobName, submissionId, submissionSubType.ToString(), userId, organisationId, complianceSchemeId, userType);
 
         // Act
         var response = _sut.GetMessageFromJson<BlobQueueMessage>(message);
 
         // Assert
         response.OrganisationId.Should().Be(organisationId);
+        response.ComplianceSchemeId.Should().Be(complianceSchemeId);
         response.UserId.Should().Be(userId);
         response.SubmissionId.Should().Be(submissionId);
         response.SubmissionSubType.Should().Be(submissionSubType.ToString());

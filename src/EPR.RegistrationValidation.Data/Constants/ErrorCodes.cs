@@ -55,4 +55,6 @@ public static class ErrorCodes
     public const string CompanyHouseNumberMustBeEmpty = "860";
     public const string MissingOrganisationTypeCode = "880";
     public const string InvalidOrganisationTypeCode = "881";
+    public const string CompaniesHouseNumberNotMatchOrganisationId = "861";
+    public const string CheckOrganisationId = "882";
 }

@@ -114,6 +114,21 @@ public class RegistrationService : IRegistrationService
         }
     }
 
+    private static EventType GetEventType(string submissionSubType)
+    {
+        switch (submissionSubType)
+        {
+            case nameof(SubmissionSubType.CompanyDetails):
+                return EventType.Registration;
+            case nameof(SubmissionSubType.Brands):
+                return EventType.BrandValidation;
+            case nameof(SubmissionSubType.Partnerships):
+                return EventType.PartnerValidation;
+        }
+
+        throw new Exception("Invalid submissionSubType");
+    }
+
     private async Task<ValidationEvent> ValidateRegistrationFile(BlobQueueMessage blobQueueMessage)
     {
         var csvRows = await ParseFile<OrganisationDataRow>(blobQueueMessage);
@@ -145,7 +160,7 @@ public class RegistrationService : IRegistrationService
                     ErrorCodes.CharacterLengthExceeded);
             }
 
-            validationErrors = await _validationService.ValidateOrganisationsAsync(csvRows);
+            validationErrors = await _validationService.ValidateOrganisationsAsync(csvRows, blobQueueMessage);
         }
 
         if (!validationErrors.Any())
@@ -197,21 +212,6 @@ public class RegistrationService : IRegistrationService
     {
         using var blobMemoryStream = _blobReader.DownloadBlobToStream(blobQueueMessage.BlobName);
         return await _csvStreamParser.GetItemsFromCsvStreamAsync<T>(blobMemoryStream);
-    }
-
-    private EventType GetEventType(string submissionSubType)
-    {
-        switch (submissionSubType)
-        {
-            case nameof(SubmissionSubType.CompanyDetails):
-                return EventType.Registration;
-            case nameof(SubmissionSubType.Brands):
-                return EventType.BrandValidation;
-            case nameof(SubmissionSubType.Partnerships):
-                return EventType.PartnerValidation;
-        }
-
-        throw new Exception("Invalid submissionSubType");
     }
 
     private async Task<bool> IsOrgDataValidationEnabledAsync(BlobQueueMessage blobQueueMessage)

@@ -359,7 +359,7 @@ public class RegistrationServiceTests
                 });
 
         _validationServiceMock
-            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>()))
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage))
             .ReturnsAsync(new List<RegistrationValidationError>
             {
                 It.IsAny<RegistrationValidationError>(),
@@ -379,7 +379,7 @@ public class RegistrationServiceTests
 
         // Assert
         _validationServiceMock.Verify(
-            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>()),
+            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage),
             Times.Never);
     }
 
@@ -418,7 +418,7 @@ public class RegistrationServiceTests
                 });
 
         _validationServiceMock
-            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>()))
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage))
             .ReturnsAsync(new List<RegistrationValidationError>
             {
                 It.IsAny<RegistrationValidationError>(),
@@ -439,7 +439,7 @@ public class RegistrationServiceTests
         // Assert
         f.Should().NotThrowAsync<Exception>();
         _validationServiceMock.Verify(
-            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>()),
+            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage),
             Times.Once);
     }
 
@@ -476,7 +476,7 @@ public class RegistrationServiceTests
                 });
 
         _validationServiceMock
-            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>()))
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage))
             .ReturnsAsync(new List<RegistrationValidationError>
             {
                 It.IsAny<RegistrationValidationError>(),
@@ -497,7 +497,7 @@ public class RegistrationServiceTests
         // Assert
         f.Should().NotThrowAsync<Exception>();
         _validationServiceMock.Verify(
-            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>()),
+            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage),
             Times.Never);
     }
 

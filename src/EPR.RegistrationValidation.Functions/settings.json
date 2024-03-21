@@ -9,9 +9,13 @@
     "StorageAccount:ConnectionString": "AccountName=devrwdwebsa1402",
     "StorageAccount:BlobContainerName": "registration-upload-container",
     "SubmissionApi:BaseUrl": "https://localhost:7206/",
+    "CompanyDetailsApi:BaseUrl": "http://localhost:7076/",
+    "CompanyDetailsApi:Timeout": 10,
+    "CompanyDetailsApi:ClientId": "",
     "ValidationSettings:ErrorLimit": 200,
     "FeatureManagement:EnableRowValidation": false,
     "FeatureManagement:EnableOrganisationDataRowValidation": false,
-    "FeatureManagement:EnableBrandPartnerDataRowValidation": false
+    "FeatureManagement:EnableBrandPartnerDataRowValidation": false,
+    "FeatureManagement:EnableCompanyDetailsValidation": false
   }
 }

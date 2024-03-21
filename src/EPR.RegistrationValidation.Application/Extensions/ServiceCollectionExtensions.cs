@@ -1,7 +1,7 @@
 ﻿namespace EPR.RegistrationValidation.Application.Extensions;
 
 using System.Diagnostics.CodeAnalysis;
-using Clients;
+using EPR.RegistrationValidation.Application.Handlers;
 using EPR.RegistrationValidation.Application.Validators;
 using Helpers;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,7 +22,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRegistrationService, RegistrationService>();
         services.AddScoped<IDequeueProvider, DequeueProvider>();
         services.AddScoped<IBlobReader, BlobReader>();
-        services.AddScoped<ISubmissionApiClient, SubmissionApiClient>();
+        services.AddTransient<CompanyDetailsApiAuthorisationHandler>();
         services.AddScoped<IValidationService, ValidationService>();
         services.AddScoped<OrganisationDataRowValidator>();
         services.AddScoped<BrandDataRowValidator>();

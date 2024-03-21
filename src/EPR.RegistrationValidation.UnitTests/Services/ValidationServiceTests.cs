@@ -1,5 +1,6 @@
 ﻿namespace EPR.RegistrationValidation.UnitTests.Services;
 
+using EPR.RegistrationValidation.Application.Clients;
 using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Application.Helpers;
 using EPR.RegistrationValidation.Application.Services;
@@ -7,16 +8,22 @@ using EPR.RegistrationValidation.Application.Validators;
 using EPR.RegistrationValidation.Data.Config;
 using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
+using EPR.RegistrationValidation.Data.Models.CompanyDetailsApi;
+using EPR.RegistrationValidation.Data.Models.QueueMessages;
 using EPR.RegistrationValidation.UnitTests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.FeatureManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
 [TestClass]
 public class ValidationServiceTests
 {
+    private Mock<IFeatureManager> _featureManagerMock;
+    private Mock<ICompanyDetailsApiClient> _companyDetailsApiClientMock;
+
     [TestMethod]
     public async Task Validate_WithoutOrgId_ExpectOrgIdValidationError()
     {
@@ -26,9 +33,10 @@ public class ValidationServiceTests
         const string expectedColumnName = "organisation_id";
         var service = CreateService();
         var dataRows = new List<OrganisationDataRow> { new() };
+        var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows);
+        var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage);
 
         // Assert
         var validationError = results.First(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.MissingOrganisationId));
@@ -75,9 +83,10 @@ public class ValidationServiceTests
                 OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
             },
         };
+        var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows);
+        var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage);
 
         // Assert
         results.Should().BeEmpty();
@@ -91,9 +100,10 @@ public class ValidationServiceTests
         int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount);
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+        var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows.ToList());
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage);
 
         // Assert
         results.Should().BeEmpty();
@@ -107,9 +117,10 @@ public class ValidationServiceTests
         int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgIdSubId(rowCount);
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+        var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows.ToList());
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage);
 
         // Assert
         results.Should().BeEmpty();
@@ -124,9 +135,10 @@ public class ValidationServiceTests
         var dataRows = RowDataTestHelper.GenerateDuplicateOrgIdSubId(rowCount);
 
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+        var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows.ToList());
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage);
 
         // Assert
         var validationError = results.First(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.DuplicateOrganisationIdSubsidiaryId));
@@ -141,9 +153,10 @@ public class ValidationServiceTests
         int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateDuplicateOrgIdSubId(rowCount);
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+        var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows.ToList());
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage);
 
         // Assert
         results.Sum(x => x.ColumnErrors.Count).Should().Be(maxErrors);
@@ -256,9 +269,10 @@ public class ValidationServiceTests
         var service = CreateService();
 
         dataRow.MainActivitySic = "123456";
+        var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow });
+        var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow }, blobQueueMessage);
 
         // Assert
         var columnError = errors.Single().ColumnErrors.Single();
@@ -275,9 +289,10 @@ public class ValidationServiceTests
         var service = CreateService();
 
         dataRow.TradingName = dataRow.OrganisationName;
+        var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow });
+        var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow }, blobQueueMessage);
 
         // Assert
         var columnError = errors.Single().ColumnErrors.Single();
@@ -420,14 +435,290 @@ public class ValidationServiceTests
         results.Count.Should().Be(1);
     }
 
-    private static ValidationService CreateService(ValidationSettings? settings = null)
+    [TestMethod]
+    public async Task ValidateOrganisation_AsProducerUser()
     {
+        // Arrange
+        int rowCount = 4;
+        int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
+        dataRows[0].DefraId = "100001";
+        dataRows[0].CompaniesHouseNumber = "110011";
+        dataRows[1].DefraId = "200002";
+        dataRows[1].CompaniesHouseNumber = "220022";
+        dataRows[2].DefraId = "300003";
+        dataRows[2].CompaniesHouseNumber = "330033";
+        dataRows[3].DefraId = "400004";
+        dataRows[3].CompaniesHouseNumber = "440044";
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableCompanyDetailsValidation))
+            .ReturnsAsync(true);
+
+        var companyDetailsOrganisations1 = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations1.Add(new CompanyDetailsDataItem { ReferenceNumber = "100001", CompaniesHouseNumber = "110011" });
+        var companyDetailsDataResult1 = new CompanyDetailsDataResult { Organisations = companyDetailsOrganisations1 };
+        var companyDetailsOrganisations2 = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations2.Add(new CompanyDetailsDataItem { ReferenceNumber = "200002", CompaniesHouseNumber = "220022" });
+        var companyDetailsDataResult2 = new CompanyDetailsDataResult { Organisations = companyDetailsOrganisations2 };
+        var companyDetailsOrganisations3 = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations3.Add(new CompanyDetailsDataItem { ReferenceNumber = "300003", CompaniesHouseNumber = "330033" });
+        var companyDetailsDataResult3 = new CompanyDetailsDataResult { Organisations = companyDetailsOrganisations3 };
+        var companyDetailsOrganisations4 = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations4.Add(new CompanyDetailsDataItem { ReferenceNumber = "400004", CompaniesHouseNumber = "440044" });
+        var companyDetailsDataResult4 = new CompanyDetailsDataResult { Organisations = companyDetailsOrganisations4 };
+
+        var producer = new List<CompanyDetailsDataItem>();
+        producer.Add(new CompanyDetailsDataItem { ReferenceNumber = "13202f0d-bde8-422c-974a-f1dec1b32fff", CompaniesHouseNumber = "110055" });
+        var producerResult = new CompanyDetailsDataResult { Organisations = producer };
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetCompanyDetails("100001"))
+            .ReturnsAsync(companyDetailsDataResult1);
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetCompanyDetails("200002"))
+            .ReturnsAsync(companyDetailsDataResult2);
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetCompanyDetails("300003"))
+            .ReturnsAsync(companyDetailsDataResult3);
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetCompanyDetails("400004"))
+            .ReturnsAsync(companyDetailsDataResult4);
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetCompanyDetails("13202f0d-bde8-422c-974a-f1dec1b32fff"))
+            .ReturnsAsync(producerResult);
+
+        // Act
+        var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, string.Empty, string.Empty);
+
+        // Assert
+        var validationError = results.ValidationErrors.Count;
+        results.ValidationErrors.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisation_AsComplianceSchemeUser()
+    {
+        // Arrange
+        int rowCount = 4;
+        int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
+        dataRows[0].DefraId = "100001";
+        dataRows[0].CompaniesHouseNumber = "110011";
+        dataRows[1].DefraId = "200002";
+        dataRows[1].CompaniesHouseNumber = "220022";
+        dataRows[2].DefraId = "300003";
+        dataRows[2].CompaniesHouseNumber = "330033";
+        dataRows[3].DefraId = "400004";
+        dataRows[3].CompaniesHouseNumber = "440044";
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableCompanyDetailsValidation))
+            .ReturnsAsync(true);
+
+        var companyDetailsOrganisations1 = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations1.Add(new CompanyDetailsDataItem { ReferenceNumber = "100001", CompaniesHouseNumber = "110011" });
+        var companyDetailsDataResult1 = new CompanyDetailsDataResult { Organisations = companyDetailsOrganisations1 };
+        var companyDetailsOrganisations2 = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations2.Add(new CompanyDetailsDataItem { ReferenceNumber = "200002", CompaniesHouseNumber = "220022" });
+        var companyDetailsDataResult2 = new CompanyDetailsDataResult { Organisations = companyDetailsOrganisations2 };
+        var companyDetailsOrganisations3 = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations3.Add(new CompanyDetailsDataItem { ReferenceNumber = "300003", CompaniesHouseNumber = "330033" });
+        var companyDetailsDataResult3 = new CompanyDetailsDataResult { Organisations = companyDetailsOrganisations3 };
+        var companyDetailsOrganisations4 = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations4.Add(new CompanyDetailsDataItem { ReferenceNumber = "400004", CompaniesHouseNumber = "440044" });
+        var companyDetailsDataResult4 = new CompanyDetailsDataResult { Organisations = companyDetailsOrganisations4 };
+
+        var companyDetailsComplianceSchemeMembers = new List<CompanyDetailsDataItem>();
+        companyDetailsComplianceSchemeMembers.Add(new CompanyDetailsDataItem { ReferenceNumber = "100005", CompaniesHouseNumber = "110055" });
+        companyDetailsComplianceSchemeMembers.Add(new CompanyDetailsDataItem { ReferenceNumber = "100006", CompaniesHouseNumber = "110066" });
+        companyDetailsComplianceSchemeMembers.Add(new CompanyDetailsDataItem { ReferenceNumber = "100007", CompaniesHouseNumber = "110077" });
+        var complianceSchemeMembers = new CompanyDetailsDataResult { Organisations = companyDetailsComplianceSchemeMembers };
+
+        var otherCompanyDetailsOrganisations = new List<CompanyDetailsDataItem>();
+        otherCompanyDetailsOrganisations.Add(new CompanyDetailsDataItem { ReferenceNumber = "200002", CompaniesHouseNumber = "220022" });
+        otherCompanyDetailsOrganisations.Add(new CompanyDetailsDataItem { ReferenceNumber = "300003", CompaniesHouseNumber = "330033" });
+        otherCompanyDetailsOrganisations.Add(new CompanyDetailsDataItem { ReferenceNumber = "400004", CompaniesHouseNumber = "440044" });
+        var otherCompanyDetailsDataResult = new CompanyDetailsDataResult { Organisations = otherCompanyDetailsOrganisations };
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetComplianceSchemeMembers("100001", "85a8b24f-d192-461f-8a0b-87dc54f63453"))
+            .ReturnsAsync(companyDetailsDataResult1);
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetCompanyDetails("100001"))
+            .ReturnsAsync(companyDetailsDataResult1);
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()))
+            .ReturnsAsync(otherCompanyDetailsDataResult);
+
+        // Act
+        var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, "85a8b24f-d192-461f-8a0b-87dc54f63453", string.Empty);
+
+        // Assert
+        var validationError = results.ValidationErrors.Count;
+        results.ValidationErrors.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisation_AsProducerUser_FailureErrorMessage()
+    {
+        // Arrange
+        int rowCount = 6;
+        int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableCompanyDetailsValidation))
+            .ReturnsAsync(true);
+
+        var organisation = new CompanyDetailsDataItem
+        {
+            ReferenceNumber = "123456",
+            CompaniesHouseNumber = "X1234567",
+        };
+
+        var companyDetailsOrganisations = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations.Add(organisation);
+        var companyDetailsDataResult = new CompanyDetailsDataResult();
+        companyDetailsDataResult.Organisations = companyDetailsOrganisations;
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetCompanyDetails(It.IsAny<string>()))
+            .ReturnsAsync(companyDetailsDataResult);
+
+        // Act
+        var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, string.Empty, string.Empty);
+
+        // Assert
+        var validationError = results.ValidationErrors.First(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.CheckOrganisationId));
+        validationError.Should().NotBeNull();
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisation_AsComplianceSchemeUser_FailureErrorMessage()
+    {
+        // Arrange
+        int rowCount = 6;
+        int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableCompanyDetailsValidation))
+            .ReturnsAsync(true);
+
+        var organisation = new CompanyDetailsDataItem
+        {
+            ReferenceNumber = "123456",
+            CompaniesHouseNumber = "X1234567",
+        };
+
+        var companyDetailsOrganisations = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations.Add(organisation);
+        var companyDetailsDataResult = new CompanyDetailsDataResult();
+        companyDetailsDataResult.Organisations = companyDetailsOrganisations;
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(companyDetailsDataResult);
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()))
+            .ReturnsAsync(companyDetailsDataResult);
+
+        // Act
+        var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, "13202f0d-bde8-422c-974a-f1dec1b32fff", string.Empty);
+
+        // Assert
+        var validationError = results.ValidationErrors.First(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.CheckOrganisationId));
+        validationError.Should().NotBeNull();
+
+        _companyDetailsApiClientMock.Verify(
+            m => m.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Exactly(rowCount));
+        _companyDetailsApiClientMock.Verify(
+            m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()),
+            Times.Once);
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisation_AsComplianceSchemeUser_AdditionalMembers_FailureErrorMessage()
+    {
+        // Arrange
+        int rowCount = 6;
+        int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableCompanyDetailsValidation))
+            .ReturnsAsync(true);
+
+        var organisation = new CompanyDetailsDataItem
+        {
+            ReferenceNumber = "123456",
+            CompaniesHouseNumber = "X1234567",
+        };
+
+        var companyDetailsOrganisations = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations.Add(organisation);
+        var companyDetailsDataResult = new CompanyDetailsDataResult();
+        companyDetailsDataResult.Organisations = companyDetailsOrganisations;
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(companyDetailsDataResult);
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()))
+            .ReturnsAsync(default(CompanyDetailsDataResult));
+
+        // Act
+        var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, "13202f0d-bde8-422c-974a-f1dec1b32fff", string.Empty);
+
+        // Assert
+        var validationError = results.ValidationErrors.First(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.CheckOrganisationId));
+        validationError.Should().NotBeNull();
+
+        _companyDetailsApiClientMock.Verify(
+            m => m.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Exactly(rowCount));
+        _companyDetailsApiClientMock.Verify(
+            m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()),
+            Times.Once);
+    }
+
+    private ValidationService CreateService(ValidationSettings? settings = null)
+    {
+        _featureManagerMock = new Mock<IFeatureManager>();
+        _companyDetailsApiClientMock = new Mock<ICompanyDetailsApiClient>();
+
         return new ValidationService(
             new OrganisationDataRowValidator(),
             new BrandDataRowValidator(),
             new PartnerDataRowValidator(),
             new ColumnMetaDataProvider(),
             Options.Create(settings ?? new ValidationSettings()),
+            _companyDetailsApiClientMock.Object,
+            _featureManagerMock.Object,
             Mock.Of<ILogger<ValidationService>>());
     }
 

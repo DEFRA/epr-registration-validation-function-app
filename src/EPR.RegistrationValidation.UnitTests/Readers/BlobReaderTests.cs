@@ -48,7 +48,7 @@ public class BlobReaderTests
         var memoryStream = _sut.DownloadBlobToStream("test");
 
         // Assert
-        StreamReader reader = new StreamReader(memoryStream);
+        var reader = new StreamReader(memoryStream);
         string text = await reader.ReadToEndAsync();
         text.Should().BeEmpty();
     }

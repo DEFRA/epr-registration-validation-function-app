@@ -17,5 +17,7 @@ public class BlobQueueMessage
 
     public string OrganisationId { get; init; }
 
+    public string ComplianceSchemeId { get; init; }
+
     public bool? RequiresRowValidation { get; init; }
 }

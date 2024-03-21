@@ -9,6 +9,7 @@ namespace EPR.RegistrationValidation.Functions
     using System.Net.Http.Headers;
     using Application.Clients;
     using Application.Extensions;
+    using Application.Handlers;
     using Data.Config;
     using Extensions;
     using Microsoft.Azure.Functions.Extensions.DependencyInjection;
@@ -34,6 +35,15 @@ namespace EPR.RegistrationValidation.Functions
                 c.BaseAddress = new Uri(submissionApiConfig.BaseUrl);
                 c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             });
+
+            services.AddHttpClient<ICompanyDetailsApiClient, CompanyDetailsApiClient>((sp, c) =>
+            {
+                var companyDetailsApiConfig = sp.GetRequiredService<IOptions<CompanyDetailsApiConfig>>().Value;
+                c.BaseAddress = new Uri(companyDetailsApiConfig.BaseUrl);
+                c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                c.Timeout = TimeSpan.FromSeconds(companyDetailsApiConfig.Timeout);
+            })
+            .AddHttpMessageHandler<CompanyDetailsApiAuthorisationHandler>();
         }
     }
 }
