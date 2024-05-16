@@ -8,6 +8,7 @@ public static class ErrorCodes
     public const string FileFormatInvalid = "80";
     public const string CsvFileEmptyErrorCode = "82";
     public const string CsvFileInvalidHeaderErrorCode = "83";
+    public const string UncaughtExceptionErrorCode = "89";
     public const string MissingOrganisationId = "801";
     public const string MissingOrganisationName = "802";
     public const string MissingHomeNationCode = "803";
@@ -57,4 +58,6 @@ public static class ErrorCodes
     public const string InvalidOrganisationTypeCode = "881";
     public const string CompaniesHouseNumberNotMatchOrganisationId = "861";
     public const string CheckOrganisationId = "882";
+    public const string BrandDetailsNotMatchingOrganisation = "890";
+    public const string PartnerDetailsNotMatchingOrganisation = "891";
 }

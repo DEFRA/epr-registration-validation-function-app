@@ -4,7 +4,6 @@ using Data.Models;
 using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Data.Constants;
 using FluentValidation;
-using FluentValidation.Results;
 
 public class PackagingActivityValidator : AbstractValidator<OrganisationDataRow>
 {

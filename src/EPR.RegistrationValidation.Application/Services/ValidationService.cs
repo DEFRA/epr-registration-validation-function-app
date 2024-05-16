@@ -1,5 +1,8 @@
 ﻿namespace EPR.RegistrationValidation.Application.Services;
 
+using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Reflection;
 using EPR.RegistrationValidation.Application.Clients;
@@ -11,12 +14,13 @@ using EPR.RegistrationValidation.Data.Config;
 using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
 using EPR.RegistrationValidation.Data.Models.CompanyDetailsApi;
+using EPR.RegistrationValidation.Data.Models.OrganisationDataLookup;
 using EPR.RegistrationValidation.Data.Models.QueueMessages;
 using EPR.RegistrationValidation.Data.Models.SubmissionApi;
+using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.FeatureManagement;
 
 public class ValidationService : IValidationService
 {
@@ -26,7 +30,6 @@ public class ValidationService : IValidationService
     private readonly ColumnMetaDataProvider _metaDataProvider;
     private readonly ValidationSettings _validationSettings;
     private readonly ILogger<ValidationService> _logger;
-    private readonly IFeatureManager _featureManager;
     private readonly ICompanyDetailsApiClient _companyDetailsApiClient;
 
     public ValidationService(
@@ -36,20 +39,18 @@ public class ValidationService : IValidationService
         ColumnMetaDataProvider metaDataProvider,
         IOptions<ValidationSettings> validationSettings,
         ICompanyDetailsApiClient companyDetailsApiClient,
-        IFeatureManager featureManager,
         ILogger<ValidationService> logger)
     {
         _organisationDataRowValidator = organisationDataRowValidator;
         _brandDataRowValidator = brandDataRowValidator;
         _partnerDataRowValidator = partnerDataRowValidator;
         _metaDataProvider = metaDataProvider;
-        _featureManager = featureManager;
         _companyDetailsApiClient = companyDetailsApiClient;
         _logger = logger;
         _validationSettings = validationSettings.Value;
     }
 
-    public async Task<List<RegistrationValidationError>> ValidateOrganisationsAsync(List<OrganisationDataRow> rows, BlobQueueMessage blobQueueMessage)
+    public async Task<List<RegistrationValidationError>> ValidateOrganisationsAsync(List<OrganisationDataRow> rows, BlobQueueMessage blobQueueMessage, bool validateCompanyDetailsData)
     {
         List<RegistrationValidationError> validationErrors = new();
 
@@ -62,10 +63,17 @@ public class ValidationService : IValidationService
         var organisationSubTypeValidationResult = ValidateOrganisationSubType(rows, duplicateValidationResult.TotalErrors);
         validationErrors.AddRange(organisationSubTypeValidationResult.ValidationErrors);
 
-        var companyDetailsValidationResult = await ValidateCompanyDetails(rows, organisationSubTypeValidationResult.TotalErrors, blobQueueMessage.ComplianceSchemeId, blobQueueMessage.UserId);
-        validationErrors.AddRange(companyDetailsValidationResult.ValidationErrors);
+        if (validateCompanyDetailsData)
+        {
+            var companyDetailsValidationResult = await ValidateCompanyDetails(rows, organisationSubTypeValidationResult.TotalErrors, blobQueueMessage.ComplianceSchemeId, blobQueueMessage.UserId);
+            validationErrors.AddRange(companyDetailsValidationResult.ValidationErrors);
+            _logger.LogInformation("Total validation errors {Count}", companyDetailsValidationResult.TotalErrors);
+        }
+        else
+        {
+            _logger.LogInformation("Total validation errors {Count}", organisationSubTypeValidationResult.TotalErrors);
+        }
 
-        _logger.LogInformation("Total validation errors {Count}", companyDetailsValidationResult.TotalErrors);
         return validationErrors;
     }
 
@@ -149,30 +157,14 @@ public class ValidationService : IValidationService
         return (totalErrors, validationErrors);
     }
 
-    public async Task<List<string>> ValidateAppendedFileAsync<T>(List<T> rows)
+    public async Task<List<string>> ValidateAppendedFileAsync<T>(List<T> rows, OrganisationDataLookupTable organisationLookup)
         where T : ICsvDataRow
     {
-        List<string> errors = new();
-        foreach (var row in rows.TakeWhile(_ => errors.Count < _validationSettings.ErrorLimit))
-        {
-            var result = await ValidateRowAsync(row);
+        var errors = await ValidateRows(rows, organisationLookup);
 
-            if (result.IsValid)
-            {
-                _logger.LogInformation("Row {Row} validated successfully", row.LineNumber);
-                continue;
-            }
-
-            foreach (var validationError in result.Errors)
-            {
-                if (!errors.Contains(validationError.ErrorCode))
-                {
-                    errors.Add(validationError.ErrorCode);
-                }
-
-                LogValidationWarning(row.LineNumber, validationError);
-            }
-        }
+        var missingOrganisationErrors = await ValidateAllOrganisationRowsInFile(rows, organisationLookup);
+        errors.AddRange(missingOrganisationErrors
+                        .Where(e => !errors.Contains(e)));
 
         return errors;
     }
@@ -237,57 +229,64 @@ public class ValidationService : IValidationService
     public async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateCompanyDetails(IList<OrganisationDataRow> rows, int totalErrors, string complianceSchemeId, string userId)
     {
         List<RegistrationValidationError> validationErrors = new();
-        int totErrors = 0;
 
-        if (await IsCompanyDetailsDataValidationEnabledAsync())
+        try
         {
-            try
+            var companyDetailsLookup = new Dictionary<string, CompanyDetailsDataResult>();
+            var complianceSchemeMembersLookup = new Dictionary<string, CompanyDetailsDataResult>();
+
+            var unvalidatedComplianceSchemeRows = new List<OrganisationDataRow>();
+
+            foreach (var row in rows.TakeWhile(_ => totalErrors < _validationSettings.ErrorLimit))
             {
-                var unvalidatedComplianceSchemeRows = new List<OrganisationDataRow>();
-
-                foreach (var row in rows.TakeWhile(_ => totalErrors < _validationSettings.ErrorLimit))
+                if (!companyDetailsLookup.TryGetValue(row.DefraId, out var companyDetails))
                 {
-                    var companyDetailsCollection = await _companyDetailsApiClient.GetCompanyDetails(row.DefraId);
-
-                    var companiesHouseNumberValidationResult = await ValidateCompaniesHouseNumbers(row, companyDetailsCollection);
-                    totalErrors += companiesHouseNumberValidationResult.TotalErrors;
-                    validationErrors.AddRange(companiesHouseNumberValidationResult.ValidationErrors);
-
-                    if (string.IsNullOrEmpty(complianceSchemeId))
-                    {
-                        var producerValidationResult = await ValidateAsProducer(row, companyDetailsCollection);
-                        totalErrors += producerValidationResult.TotalErrors;
-                        validationErrors.AddRange(producerValidationResult.ValidationErrors);
-                    }
-                    else
-                    {
-                        var complianceSchemeMembers = await _companyDetailsApiClient.GetComplianceSchemeMembers(row.DefraId, complianceSchemeId);
-                        var complianceSchemeValidationResult = await IsValidComplianceSchemeMember(row, complianceSchemeMembers);
-
-                        if (!complianceSchemeValidationResult)
-                        {
-                            unvalidatedComplianceSchemeRows.Add(row);
-                        }
-                    }
+                    companyDetails = await _companyDetailsApiClient.GetCompanyDetails(row.DefraId);
+                    companyDetailsLookup[row.DefraId] = companyDetails;
                 }
 
-                if (!string.IsNullOrEmpty(complianceSchemeId) && unvalidatedComplianceSchemeRows.Any())
+                var companiesHouseNumberValidationResult = await ValidateCompaniesHouseNumbers(row, companyDetails: companyDetails);
+                totalErrors += companiesHouseNumberValidationResult.TotalErrors;
+                validationErrors.AddRange(companiesHouseNumberValidationResult.ValidationErrors);
+
+                if (string.IsNullOrEmpty(complianceSchemeId))
                 {
-                    var remainingMembersValidationResult = await ValidateRemainingComplianceSchemeMembers(unvalidatedComplianceSchemeRows, complianceSchemeId);
-
-                    totalErrors += remainingMembersValidationResult.TotalErrors;
-                    validationErrors.AddRange(remainingMembersValidationResult.ValidationErrors);
+                    var producerValidationResult = await ValidateAsProducer(row, companyDetails: companyDetails);
+                    totalErrors += producerValidationResult.TotalErrors;
+                    validationErrors.AddRange(producerValidationResult.ValidationErrors);
                 }
+                else
+                {
+                    var complianceSchemeKey = $"{row.DefraId}_{complianceSchemeId}";
+                    if (!complianceSchemeMembersLookup.TryGetValue(complianceSchemeKey, out var complianceSchemeMembers))
+                    {
+                        complianceSchemeMembers = await _companyDetailsApiClient.GetComplianceSchemeMembers(row.DefraId, complianceSchemeId);
+                        complianceSchemeMembersLookup[complianceSchemeKey] = complianceSchemeMembers;
+                    }
 
-                return (totalErrors, validationErrors);
+                    var complianceSchemeValidationResult = await IsValidComplianceSchemeMember(row, complianceSchemeMembers);
+                    if (!complianceSchemeValidationResult)
+                    {
+                        unvalidatedComplianceSchemeRows.Add(row);
+                    }
+                }
             }
-            catch (HttpRequestException exception)
+
+            if (!string.IsNullOrEmpty(complianceSchemeId) && unvalidatedComplianceSchemeRows.Any())
             {
-                _logger.LogError(exception, "Error comparing organisation details");
+                var remainingMembersValidationResult = await ValidateRemainingComplianceSchemeMembers(unvalidatedComplianceSchemeRows);
+
+                totalErrors += remainingMembersValidationResult.TotalErrors;
+                validationErrors.AddRange(remainingMembersValidationResult.ValidationErrors);
             }
+
+            return (totalErrors, validationErrors);
         }
-
-        return (totalErrors, validationErrors);
+        catch (HttpRequestException exception)
+        {
+            _logger.LogError(exception, "Error comparing organisation details");
+            return (totalErrors, validationErrors);
+        }
     }
 
     public bool IsColumnLengthExceeded(List<OrganisationDataRow> rows)
@@ -297,15 +296,7 @@ public class ValidationService : IValidationService
             .Where(x => x.GetCustomAttribute<ColumnAttribute>() != null)
             .ToList();
 
-        foreach (var dataRow in rows)
-        {
-            if (DoesExceedMaxCharacterLength(dataRow, columnProperties))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return rows.Exists(x => DoesExceedMaxCharacterLength(x, columnProperties));
     }
 
     private static bool DoesExceedMaxCharacterLength(OrganisationDataRow row, List<PropertyInfo> columnProperties)
@@ -322,19 +313,113 @@ public class ValidationService : IValidationService
         return false;
     }
 
-    private async Task<bool> IsCompanyDetailsDataValidationEnabledAsync()
+    private static async Task<bool> IsValidComplianceSchemeMember(OrganisationDataRow row, CompanyDetailsDataResult companyDetails)
     {
-        return await _featureManager.IsEnabledAsync(FeatureFlags.EnableCompanyDetailsValidation);
+        if (companyDetails?.Organisations == null ||
+            !companyDetails.Organisations.Any(x => x.ReferenceNumber == row.DefraId))
+        {
+            return false;
+        }
+
+        return true;
     }
 
-    private async Task<ValidationResult> ValidateRowAsync<T>(T row)
+    private async Task<List<string>> ValidateRows<T>(List<T> rows, OrganisationDataLookupTable organisationDataLookup)
+        where T : ICsvDataRow
+    {
+        List<string> errors = new();
+        foreach (var row in rows.TakeWhile(_ => errors.Count < _validationSettings.ErrorLimit))
+        {
+            var result = await ValidateRowAsync(row, organisationDataLookup);
+
+            if (result.IsValid)
+            {
+                _logger.LogInformation("Row {Row} validated successfully", row.LineNumber);
+                continue;
+            }
+
+            foreach (var validationError in result.Errors)
+            {
+                if (!errors.Contains(validationError.ErrorCode))
+                {
+                    errors.Add(validationError.ErrorCode);
+                }
+
+                LogValidationWarning(row.LineNumber, validationError);
+            }
+        }
+
+        return errors;
+    }
+
+    private async Task<ValidationResult> ValidateRowAsync<T>(T row, OrganisationDataLookupTable organisationLookup)
     {
         return row switch
         {
-            BrandDataRow dataRow => await _brandDataRowValidator.ValidateAsync(dataRow),
-            PartnersDataRow dataRow => await _partnerDataRowValidator.ValidateAsync(dataRow),
+            BrandDataRow dataRow => await _brandDataRowValidator.ValidateAsync(CreateValidationContextWithLookupData(dataRow, organisationLookup)),
+            PartnersDataRow dataRow => await _partnerDataRowValidator.ValidateAsync(CreateValidationContextWithLookupData(dataRow, organisationLookup)),
             _ => throw new ArgumentException("Unsupported row type"),
         };
+    }
+
+    private async Task<List<string>> ValidateAllOrganisationRowsInFile<T>(List<T> rows, OrganisationDataLookupTable organisationDataLookup)
+    {
+        List<string> errors = new();
+
+        if (organisationDataLookup?.Data is null)
+        {
+            return errors;
+        }
+
+        var rowsIdentifiers = rows switch
+        {
+            List<BrandDataRow> _ => rows.Cast<BrandDataRow>().Select(x => new OrganisationIdentifiers(x.DefraId, x.SubsidiaryId)),
+            List<PartnersDataRow> _ => rows.Cast<PartnersDataRow>().Select(x => new OrganisationIdentifiers(x.DefraId, x.SubsidiaryId)),
+            _ => throw new ArgumentException("Unsupported row type"),
+        };
+
+        var missingRows = organisationDataLookup.Data
+            .SelectMany(x => x.Value.Values, (_, b) => new { b.DefraId, b.SubsidiaryId })
+            .Where(x => !rowsIdentifiers.Any(row => row.DefraId == x.DefraId
+              && row.SubsidiaryId == x.SubsidiaryId))
+            .Select(x => new OrganisationIdentifiers(x.DefraId, x.SubsidiaryId))
+            .ToList();
+
+        if (missingRows.Any())
+        {
+            var errorCode = rows switch
+            {
+                List<BrandDataRow> _ => ErrorCodes.BrandDetailsNotMatchingOrganisation,
+                List<PartnersDataRow> _ => ErrorCodes.PartnerDetailsNotMatchingOrganisation,
+            };
+
+            if (!errors.Contains(errorCode))
+            {
+                errors.Add(errorCode);
+            }
+
+            foreach (var missingRow in missingRows)
+            {
+                _logger.LogWarning(
+                    "Validation error - no row with organisation id {DefraId} and subsidiary id {SubsidiaryId}. Error code {ErrorCode}",
+                    missingRow.DefraId,
+                    missingRow.SubsidiaryId,
+                    errorCode);
+            }
+        }
+
+        return errors;
+    }
+
+    private ValidationContext<T> CreateValidationContextWithLookupData<T>(T row, OrganisationDataLookupTable organisationDataLookup)
+    {
+        var context = new ValidationContext<T>(row);
+        if (organisationDataLookup?.Data is not null && organisationDataLookup.Data.Any())
+        {
+            context.RootContextData[nameof(OrganisationDataLookupTable)] = organisationDataLookup;
+        }
+
+        return context;
     }
 
     private void LogValidationWarning(int row, ValidationFailure validationError)
@@ -361,27 +446,23 @@ public class ValidationService : IValidationService
             errorCode);
     }
 
-    private async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateCompaniesHouseNumbers(OrganisationDataRow row, CompanyDetailsDataResult companyDetailsCollection)
+    private async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateCompaniesHouseNumbers(OrganisationDataRow row, CompanyDetailsDataResult companyDetails)
     {
         List<RegistrationValidationError> validationErrors = new();
         int totalErrors = 0;
         var organisationId = _metaDataProvider.GetOrganisationColumnMetaData(nameof(OrganisationDataRow.DefraId));
         var companiesHouseNumber = _metaDataProvider.GetOrganisationColumnMetaData(nameof(OrganisationDataRow.CompaniesHouseNumber));
-        var companyDetails = new CompanyDetailsDataItem();
 
-        if (companyDetailsCollection != null && companyDetailsCollection?.Organisations != null)
-        {
-            companyDetails = companyDetailsCollection.Organisations.FirstOrDefault();
-        }
+        var organisation = companyDetails?.Organisations?.FirstOrDefault();
 
-        if (companyDetailsCollection != null && string.IsNullOrEmpty(row.SubsidiaryId))
+        if (companyDetails != null && organisation != null && string.IsNullOrEmpty(row.SubsidiaryId))
         {
-            if (string.IsNullOrEmpty(row.CompaniesHouseNumber) && string.IsNullOrEmpty(companyDetails.CompaniesHouseNumber))
+            if (string.IsNullOrEmpty(row.CompaniesHouseNumber) && string.IsNullOrEmpty(organisation.CompaniesHouseNumber))
             {
                 return (totalErrors, validationErrors);
             }
 
-            if (row.CompaniesHouseNumber != companyDetails.CompaniesHouseNumber)
+            if (row.CompaniesHouseNumber != organisation.CompaniesHouseNumber)
             {
                 var organisationIdColumnValidationError = new ColumnValidationError
                 {
@@ -417,32 +498,19 @@ public class ValidationService : IValidationService
         return (totalErrors, validationErrors);
     }
 
-    private async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateAsProducer(OrganisationDataRow row, CompanyDetailsDataResult companyDetailsCollection)
+    private async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateAsProducer(OrganisationDataRow row, CompanyDetailsDataResult companyDetails)
     {
         List<RegistrationValidationError> validationErrors = new();
         int totalErrors = 0;
 
-        if (companyDetailsCollection?.Organisations?.FirstOrDefault(x => x.ReferenceNumber == row.DefraId) == null)
+        if (companyDetails?.Organisations?.FirstOrDefault(x => x.ReferenceNumber == row.DefraId) == null)
         {
+            var error = CreateOrganisationIdValidationError(row);
+
             var errorMessage = $"Check organisation ID - this one is either invalid or for an organisation that does not need to submit data";
-            var organisationIdColumn = _metaDataProvider.GetOrganisationColumnMetaData(nameof(OrganisationDataRow.DefraId));
 
-            var columnValidationError = new ColumnValidationError
-            {
-                ErrorCode = ErrorCodes.CheckOrganisationId,
-                ColumnIndex = organisationIdColumn?.Index,
-                ColumnName = organisationIdColumn?.Name,
-            };
-
-            var error = new RegistrationValidationError
-            {
-                RowNumber = row.LineNumber,
-                OrganisationId = row.DefraId,
-                SubsidiaryId = string.Empty,
-            };
-
-            error.ColumnErrors.Add(columnValidationError);
             LogValidationWarning(row.LineNumber, errorMessage, ErrorCodes.CheckOrganisationId);
+
             validationErrors.Add(error);
             totalErrors++;
         }
@@ -450,49 +518,23 @@ public class ValidationService : IValidationService
         return (totalErrors, validationErrors);
     }
 
-    private async Task<bool> IsValidComplianceSchemeMember(OrganisationDataRow row, CompanyDetailsDataResult companyDetailsCollection)
-    {
-        if (companyDetailsCollection?.Organisations == null ||
-            !companyDetailsCollection.Organisations.Any(x => x.ReferenceNumber == row.DefraId))
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    private async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateRemainingComplianceSchemeMembers(IList<OrganisationDataRow> rows, string complianceScemeId)
+    private async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateRemainingComplianceSchemeMembers(IList<OrganisationDataRow> rows)
     {
         List<RegistrationValidationError> validationErrors = new();
         int totalErrors = 0;
 
         var organisationIds = rows.Select(r => r.DefraId);
 
-        var companyDetailsCollection = await _companyDetailsApiClient.GetRemainingProducerDetails(organisationIds);
+        var remainingProducerDetails = await _companyDetailsApiClient.GetRemainingProducerDetails(organisationIds);
 
         foreach (var row in rows)
         {
-            if (companyDetailsCollection?.Organisations == null ||
-                !companyDetailsCollection.Organisations.Any(x => x.ReferenceNumber == row.DefraId))
+            if (remainingProducerDetails?.Organisations == null ||
+                !remainingProducerDetails.Organisations.Any(x => x.ReferenceNumber == row.DefraId))
             {
+                var error = CreateOrganisationIdValidationError(row);
+
                 var errorMessage = $"Check organisation ID - this one is either invalid or for an organisation that does not need to submit data";
-                var organisationIdColumn = _metaDataProvider.GetOrganisationColumnMetaData(nameof(OrganisationDataRow.DefraId));
-
-                var columnValidationError = new ColumnValidationError
-                {
-                    ErrorCode = ErrorCodes.CheckOrganisationId,
-                    ColumnIndex = organisationIdColumn?.Index,
-                    ColumnName = organisationIdColumn?.Name,
-                };
-
-                var error = new RegistrationValidationError
-                {
-                    RowNumber = row.LineNumber,
-                    OrganisationId = row.DefraId,
-                    SubsidiaryId = string.Empty,
-                };
-
-                error.ColumnErrors.Add(columnValidationError);
 
                 LogValidationWarning(row.LineNumber, errorMessage, ErrorCodes.CheckOrganisationId);
 
@@ -502,5 +544,28 @@ public class ValidationService : IValidationService
         }
 
         return (totalErrors, validationErrors);
+    }
+
+    private RegistrationValidationError CreateOrganisationIdValidationError(OrganisationDataRow row)
+    {
+        var organisationIdColumn = _metaDataProvider.GetOrganisationColumnMetaData(nameof(OrganisationDataRow.DefraId));
+
+        var columnValidationError = new ColumnValidationError
+        {
+            ErrorCode = ErrorCodes.CheckOrganisationId,
+            ColumnIndex = organisationIdColumn?.Index,
+            ColumnName = organisationIdColumn?.Name,
+        };
+
+        var error = new RegistrationValidationError
+        {
+            RowNumber = row.LineNumber,
+            OrganisationId = row.DefraId,
+            SubsidiaryId = string.Empty,
+        };
+
+        error.ColumnErrors.Add(columnValidationError);
+
+        return error;
     }
 }

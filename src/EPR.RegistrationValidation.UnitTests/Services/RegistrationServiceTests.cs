@@ -12,6 +12,8 @@ using Data.Enums;
 using Data.Models;
 using Data.Models.QueueMessages;
 using Data.Models.SubmissionApi;
+using EPR.RegistrationValidation.Application.Constants;
+using EPR.RegistrationValidation.Data.Models.OrganisationDataLookup;
 using FluentAssertions;
 using Helpers;
 using Microsoft.Extensions.Logging;
@@ -99,7 +101,7 @@ public class RegistrationServiceTests
                     It.IsAny<ValidationEvent>()),
             Times.Never);
         _csvStreamParserMock.Verify(
-            m => m.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>()),
+            m => m.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()),
             Times.Never);
     }
 
@@ -126,11 +128,12 @@ public class RegistrationServiceTests
             .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
             .Returns(_blobQueueMessage);
         _csvStreamParserMock.Setup(
-            x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>())).ReturnsAsync(new List<OrganisationDataRow>
-        {
-            CSVRowTestHelper.GenerateOrgCsvDataRow(),
-            CSVRowTestHelper.GenerateOrgCsvDataRow(),
-        });
+            x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<OrganisationDataRow>
+            {
+                CSVRowTestHelper.GenerateOrgCsvDataRow(),
+                CSVRowTestHelper.GenerateOrgCsvDataRow(),
+            });
         var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
 
         // Act
@@ -153,7 +156,7 @@ public class RegistrationServiceTests
                         && x.IsValid)),
             Times.Once);
         _csvStreamParserMock.Verify(
-            m => m.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>()),
+            m => m.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()),
             Times.Once);
     }
 
@@ -174,7 +177,7 @@ public class RegistrationServiceTests
             .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
             .Returns(_blobQueueMessage);
         _csvStreamParserMock
-            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>()))
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
             .Throws<CsvParseException>();
 
         // Act
@@ -214,7 +217,7 @@ public class RegistrationServiceTests
             .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
             .Returns(_blobQueueMessage);
         _csvStreamParserMock
-            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>()))
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
             .Throws<CsvHeaderException>();
 
         // Act
@@ -258,7 +261,7 @@ public class RegistrationServiceTests
             .Returns(_blobQueueMessage);
 
         _csvStreamParserMock
-            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>()))
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
             .ReturnsAsync(new List<OrganisationDataRow>());
 
         // Act
@@ -280,6 +283,55 @@ public class RegistrationServiceTests
                     && e.Type == EventType.Registration)),
             Times.Once);
         _loggerMock.VerifyLog(logger => logger.LogInformation("The CSV file for submission ID {SubmissionId} is empty", _blobQueueMessage.SubmissionId));
+    }
+
+    [DataRow(true, false, DisplayName = "WhenRowValidationIsEnabled_Then_UseMinimalClassMaps_Is_False")]
+    [DataRow(false, true, DisplayName = "WhenRowValidationIsEnabled_Then_UseMinimalClassMaps_Is_True")]
+    [TestMethod]
+    public async Task ProcessServiceBusMessage_With_EnableRowValidation_Calls_CsvParser_With_Correct_MinimalClass_Flag(
+        bool isRowValidationEnabled,
+        bool useMinimalClassMaps)
+    {
+        // Arrange
+        var blobName = "test";
+        var submissionId = Guid.NewGuid().ToString();
+        var userId = Guid.NewGuid().ToString();
+        var organisationId = Guid.NewGuid().ToString();
+        var submissionSubType = SubmissionSubType.CompanyDetails;
+
+        _blobQueueMessage = new BlobQueueMessage()
+        {
+            UserId = userId,
+            OrganisationId = organisationId,
+            SubmissionId = submissionId,
+            SubmissionSubType = submissionSubType.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(isRowValidationEnabled);
+
+        _csvStreamParserMock.Setup(
+            x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<OrganisationDataRow>
+            {
+                CSVRowTestHelper.GenerateOrgCsvDataRow(),
+                CSVRowTestHelper.GenerateOrgCsvDataRow(),
+            });
+        var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
+
+        // Act
+        await _sut.ProcessServiceBusMessage(serialisedMessage);
+
+        // Assert
+        _csvStreamParserMock.Verify(
+            m => m.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), useMinimalClassMaps),
+            Times.Once);
     }
 
     [TestMethod]
@@ -304,7 +356,7 @@ public class RegistrationServiceTests
             .Returns(_blobQueueMessage);
 
         _csvStreamParserMock
-            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>()))
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
             .ReturnsAsync(new List<OrganisationDataRow> { csvDataRow });
 
         _submissionApiClientMock.Setup(
@@ -350,7 +402,7 @@ public class RegistrationServiceTests
             .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
             .Returns(_blobQueueMessage);
         _csvStreamParserMock
-            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>()))
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
             .ReturnsAsync(
                 new List<OrganisationDataRow>
                 {
@@ -359,7 +411,7 @@ public class RegistrationServiceTests
                 });
 
         _validationServiceMock
-            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage))
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()))
             .ReturnsAsync(new List<RegistrationValidationError>
             {
                 It.IsAny<RegistrationValidationError>(),
@@ -379,7 +431,7 @@ public class RegistrationServiceTests
 
         // Assert
         _validationServiceMock.Verify(
-            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage),
+            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()),
             Times.Never);
     }
 
@@ -409,7 +461,7 @@ public class RegistrationServiceTests
             .Returns(_blobQueueMessage);
 
         _csvStreamParserMock
-            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>()))
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
             .ReturnsAsync(
                 new List<OrganisationDataRow>
                 {
@@ -418,7 +470,7 @@ public class RegistrationServiceTests
                 });
 
         _validationServiceMock
-            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage))
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()))
             .ReturnsAsync(new List<RegistrationValidationError>
             {
                 It.IsAny<RegistrationValidationError>(),
@@ -439,7 +491,7 @@ public class RegistrationServiceTests
         // Assert
         f.Should().NotThrowAsync<Exception>();
         _validationServiceMock.Verify(
-            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage),
+            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()),
             Times.Once);
     }
 
@@ -468,7 +520,7 @@ public class RegistrationServiceTests
             .Returns(_blobQueueMessage);
 
         _csvStreamParserMock
-            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>()))
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
             .ReturnsAsync(
                 new List<OrganisationDataRow>
                 {
@@ -476,7 +528,7 @@ public class RegistrationServiceTests
                 });
 
         _validationServiceMock
-            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage))
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()))
             .ReturnsAsync(new List<RegistrationValidationError>
             {
                 It.IsAny<RegistrationValidationError>(),
@@ -497,8 +549,140 @@ public class RegistrationServiceTests
         // Assert
         f.Should().NotThrowAsync<Exception>();
         _validationServiceMock.Verify(
-            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage),
+            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()),
             Times.Never);
+    }
+
+    [TestMethod]
+    public void ProcessServiceBusMessage_WhenCompanyDetailsDataValidationFeatureIsEnabled_AndRequiresRowValidationIsFalse_CallsValidateCompanyAsync_With_True_Flag()
+    {
+        // Arrange
+        var blobName = "test";
+        var submissionId = Guid.NewGuid().ToString();
+        var userId = Guid.NewGuid().ToString();
+        var organisationId = Guid.NewGuid().ToString();
+        var submissionSubType = SubmissionSubType.CompanyDetails;
+        var csvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(RequiredOrganisationTypeCodeForPartners.PAR.ToString(), IncorrectPackagingActivity);
+        var csvDataRow2 = CSVRowTestHelper.GenerateOrgCsvDataRow(IncorrectOrganisationTypeCode, IncorrectPackagingActivity);
+        _blobQueueMessage = new BlobQueueMessage
+        {
+            UserId = userId,
+            OrganisationId = organisationId,
+            SubmissionId = submissionId,
+            SubmissionSubType = submissionSubType.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+
+        _csvStreamParserMock
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(
+                new List<OrganisationDataRow>
+                {
+                    csvDataRow,
+                    csvDataRow2,
+                });
+
+        _validationServiceMock
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()))
+            .ReturnsAsync(new List<RegistrationValidationError>
+            {
+                It.IsAny<RegistrationValidationError>(),
+            });
+
+        var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
+
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableOrganisationDataRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableCompanyDetailsValidation))
+            .ReturnsAsync(true);
+
+        // Act
+        Func<Task> f = async () => await _sut.ProcessServiceBusMessage(serialisedMessage);
+
+        // Assert
+        f.Should().NotThrowAsync<Exception>();
+        _validationServiceMock.Verify(
+            v => v.ValidateOrganisationsAsync(
+                It.IsAny<List<OrganisationDataRow>>(),
+                _blobQueueMessage,
+                true),
+            Times.Once);
+    }
+
+    [TestMethod]
+    public void ProcessServiceBusMessage_WhenCompanyDetailsDataFeatureIsDisabled_AndRequiresRowValidationIsFalse_CallsValidateCompanyAsync_With_False_Flag()
+    {
+        // Arrange
+        var blobName = "test";
+        var submissionId = Guid.NewGuid().ToString();
+        var userId = Guid.NewGuid().ToString();
+        var organisationId = Guid.NewGuid().ToString();
+        var submissionSubType = SubmissionSubType.CompanyDetails;
+        var csvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(RequiredOrganisationTypeCodeForPartners.PAR.ToString(), IncorrectPackagingActivity);
+        var csvDataRow2 = CSVRowTestHelper.GenerateOrgCsvDataRow(IncorrectOrganisationTypeCode, IncorrectPackagingActivity);
+        _blobQueueMessage = new BlobQueueMessage
+        {
+            UserId = userId,
+            OrganisationId = organisationId,
+            SubmissionId = submissionId,
+            SubmissionSubType = submissionSubType.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+
+        _csvStreamParserMock
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(
+                new List<OrganisationDataRow>
+                {
+                    csvDataRow,
+                    csvDataRow2,
+                });
+
+        _validationServiceMock
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()))
+            .ReturnsAsync(new List<RegistrationValidationError>
+            {
+                It.IsAny<RegistrationValidationError>(),
+            });
+
+        var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
+
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableOrganisationDataRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableCompanyDetailsValidation))
+            .ReturnsAsync(false);
+
+        // Act
+        Func<Task> f = async () => await _sut.ProcessServiceBusMessage(serialisedMessage);
+
+        // Assert
+        f.Should().NotThrowAsync<Exception>();
+        _validationServiceMock.Verify(
+            v => v.ValidateOrganisationsAsync(
+                It.IsAny<List<OrganisationDataRow>>(),
+                _blobQueueMessage,
+                false),
+            Times.Once);
     }
 
     [TestMethod]
@@ -526,7 +710,7 @@ public class RegistrationServiceTests
             .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
             .Returns(_blobQueueMessage);
         _csvStreamParserMock
-            .Setup(x => x.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>()))
+            .Setup(x => x.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
             .ReturnsAsync(
                 new List<BrandDataRow>
                 {
@@ -535,7 +719,7 @@ public class RegistrationServiceTests
                 });
 
         _validationServiceMock
-            .Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<BrandDataRow>>()))
+            .Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<BrandDataRow>>(), It.IsAny<OrganisationDataLookupTable>()))
             .ReturnsAsync(new List<string>());
 
         var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
@@ -553,7 +737,7 @@ public class RegistrationServiceTests
         // Assert
         f.Should().NotThrowAsync<Exception>();
         _validationServiceMock.Verify(
-            v => v.ValidateAppendedFileAsync(It.IsAny<List<BrandDataRow>>()),
+            v => v.ValidateAppendedFileAsync(It.IsAny<List<BrandDataRow>>(), It.IsAny<OrganisationDataLookupTable>()),
             Times.Never);
     }
 
@@ -589,13 +773,14 @@ public class RegistrationServiceTests
             .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
             .Returns(_blobQueueMessage);
         _csvStreamParserMock.Setup(
-            x => x.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>())).ReturnsAsync(new List<BrandDataRow>
-        {
-            csvDataRow,
-            csvDataRow2,
-        });
+            x => x.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<BrandDataRow>
+            {
+                csvDataRow,
+                csvDataRow2,
+            });
         _validationServiceMock
-            .Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<BrandDataRow>>()))
+            .Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<BrandDataRow>>(), It.IsAny<OrganisationDataLookupTable>()))
             .ReturnsAsync(new List<string>());
 
         var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
@@ -646,14 +831,14 @@ public class RegistrationServiceTests
             .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
             .Returns(_blobQueueMessage);
         _csvStreamParserMock.Setup(
-            x => x.GetItemsFromCsvStreamAsync<PartnersDataRow>(It.IsAny<MemoryStream>()))
+            x => x.GetItemsFromCsvStreamAsync<PartnersDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
             .ReturnsAsync(new List<PartnersDataRow>
             {
                 csvDataRow,
                 csvDataRow2,
             });
         _validationServiceMock
-            .Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<PartnersDataRow>>()))
+            .Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<PartnersDataRow>>(), It.IsAny<OrganisationDataLookupTable>()))
             .ReturnsAsync(new List<string>());
 
         var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
@@ -670,7 +855,7 @@ public class RegistrationServiceTests
 
         // Assert
         f.Should().NotThrowAsync<Exception>();
-        _validationServiceMock.Verify(v => v.ValidateAppendedFileAsync(It.IsAny<List<PartnersDataRow>>()), Times.Exactly(timesCalled));
+        _validationServiceMock.Verify(v => v.ValidateAppendedFileAsync(It.IsAny<List<PartnersDataRow>>(), It.IsAny<OrganisationDataLookupTable>()), Times.Exactly(timesCalled));
     }
 
     [TestMethod]
@@ -695,7 +880,7 @@ public class RegistrationServiceTests
             .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
             .Returns(_blobQueueMessage);
         _csvStreamParserMock.Setup(
-            x => x.GetItemsFromCsvStreamAsync<PartnersDataRow>(It.IsAny<MemoryStream>()))
+            x => x.GetItemsFromCsvStreamAsync<PartnersDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
             .Throws<CsvHeaderException>();
 
         var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
@@ -741,7 +926,7 @@ public class RegistrationServiceTests
             .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
             .Returns(_blobQueueMessage);
         _csvStreamParserMock
-            .Setup(x => x.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>()))
+            .Setup(x => x.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
             .ReturnsAsync(new List<BrandDataRow>());
         _featureManagerMock
             .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
@@ -795,12 +980,13 @@ public class RegistrationServiceTests
             .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
             .Returns(_blobQueueMessage);
         _csvStreamParserMock.Setup(
-            x => x.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>())).ReturnsAsync(new List<BrandDataRow>
-        {
-            csvDataRow,
-            csvDataRow2,
-        });
-        _validationServiceMock.Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<BrandDataRow>>()))
+            x => x.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<BrandDataRow>
+            {
+                csvDataRow,
+                csvDataRow2,
+            });
+        _validationServiceMock.Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<BrandDataRow>>(), It.IsAny<OrganisationDataLookupTable>()))
             .ReturnsAsync(new List<string>
             {
                 It.IsAny<string>(),
@@ -830,9 +1016,9 @@ public class RegistrationServiceTests
                         && !x.IsValid)),
             Times.Once);
         _csvStreamParserMock.Verify(
-            m => m.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>()),
+            m => m.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()),
             Times.Once);
-        _validationServiceMock.Verify(v => v.ValidateAppendedFileAsync(It.IsAny<List<BrandDataRow>>()), Times.Once);
+        _validationServiceMock.Verify(v => v.ValidateAppendedFileAsync(It.IsAny<List<BrandDataRow>>(), It.IsAny<OrganisationDataLookupTable>()), Times.Once);
     }
 
     [TestMethod]
@@ -859,12 +1045,13 @@ public class RegistrationServiceTests
             .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
             .Returns(_blobQueueMessage);
         _csvStreamParserMock.Setup(
-            x => x.GetItemsFromCsvStreamAsync<PartnersDataRow>(It.IsAny<MemoryStream>())).ReturnsAsync(new List<PartnersDataRow>
-        {
-            csvDataRow,
-            csvDataRow2,
-        });
-        _validationServiceMock.Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<PartnersDataRow>>()))
+            x => x.GetItemsFromCsvStreamAsync<PartnersDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<PartnersDataRow>
+            {
+                csvDataRow,
+                csvDataRow2,
+            });
+        _validationServiceMock.Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<PartnersDataRow>>(), It.IsAny<OrganisationDataLookupTable>()))
             .ReturnsAsync(new List<string>
             {
                 It.IsAny<string>(),
@@ -894,9 +1081,9 @@ public class RegistrationServiceTests
                         && !x.IsValid)),
             Times.Once);
         _csvStreamParserMock.Verify(
-            m => m.GetItemsFromCsvStreamAsync<PartnersDataRow>(It.IsAny<MemoryStream>()),
+            m => m.GetItemsFromCsvStreamAsync<PartnersDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()),
             Times.Once);
-        _validationServiceMock.Verify(v => v.ValidateAppendedFileAsync(It.IsAny<List<PartnersDataRow>>()), Times.Once);
+        _validationServiceMock.Verify(v => v.ValidateAppendedFileAsync(It.IsAny<List<PartnersDataRow>>(), It.IsAny<OrganisationDataLookupTable>()), Times.Once);
     }
 
     [TestMethod]
@@ -926,7 +1113,7 @@ public class RegistrationServiceTests
             .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
             .Returns(_blobQueueMessage);
         _csvStreamParserMock
-            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>()))
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
             .ReturnsAsync(
                 new List<OrganisationDataRow>
                 {
@@ -959,6 +1146,581 @@ public class RegistrationServiceTests
                         && x.Errors.Count == 1 && x.Errors[0] == ErrorCodes.CharacterLengthExceeded
                         && x.BlobContainerName == ContainerName
                         && x.BlobName == blobName
+                        && !x.IsValid)),
+            Times.Once);
+    }
+
+    [TestMethod]
+    public void ProcessServiceBusMessage_BrandPartnerCrossFileValidationFeature_Brands_Logs_Empty_File()
+    {
+        // Arrange
+        var blobName = "test";
+        var submissionId = Guid.NewGuid().ToString();
+        var userId = Guid.NewGuid().ToString();
+        var organisationId = Guid.NewGuid().ToString();
+        var submissionSubType = SubmissionSubType.Brands;
+
+        _blobQueueMessage = new BlobQueueMessage()
+        {
+            UserId = userId,
+            OrganisationId = organisationId,
+            SubmissionId = submissionId,
+            SubmissionSubType = submissionSubType.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock.Setup(
+            x => x.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<BrandDataRow>());
+
+        var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
+
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerDataRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerCrossFileValidation))
+            .ReturnsAsync(true);
+
+        // Act
+        Func<Task> f = async () => await _sut.ProcessServiceBusMessage(serialisedMessage);
+
+        // Assert
+        f.Should().NotThrowAsync<Exception>();
+
+        _loggerMock.VerifyLog(logger => logger.LogInformation("The CSV file for submission ID {SubmissionId} is empty", _blobQueueMessage.SubmissionId));
+    }
+
+    [TestMethod]
+    public void ProcessServiceBusMessage_BrandPartnerCrossFileValidationFeature_Partners_Logs_Empty_File()
+    {
+        // Arrange
+        var blobName = "test";
+        var submissionId = Guid.NewGuid().ToString();
+        var userId = Guid.NewGuid().ToString();
+        var organisationId = Guid.NewGuid().ToString();
+        var submissionSubType = SubmissionSubType.Partnerships;
+
+        _blobQueueMessage = new BlobQueueMessage()
+        {
+            UserId = userId,
+            OrganisationId = organisationId,
+            SubmissionId = submissionId,
+            SubmissionSubType = submissionSubType.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock.Setup(
+            x => x.GetItemsFromCsvStreamAsync<PartnersDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<PartnersDataRow>());
+
+        var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
+
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerDataRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerCrossFileValidation))
+            .ReturnsAsync(true);
+
+        // Act
+        Func<Task> f = async () => await _sut.ProcessServiceBusMessage(serialisedMessage);
+
+        // Assert
+        f.Should().NotThrowAsync<Exception>();
+
+        _loggerMock.VerifyLog(logger => logger.LogInformation("The CSV file for submission ID {SubmissionId} is empty", _blobQueueMessage.SubmissionId));
+    }
+
+    [TestMethod]
+    [DataRow(true, 1, DisplayName = "Validation_WhenBrandPartnerCrossFileValidationEnabled_Brands_CallsSubmissionApi")]
+    [DataRow(false, 0, DisplayName = "Validation_WhenBrandPartnerCrossFileValidationDisabled_Brands_DoesNotCallSubmissionApi")]
+    public void ProcessServiceBusMessage_BrandPartnerCrossFileValidationFeature_Brands_VerifySubmissionApiCalls(bool flagEnabled, int timesCalled)
+    {
+        // Arrange
+        var blobName = "test";
+        var registrationBlobName = "registrationblob";
+        var submissionId = Guid.NewGuid().ToString();
+        var userId = Guid.NewGuid().ToString();
+        var organisationId = Guid.NewGuid().ToString();
+        var submissionSubType = SubmissionSubType.Brands;
+        var csvDataRow = CSVRowTestHelper.GenerateBrandCsvDataRow();
+        var csvDataRow2 = CSVRowTestHelper.GenerateBrandCsvDataRow();
+        var orgCsvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(packagingActivitySo: PackagingActivities.Primary);
+
+        _blobQueueMessage = new BlobQueueMessage()
+        {
+            UserId = userId,
+            OrganisationId = organisationId,
+            SubmissionId = submissionId,
+            SubmissionSubType = submissionSubType.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock.Setup(
+            x => x.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<BrandDataRow>
+            {
+                csvDataRow,
+                csvDataRow2,
+            });
+        _csvStreamParserMock.Setup(
+            x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<OrganisationDataRow>
+            {
+                orgCsvDataRow,
+            });
+
+        _validationServiceMock
+            .Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<BrandDataRow>>(), It.IsAny<OrganisationDataLookupTable>()))
+            .ReturnsAsync(new List<string>());
+
+        _submissionApiClientMock
+            .Setup(x => x.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = registrationBlobName });
+
+        var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
+
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerDataRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerCrossFileValidation))
+            .ReturnsAsync(flagEnabled);
+
+        // Act
+        Func<Task> f = async () => await _sut.ProcessServiceBusMessage(serialisedMessage);
+
+        // Assert
+        f.Should().NotThrowAsync<Exception>();
+        _submissionApiClientMock.Verify(v => v.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(timesCalled));
+
+        _csvStreamParserMock.Verify(
+            m => m.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()),
+            Times.Once);
+        _csvStreamParserMock.Verify(
+            m => m.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()),
+            Times.Exactly(timesCalled));
+
+        _validationServiceMock.Verify(v => v.ValidateAppendedFileAsync(It.IsAny<List<BrandDataRow>>(), It.IsAny<OrganisationDataLookupTable>()), Times.Once);
+    }
+
+    [TestMethod]
+    [DataRow(true, 1, DisplayName = "Validation_WhenBrandPartnerCrossFileValidationEnabled_Partners_CallsSubmissionApi")]
+    [DataRow(false, 0, DisplayName = "Validation_WhenBrandPartnerCrossFileValidationDisabled_Partners_DoesNotCallSubmissionApi")]
+    public void ProcessServiceBusMessage_BrandPartnerCrossFileValidationFeature_Partners_VerifySubmissionApiCalls(bool flagEnabled, int timesCalled)
+    {
+        // Arrange
+        var blobName = "test";
+        var registrationBlobName = "registrationblob";
+        var submissionId = Guid.NewGuid().ToString();
+        var userId = Guid.NewGuid().ToString();
+        var organisationId = Guid.NewGuid().ToString();
+        var submissionSubType = SubmissionSubType.Partnerships;
+        var csvDataRow = CSVRowTestHelper.GeneratePartnershipCsvDataRow();
+        var csvDataRow2 = CSVRowTestHelper.GeneratePartnershipCsvDataRow();
+        var orgCsvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(organisationTypeCode: IncorporationTypeCodes.LimitedCompany);
+
+        _blobQueueMessage = new BlobQueueMessage()
+        {
+            UserId = userId,
+            OrganisationId = organisationId,
+            SubmissionId = submissionId,
+            SubmissionSubType = submissionSubType.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock.Setup(
+            x => x.GetItemsFromCsvStreamAsync<PartnersDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<PartnersDataRow>
+            {
+                csvDataRow,
+                csvDataRow2,
+            });
+        _csvStreamParserMock.Setup(
+            x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<OrganisationDataRow>
+            {
+                orgCsvDataRow,
+            });
+
+        _validationServiceMock
+            .Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<PartnersDataRow>>(), It.IsAny<OrganisationDataLookupTable>()))
+            .ReturnsAsync(new List<string>());
+
+        _submissionApiClientMock
+            .Setup(x => x.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = registrationBlobName });
+
+        var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
+
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerDataRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerCrossFileValidation))
+            .ReturnsAsync(flagEnabled);
+
+        // Act
+        Func<Task> f = async () => await _sut.ProcessServiceBusMessage(serialisedMessage);
+
+        // Assert
+        f.Should().NotThrowAsync<Exception>();
+        _submissionApiClientMock.Verify(v => v.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(timesCalled));
+
+        _csvStreamParserMock.Verify(
+            m => m.GetItemsFromCsvStreamAsync<PartnersDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()),
+            Times.Once);
+        _csvStreamParserMock.Verify(
+            m => m.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()),
+            Times.Exactly(timesCalled));
+
+        _validationServiceMock.Verify(v => v.ValidateAppendedFileAsync(It.IsAny<List<PartnersDataRow>>(), It.IsAny<OrganisationDataLookupTable>()), Times.Once);
+    }
+
+    [TestMethod]
+    public void ProcessServiceBusMessage_BrandPartnerCrossFileValidationFeature_Null_OrganisationFile_Logs_Error()
+    {
+        // Arrange
+        var blobName = "test";
+        var registrationBlobName = "registrationblob";
+        var submissionId = Guid.NewGuid().ToString();
+        var userId = Guid.NewGuid().ToString();
+        var organisationId = Guid.NewGuid().ToString();
+        var submissionSubType = SubmissionSubType.Brands;
+        var csvDataRow = CSVRowTestHelper.GenerateBrandCsvDataRow();
+        var csvDataRow2 = CSVRowTestHelper.GenerateBrandCsvDataRow();
+
+        _blobQueueMessage = new BlobQueueMessage()
+        {
+            UserId = userId,
+            OrganisationId = organisationId,
+            SubmissionId = submissionId,
+            SubmissionSubType = submissionSubType.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock.Setup(
+            x => x.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<BrandDataRow>
+            {
+                csvDataRow,
+                csvDataRow2,
+            });
+
+        _validationServiceMock
+            .Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<BrandDataRow>>(), It.IsAny<OrganisationDataLookupTable>()))
+            .ReturnsAsync(new List<string>());
+
+        _submissionApiClientMock
+            .Setup(x => x.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(default(OrganisationFileDetailsResponse));
+
+        var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
+
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerDataRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerCrossFileValidation))
+            .ReturnsAsync(true);
+
+        // Act
+        Func<Task> f = async () => await _sut.ProcessServiceBusMessage(serialisedMessage);
+
+        // Assert
+        f.Should().ThrowAsync<OrganisationDetailsException>();
+        _loggerMock.VerifyLog(logger => logger.LogInformation("Registration blob for submission ID {SubmissionId} was not found", _blobQueueMessage.SubmissionId));
+    }
+
+    [TestMethod]
+    public void ProcessServiceBusMessage_BrandPartnerCrossFileValidationFeature_Empty_OrganisationFile_Logs_Error()
+    {
+        // Arrange
+        var blobName = "test";
+        var registrationBlobName = "registrationblob";
+        var submissionId = Guid.NewGuid().ToString();
+        var userId = Guid.NewGuid().ToString();
+        var organisationId = Guid.NewGuid().ToString();
+        var submissionSubType = SubmissionSubType.Brands;
+        var csvDataRow = CSVRowTestHelper.GenerateBrandCsvDataRow();
+        var csvDataRow2 = CSVRowTestHelper.GenerateBrandCsvDataRow();
+        var orgCsvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow();
+
+        _blobQueueMessage = new BlobQueueMessage()
+        {
+            UserId = userId,
+            OrganisationId = organisationId,
+            SubmissionId = submissionId,
+            SubmissionSubType = submissionSubType.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock.Setup(
+            x => x.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<BrandDataRow>
+            {
+                csvDataRow,
+                csvDataRow2,
+            });
+        _csvStreamParserMock.Setup(
+            x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<OrganisationDataRow>
+            {
+                orgCsvDataRow,
+            });
+
+        _validationServiceMock
+            .Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<BrandDataRow>>(), It.IsAny<OrganisationDataLookupTable>()))
+            .ReturnsAsync(new List<string>());
+
+        _submissionApiClientMock
+            .Setup(x => x.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty });
+
+        var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
+
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerDataRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerCrossFileValidation))
+            .ReturnsAsync(true);
+
+        // Act
+        Func<Task> f = async () => await _sut.ProcessServiceBusMessage(serialisedMessage);
+
+        // Assert
+        f.Should().ThrowAsync<OrganisationDetailsException>();
+        _loggerMock.VerifyLog(logger => logger.LogInformation("Registration blob for submission ID {SubmissionId} was not found", _blobQueueMessage.SubmissionId));
+    }
+
+    [TestMethod]
+    public async Task ProcessServiceBusMessage_BrandPartnerCrossFileValidationFeature_Brands_OrganisationDataLookupTable()
+    {
+        // Arrange
+        var blobName = "test";
+        var registrationBlobName = "registrationblob";
+        var submissionId = Guid.NewGuid().ToString();
+        var userId = Guid.NewGuid().ToString();
+        var organisationId = Guid.NewGuid().ToString();
+        var submissionSubType = SubmissionSubType.Brands;
+        var csvDataRow = CSVRowTestHelper.GenerateBrandCsvDataRow();
+        var csvDataRow2 = CSVRowTestHelper.GenerateBrandCsvDataRow();
+        var orgCsvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(packagingActivitySo: PackagingActivities.Primary);
+        var organisationDataLookupTable = default(OrganisationDataLookupTable);
+
+        _blobQueueMessage = new BlobQueueMessage()
+        {
+            UserId = userId,
+            OrganisationId = organisationId,
+            SubmissionId = submissionId,
+            SubmissionSubType = submissionSubType.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock.Setup(
+            x => x.GetItemsFromCsvStreamAsync<BrandDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<BrandDataRow>
+            {
+                csvDataRow,
+                csvDataRow2,
+            });
+        _csvStreamParserMock.Setup(
+            x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<OrganisationDataRow>
+            {
+                orgCsvDataRow,
+            });
+
+        _validationServiceMock
+            .Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<BrandDataRow>>(), It.IsAny<OrganisationDataLookupTable>()))
+            .Callback<List<BrandDataRow>, OrganisationDataLookupTable>((l, t) => organisationDataLookupTable = t)
+            .ReturnsAsync(new List<string>());
+
+        _submissionApiClientMock
+            .Setup(x => x.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = registrationBlobName });
+
+        var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
+
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerDataRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerCrossFileValidation))
+            .ReturnsAsync(true);
+
+        // Act
+        await _sut.ProcessServiceBusMessage(serialisedMessage);
+
+        // Assert
+        organisationDataLookupTable.Should().NotBeNull();
+        organisationDataLookupTable.Data.Should().NotBeNullOrEmpty();
+
+        organisationDataLookupTable.Data.Should().ContainKey(orgCsvDataRow.DefraId);
+        organisationDataLookupTable.Data[orgCsvDataRow.DefraId].Should().ContainKey(orgCsvDataRow.SubsidiaryId);
+
+        var details = organisationDataLookupTable.Data[orgCsvDataRow.DefraId][orgCsvDataRow.SubsidiaryId];
+        details.DefraId.Should().Be(orgCsvDataRow.DefraId);
+        details.SubsidiaryId.Should().Be(orgCsvDataRow.SubsidiaryId);
+    }
+
+    [TestMethod]
+    public async Task ProcessServiceBusMessage_BrandPartnerCrossFileValidationFeature_Partners_OrganisationDataLookupTable()
+    {
+        // Arrange
+        var blobName = "test";
+        var registrationBlobName = "registrationblob";
+        var submissionId = Guid.NewGuid().ToString();
+        var userId = Guid.NewGuid().ToString();
+        var organisationId = Guid.NewGuid().ToString();
+        var submissionSubType = SubmissionSubType.Partnerships;
+        var csvDataRow = CSVRowTestHelper.GeneratePartnershipCsvDataRow();
+        var csvDataRow2 = CSVRowTestHelper.GeneratePartnershipCsvDataRow();
+        var orgCsvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(organisationTypeCode: RequiredOrganisationTypeCodeForPartners.PAR.ToString());
+        var organisationDataLookupTable = default(OrganisationDataLookupTable);
+
+        _blobQueueMessage = new BlobQueueMessage()
+        {
+            UserId = userId,
+            OrganisationId = organisationId,
+            SubmissionId = submissionId,
+            SubmissionSubType = submissionSubType.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock.Setup(
+            x => x.GetItemsFromCsvStreamAsync<PartnersDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<PartnersDataRow>
+            {
+                csvDataRow,
+                csvDataRow2,
+            });
+        _csvStreamParserMock.Setup(
+            x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<OrganisationDataRow>
+            {
+                orgCsvDataRow,
+            });
+
+        _validationServiceMock
+            .Setup(x => x.ValidateAppendedFileAsync(It.IsAny<List<PartnersDataRow>>(), It.IsAny<OrganisationDataLookupTable>()))
+            .Callback<List<PartnersDataRow>, OrganisationDataLookupTable>((l, t) => organisationDataLookupTable = t)
+            .ReturnsAsync(new List<string>());
+
+        _submissionApiClientMock
+            .Setup(x => x.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = registrationBlobName });
+
+        var serialisedMessage = JsonConvert.SerializeObject(_blobQueueMessage);
+
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerDataRowValidation))
+            .ReturnsAsync(true);
+        _featureManagerMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableBrandPartnerCrossFileValidation))
+            .ReturnsAsync(true);
+
+        // Act
+        await _sut.ProcessServiceBusMessage(serialisedMessage);
+
+        // Assert
+        organisationDataLookupTable.Should().NotBeNull();
+        organisationDataLookupTable.Data.Should().NotBeNullOrEmpty();
+
+        organisationDataLookupTable.Data.Should().ContainKey(orgCsvDataRow.DefraId);
+        organisationDataLookupTable.Data[orgCsvDataRow.DefraId].Should().ContainKey(orgCsvDataRow.SubsidiaryId);
+
+        var details = organisationDataLookupTable.Data[orgCsvDataRow.DefraId][orgCsvDataRow.SubsidiaryId];
+        details.DefraId.Should().Be(orgCsvDataRow.DefraId);
+        details.SubsidiaryId.Should().Be(orgCsvDataRow.SubsidiaryId);
+    }
+
+    [TestMethod]
+    public void ProcessServiceBusMessage_WhenUnexpectedExceptionIsThrown_ValidationErrorEventIsCreated()
+    {
+        // Arrange
+        var blobName = "test";
+        _blobQueueMessage = new BlobQueueMessage
+        {
+            UserId = Guid.NewGuid().ToString(),
+            OrganisationId = Guid.NewGuid().ToString(),
+            SubmissionId = Guid.NewGuid().ToString(),
+            SubmissionSubType = SubmissionSubType.CompanyDetails.ToString(),
+            BlobName = blobName,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .Throws<Exception>();
+
+        // Act
+        _sut.ProcessServiceBusMessage(JsonConvert.SerializeObject(_blobQueueMessage));
+
+        // Assert
+        _submissionApiClientMock.Verify(
+            m =>
+                m.SendEventRegistrationMessage(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.Is<ValidationEvent>(
+                        x =>
+                        x.BlobContainerName == ContainerName
+                        && x.BlobName == blobName
+                        && x.Errors.Count == 1 && x.Errors[0] == ErrorCodes.UncaughtExceptionErrorCode
                         && !x.IsValid)),
             Times.Once);
     }

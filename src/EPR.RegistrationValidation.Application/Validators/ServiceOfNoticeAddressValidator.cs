@@ -1,7 +1,5 @@
 ﻿namespace EPR.RegistrationValidation.Application.Validators;
 
-using System.Text.RegularExpressions;
-using Constants;
 using Data.Constants;
 using Data.Models;
 using FluentValidation;
@@ -30,7 +28,7 @@ public class ServiceOfNoticeAddressValidator : AbstractValidator<OrganisationDat
                !string.IsNullOrEmpty(row.ServiceOfNoticeAddressLine2) ||
                !string.IsNullOrEmpty(row.ServiceOfNoticeAddressCity) ||
                !string.IsNullOrEmpty(row.ServiceOfNoticeAddressCounty) ||
-               !string.IsNullOrEmpty(row.ServiceOfNoticeAddressCountry) |
+               !string.IsNullOrEmpty(row.ServiceOfNoticeAddressCountry) ||
                !string.IsNullOrEmpty(row.ServiceOfNoticeAddressPostcode) ||
                !string.IsNullOrEmpty(row.ServiceOfNoticeAddressPhoneNumber);
     }

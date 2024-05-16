@@ -3,21 +3,16 @@
 using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
-using Data.Models;
 using EPR.RegistrationValidation.Application.ClassMaps;
-using EPR.RegistrationValidation.Data.Constants;
 using Exceptions;
-using Microsoft.FeatureManagement;
 
 public class CsvStreamParser : ICsvStreamParser
 {
     private readonly ColumnMetaDataProvider _metaDataProvider;
-    private readonly IFeatureManager _featureManager;
 
-    public CsvStreamParser(ColumnMetaDataProvider metaDataProvider, IFeatureManager featureManager)
+    public CsvStreamParser(ColumnMetaDataProvider metaDataProvider)
     {
         _metaDataProvider = metaDataProvider;
-        _featureManager = featureManager;
     }
 
     private static CsvConfiguration CsvConfiguration => new(CultureInfo.InvariantCulture)
@@ -25,14 +20,14 @@ public class CsvStreamParser : ICsvStreamParser
         HasHeaderRecord = true,
     };
 
-    public async Task<List<T>> GetItemsFromCsvStreamAsync<T>(MemoryStream memoryStream)
+    public async Task<List<T>> GetItemsFromCsvStreamAsync<T>(MemoryStream memoryStream, bool useMinimalClassMaps = false)
     {
         try
         {
             memoryStream.Position = 0;
             using var reader = new StreamReader(memoryStream);
             using var csv = new CsvReader(reader, CsvConfiguration);
-            if (await _featureManager.IsEnabledAsync(FeatureFlags.EnableRowValidation) == false)
+            if (useMinimalClassMaps)
             {
                 // Register class map to populate minimal set of properties to keep memory usage to a minimum
                 csv.Context.RegisterClassMap<MinimalOrganisationDataRowMap>();

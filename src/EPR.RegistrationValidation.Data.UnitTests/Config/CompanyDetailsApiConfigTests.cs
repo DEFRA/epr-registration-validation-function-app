@@ -12,7 +12,12 @@ public class CompanyDetailsApiConfigTests
     public void CompanyDetailsApiConfig_BaseUrlIsRequired_Success()
     {
         // Arrange
-        var config = new CompanyDetailsApiConfig { BaseUrl = "https://example.com" };
+        var config = new CompanyDetailsApiConfig
+        {
+            BaseUrl = "https://example.com",
+            ClientId = "test-client-id",
+            Timeout = 30,
+        };
 
         // Act
         var context = new ValidationContext(config, serviceProvider: null, items: null);

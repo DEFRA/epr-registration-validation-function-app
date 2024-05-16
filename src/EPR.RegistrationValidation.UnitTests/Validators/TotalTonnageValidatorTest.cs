@@ -1,6 +1,5 @@
 ﻿namespace EPR.RegistrationValidation.UnitTests.Validators;
 
-using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Application.Validators;
 using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;

@@ -6,7 +6,10 @@ using Application.Clients;
 using Data.Config;
 using Data.Enums;
 using Data.Models;
+using EPR.RegistrationValidation.Application.Exceptions;
+using EPR.RegistrationValidation.Data.Models.SubmissionApi;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -49,9 +52,9 @@ public class SubmissionApiClientTests
         var userType = UserType.Producer.ToString();
         var httpClient = new HttpClient(handlerMock.Object)
         {
-            BaseAddress = new Uri(_config!.BaseUrl),
+            BaseAddress = new Uri(_config.BaseUrl),
         };
-        var sut = new SubmissionApiClient(httpClient, _submissionApiOptionsMock.Object);
+        var sut = new SubmissionApiClient(httpClient, _submissionApiOptionsMock.Object, NullLogger<SubmissionApiClient>.Instance);
         var csvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(
             RequiredOrganisationTypeCodeForPartners.PAR.ToString(),
             packagingActivity.ToString());
@@ -108,9 +111,9 @@ public class SubmissionApiClientTests
 
         var httpClient = new HttpClient(handlerMock.Object)
         {
-            BaseAddress = new Uri(_config!.BaseUrl),
+            BaseAddress = new Uri(_config.BaseUrl),
         };
-        var sut = new SubmissionApiClient(httpClient, _submissionApiOptionsMock.Object);
+        var sut = new SubmissionApiClient(httpClient, _submissionApiOptionsMock.Object, NullLogger<SubmissionApiClient>.Instance);
         var csvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(
             RequiredOrganisationTypeCodeForPartners.PAR.ToString(),
             RequiredPackagingActivityForBrands.Primary.ToString());
@@ -161,9 +164,9 @@ public class SubmissionApiClientTests
 
         var httpClient = new HttpClient(handlerMock.Object)
         {
-            BaseAddress = new Uri(_config!.BaseUrl),
+            BaseAddress = new Uri(_config.BaseUrl),
         };
-        var sut = new SubmissionApiClient(httpClient, _submissionApiOptionsMock.Object);
+        var sut = new SubmissionApiClient(httpClient, _submissionApiOptionsMock.Object, NullLogger<SubmissionApiClient>.Instance);
         var csvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(
             RequiredOrganisationTypeCodeForPartners.PAR.ToString(),
             packagingActivity.ToString());
@@ -207,5 +210,149 @@ public class SubmissionApiClientTests
         response.Headers.GetValues("userId").Should().BeEquivalentTo(userId.ToString());
         var responseContent = await response.Content.ReadAsStringAsync();
         responseContent.Should().Be(content);
+    }
+
+    [TestMethod]
+    public async Task TestGetOrganisationFileDetails_WhenSendAsyncIsSuccessful_DoesNotThrowError()
+    {
+        // Arrange
+        const string submissionId = "fa9d10d7-cd5d-404b-8a3a-cd66b6564824";
+        const string brandOrPartnerBlobName = "0455196e-236e-4070-bdd7-0cea56fb3bdc";
+
+        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        var organisationFileDetails = new OrganisationFileDetailsResponse();
+        var content = JsonConvert.SerializeObject(organisationFileDetails);
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(content),
+            })
+            .Verifiable();
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri(_config.BaseUrl),
+        };
+        var sut = new SubmissionApiClient(httpClient, _submissionApiOptionsMock.Object, NullLogger<SubmissionApiClient>.Instance);
+
+        // Act
+        var response = await sut.GetOrganisationFileDetails(submissionId, brandOrPartnerBlobName);
+
+        // Assert
+        response.Should().NotBeNull("Exception not expected");
+    }
+
+    [DataRow(HttpStatusCode.Conflict)]
+    [DataRow(HttpStatusCode.BadRequest)]
+    [DataRow(HttpStatusCode.BadGateway)]
+    [DataRow(HttpStatusCode.Unauthorized)]
+    [TestMethod]
+    public async Task TestGetOrganisationFileDetails_WhenSendAsyncNotSuccessful_ThrowsError(HttpStatusCode statusCode)
+    {
+        // Arrange
+        const string submissionId = "fa9d10d7-cd5d-404b-8a3a-cd66b6564824";
+        const string brandOrPartnerBlobName = "0455196e-236e-4070-bdd7-0cea56fb3bdc";
+
+        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = statusCode,
+            })
+            .Verifiable();
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri(_config.BaseUrl),
+        };
+        var sut = new SubmissionApiClient(httpClient, _submissionApiOptionsMock.Object, NullLogger<SubmissionApiClient>.Instance);
+
+        // Act
+        Func<Task> act = () => sut.GetOrganisationFileDetails(submissionId, brandOrPartnerBlobName);
+
+        // Assert
+        await act.Should().ThrowAsync<SubmissionApiClientException>();
+    }
+
+    [TestMethod]
+    public async Task TestGetOrganisationFileDetails_WhenSendAsyncNotFound_ReturnsNull()
+    {
+        // Arrange
+        const string submissionId = "fa9d10d7-cd5d-404b-8a3a-cd66b6564824";
+        const string brandOrPartnerBlobName = "0455196e-236e-4070-bdd7-0cea56fb3bdc";
+
+        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.NotFound,
+            })
+            .Verifiable();
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri(_config.BaseUrl),
+        };
+        var sut = new SubmissionApiClient(httpClient, _submissionApiOptionsMock.Object, NullLogger<SubmissionApiClient>.Instance);
+
+        // Act
+        var result = await sut.GetOrganisationFileDetails(submissionId, brandOrPartnerBlobName);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [TestMethod]
+    public async Task TestGetOrganisationFileDetails_WhenParametersAreValid_ReturnsCorrectResponse()
+    {
+        // Arrange
+        const string submissionId = "fa9d10d7-cd5d-404b-8a3a-cd66b6564824";
+        const string brandOrPartnerBlobName = "0455196e-236e-4070-bdd7-0cea56fb3bdc";
+
+        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        var registrationBlobName = "92fcddf5-f66b-4f0f-8a13-f5a3b38dd48f";
+        var organisationFileDetails = new OrganisationFileDetailsResponse { BlobName = registrationBlobName };
+        var content = JsonConvert.SerializeObject(organisationFileDetails);
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(content),
+            })
+            .Verifiable();
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri(_config.BaseUrl),
+        };
+        var sut = new SubmissionApiClient(httpClient, _submissionApiOptionsMock.Object, NullLogger<SubmissionApiClient>.Instance);
+
+        // Act
+        var response = await sut.GetOrganisationFileDetails(submissionId, brandOrPartnerBlobName);
+
+        // Assert
+        response.Should().NotBeNull();
+        response.BlobName.Should().Be(registrationBlobName);
     }
 }

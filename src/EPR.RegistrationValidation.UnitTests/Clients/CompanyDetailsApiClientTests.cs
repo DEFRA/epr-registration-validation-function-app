@@ -6,7 +6,7 @@ using Data.Config;
 using EPR.RegistrationValidation.Application.Exceptions;
 using EPR.RegistrationValidation.Data.Models.CompanyDetailsApi;
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Moq.Protected;
@@ -15,14 +15,17 @@ using Newtonsoft.Json;
 [TestClass]
 public class CompanyDetailsApiClientTests
 {
-    private Mock<ILogger<CompanyDetailsApiClient>> _loggerMock = new();
     private CompanyDetailsApiConfig? _config;
 
     [TestInitialize]
     public void Setup()
     {
-        _config = new CompanyDetailsApiConfig { BaseUrl = "https://www.testurl.com" };
-        _loggerMock = new Mock<ILogger<CompanyDetailsApiClient>>();
+        _config = new CompanyDetailsApiConfig
+        {
+            BaseUrl = "https://www.testurl.com",
+            ClientId = "test-client-id",
+            Timeout = 5,
+        };
     }
 
     [TestMethod]
@@ -47,20 +50,16 @@ public class CompanyDetailsApiClientTests
 
         var httpClient = new HttpClient(handlerMock.Object)
         {
-            BaseAddress = new Uri(_config!.BaseUrl),
+            BaseAddress = new Uri(_config.BaseUrl),
+            Timeout = TimeSpan.FromSeconds(_config.Timeout),
         };
-        var sut = new CompanyDetailsApiClient(httpClient, _loggerMock.Object);
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
 
         // Act
-        try
-        {
-            var response = await sut.GetCompanyDetails("100001");
-        }
-        catch (Exception ex)
-        {
-            // Assert
-            Assert.Fail("Expected no exception, but got: " + ex.Message);
-        }
+        var response = await sut.GetCompanyDetails("100001");
+
+        // Assert
+        // Exception not expected
     }
 
     [DataRow(HttpStatusCode.Conflict)]
@@ -86,15 +85,46 @@ public class CompanyDetailsApiClientTests
 
         var httpClient = new HttpClient(handlerMock.Object)
         {
-            BaseAddress = new Uri(_config!.BaseUrl),
+            BaseAddress = new Uri(_config.BaseUrl),
+            Timeout = TimeSpan.FromSeconds(_config.Timeout),
         };
-        var sut = new CompanyDetailsApiClient(httpClient, _loggerMock.Object);
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
 
         // Act
         Func<Task> act = () => sut.GetCompanyDetails("100001");
 
         // Assert
         await act.Should().ThrowAsync<CompanyDetailsApiClientException>();
+    }
+
+    [TestMethod]
+    public async Task TestGetCompanyDetails_WhenSendAsyncNotFound_ReturnsNull()
+    {
+        // Arrange
+        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.NotFound,
+            })
+            .Verifiable();
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri(_config.BaseUrl),
+        };
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
+
+        // Act
+        var result = await sut.GetCompanyDetails("100001");
+
+        // Assert
+        result.Should().BeNull();
     }
 
     [TestMethod]
@@ -126,9 +156,10 @@ public class CompanyDetailsApiClientTests
 
         var httpClient = new HttpClient(handlerMock.Object)
         {
-            BaseAddress = new Uri(_config!.BaseUrl),
+            BaseAddress = new Uri(_config.BaseUrl),
+            Timeout = TimeSpan.FromSeconds(_config.Timeout),
         };
-        var sut = new CompanyDetailsApiClient(httpClient, _loggerMock.Object);
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
 
         // Act
         var responseContent = await sut.GetCompanyDetails("123456");
@@ -161,20 +192,16 @@ public class CompanyDetailsApiClientTests
 
         var httpClient = new HttpClient(handlerMock.Object)
         {
-            BaseAddress = new Uri(_config!.BaseUrl),
+            BaseAddress = new Uri(_config.BaseUrl),
+            Timeout = TimeSpan.FromSeconds(_config.Timeout),
         };
-        var sut = new CompanyDetailsApiClient(httpClient, _loggerMock.Object);
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
 
         // Act
-        try
-        {
-            var response = await sut.GetComplianceSchemeMembers("100001", "13202f0d-bde8-422c-974a-f1dec1b32fff");
-        }
-        catch (Exception ex)
-        {
-            // Assert
-            Assert.Fail("Expected no exception, but got: " + ex.Message);
-        }
+        var response = await sut.GetComplianceSchemeMembers("100001", "13202f0d-bde8-422c-974a-f1dec1b32fff");
+
+        // Assert
+        response.Should().NotBeNull("Exception not expected");
     }
 
     [DataRow(HttpStatusCode.Conflict)]
@@ -200,15 +227,46 @@ public class CompanyDetailsApiClientTests
 
         var httpClient = new HttpClient(handlerMock.Object)
         {
-            BaseAddress = new Uri(_config!.BaseUrl),
+            BaseAddress = new Uri(_config.BaseUrl),
+            Timeout = TimeSpan.FromSeconds(_config.Timeout),
         };
-        var sut = new CompanyDetailsApiClient(httpClient, _loggerMock.Object);
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
 
         // Act
         Func<Task> act = () => sut.GetComplianceSchemeMembers("100001", "13202f0d-bde8-422c-974a-f1dec1b32fff");
 
         // Assert
         await act.Should().ThrowAsync<CompanyDetailsApiClientException>();
+    }
+
+    [TestMethod]
+    public async Task TestGetComplianceSchemeMembers_WhenSendAsyncNotFound_ReturnsNull()
+    {
+        // Arrange
+        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.NotFound,
+            })
+            .Verifiable();
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri(_config.BaseUrl),
+        };
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
+
+        // Act
+        var result = await sut.GetComplianceSchemeMembers("100001", "13202f0d-bde8-422c-974a-f1dec1b32fff");
+
+        // Assert
+        result.Should().BeNull();
     }
 
     [TestMethod]
@@ -244,9 +302,10 @@ public class CompanyDetailsApiClientTests
 
         var httpClient = new HttpClient(handlerMock.Object)
         {
-            BaseAddress = new Uri(_config!.BaseUrl),
+            BaseAddress = new Uri(_config.BaseUrl),
+            Timeout = TimeSpan.FromSeconds(_config.Timeout),
         };
-        var sut = new CompanyDetailsApiClient(httpClient, _loggerMock.Object);
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
 
         // Act
         var responseContent = await sut.GetComplianceSchemeMembers("123456", "13202f0d-bde8-422c-974a-f1dec1b32fff");
@@ -277,24 +336,20 @@ public class CompanyDetailsApiClientTests
 
         var httpClient = new HttpClient(handlerMock.Object)
         {
-            BaseAddress = new Uri(_config!.BaseUrl),
+            BaseAddress = new Uri(_config.BaseUrl),
+            Timeout = TimeSpan.FromSeconds(_config.Timeout),
         };
-        var sut = new CompanyDetailsApiClient(httpClient, _loggerMock.Object);
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
         var referenceNumberList = new List<string>();
         referenceNumberList.Add("11000011");
         referenceNumberList.Add("22000022");
         referenceNumberList.Add("33000033");
 
         // Act
-        try
-        {
-            var response = await sut.GetRemainingProducerDetails(referenceNumberList);
-        }
-        catch (Exception ex)
-        {
-            // Assert
-            Assert.Fail("Expected no exception, but got: " + ex.Message);
-        }
+        var response = await sut.GetRemainingProducerDetails(referenceNumberList);
+
+        // Assert
+        response.Should().NotBeNull("Exception not expected");
     }
 
     [DataRow(HttpStatusCode.Conflict)]
@@ -320,9 +375,10 @@ public class CompanyDetailsApiClientTests
 
         var httpClient = new HttpClient(handlerMock.Object)
         {
-            BaseAddress = new Uri(_config!.BaseUrl),
+            BaseAddress = new Uri(_config.BaseUrl),
+            Timeout = TimeSpan.FromSeconds(_config.Timeout),
         };
-        var sut = new CompanyDetailsApiClient(httpClient, _loggerMock.Object);
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
         var referenceNumberList = new List<string>();
 
         // Act
@@ -330,6 +386,38 @@ public class CompanyDetailsApiClientTests
 
         // Assert
         await act.Should().ThrowAsync<CompanyDetailsApiClientException>();
+    }
+
+    [TestMethod]
+    public async Task TestGetRemainingProducerDetails_WhenSendAsyncNotFound_ReturnsNull()
+    {
+        // Arrange
+        var referenceNumberList = new List<string>();
+
+        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.NotFound,
+            })
+            .Verifiable();
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri(_config.BaseUrl),
+        };
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
+
+        // Act
+        var result = await sut.GetRemainingProducerDetails(referenceNumberList);
+
+        // Assert
+        result.Should().BeNull();
     }
 
     [TestMethod]
@@ -365,9 +453,10 @@ public class CompanyDetailsApiClientTests
 
         var httpClient = new HttpClient(handlerMock.Object)
         {
-            BaseAddress = new Uri(_config!.BaseUrl),
+            BaseAddress = new Uri(_config.BaseUrl),
+            Timeout = TimeSpan.FromSeconds(_config.Timeout),
         };
-        var sut = new CompanyDetailsApiClient(httpClient, _loggerMock.Object);
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
         var referenceNumberList = new List<string>();
         referenceNumberList.Add("11000011");
         referenceNumberList.Add("22000022");

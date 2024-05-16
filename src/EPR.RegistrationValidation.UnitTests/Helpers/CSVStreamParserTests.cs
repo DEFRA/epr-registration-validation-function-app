@@ -4,40 +4,31 @@ using Application.Exceptions;
 using Application.Helpers;
 using Data.Enums;
 using Data.Models;
-using EPR.RegistrationValidation.Data.Constants;
 using FluentAssertions;
-using Microsoft.FeatureManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 using TestHelpers;
 
 [TestClass]
 public class CsvStreamParserTests
 {
     private CsvStreamParser _sut;
-    private Mock<IFeatureManager> _featureManagerMock;
 
     [TestInitialize]
     public void Setup()
     {
-        _featureManagerMock = new Mock<IFeatureManager>();
-        _sut = new CsvStreamParser(new ColumnMetaDataProvider(), _featureManagerMock.Object);
+        _sut = new CsvStreamParser(new ColumnMetaDataProvider());
     }
 
     [TestMethod]
-    [DataRow(true, DisplayName = "RowValidationEnabled")]
-    [DataRow(false, DisplayName = "RowValidationDisabled")]
-    public async Task TestGetItemsFromCsvStream_WhenStreamIsValid_ReturnsList(bool rowValidationEnabled)
+    [DataRow(true, DisplayName = "UseMinimalClassMapsEnabled")]
+    [DataRow(false, DisplayName = "UseMinimalClassMapsDisabled")]
+    public async Task TestGetItemsFromCsvStream_WhenStreamIsValid_ReturnsList(bool useMinimalClassMaps)
     {
         // Arrange
-        _featureManagerMock
-            .Setup(x => x.IsEnabledAsync(FeatureFlags.EnableRowValidation))
-            .ReturnsAsync(rowValidationEnabled);
-
         var memoryStream = CsvFileReader.ReadFile("ValidFileWithCorrectHeaders.csv");
 
         // Act
-        var response = await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+        var response = await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream, useMinimalClassMaps);
 
         // Assert
         response[0].OrganisationTypeCode.Should().Be(RequiredOrganisationTypeCodeForPartners.PAR.ToString());
@@ -123,38 +114,30 @@ error, error";
     }
 
     [TestMethod]
-    [DataRow(true, DisplayName = "RowValidationEnabled")]
-    [DataRow(false, DisplayName = "RowValidationDisabled")]
-    public async Task GetItemsFromCsvStream_WhenCsvHeaderIsValid_ValidateExpectedItemCount(bool rowValidationEnabled)
+    [DataRow(true, DisplayName = "UseMinimalClassMapsEnabled")]
+    [DataRow(false, DisplayName = "UseMinimalClassMapsDisabled")]
+    public async Task GetItemsFromCsvStream_WhenCsvHeaderIsValid_ValidateExpectedItemCount(bool useMinimalClassMaps)
     {
         // Arrange
-        _featureManagerMock
-            .Setup(x => x.IsEnabledAsync(FeatureFlags.EnableRowValidation))
-            .ReturnsAsync(rowValidationEnabled);
-
         using var memoryStream = CsvFileReader.ReadFile("ValidFileWithCorrectHeaders.csv");
 
         // Act
-        var items = await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+        var items = await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream, useMinimalClassMaps);
 
         // Assert
         items.Should().HaveCount(2);
     }
 
     [TestMethod]
-    [DataRow(true, DisplayName = "RowValidationEnabled")]
-    [DataRow(false, DisplayName = "RowValidationDisabled")]
-    public async Task GetItemsFromCsvStream_WithValidCsv_ValidateLineNumbers(bool rowValidationEnabled)
+    [DataRow(true, DisplayName = "UseMinimalClassMapsEnabled")]
+    [DataRow(false, DisplayName = "UseMinimalClassMapsDisabled")]
+    public async Task GetItemsFromCsvStream_WithValidCsv_ValidateLineNumbers(bool useMinimalClassMaps)
     {
         // Arrange
-        _featureManagerMock
-            .Setup(x => x.IsEnabledAsync(FeatureFlags.EnableRowValidation))
-            .ReturnsAsync(rowValidationEnabled);
-
         using var memoryStream = CsvFileReader.ReadFile("ValidFileWithCorrectHeaders.csv");
 
         // Act
-        var items = await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+        var items = await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream, useMinimalClassMaps);
 
         // Assert
         items.Should().HaveCount(2);
@@ -166,10 +149,6 @@ error, error";
     public async Task GetItemsFromCsvStream_WhenCsvHeaderIsValid_ValidateMinimalPropertiesAreMapped()
     {
         // Arrange
-        _featureManagerMock
-            .Setup(x => x.IsEnabledAsync(FeatureFlags.EnableRowValidation))
-            .ReturnsAsync(false);
-
         using var memoryStream = CsvFileReader.ReadFile("ValidFileWithCorrectHeaders.csv");
 
         // Act
@@ -186,9 +165,9 @@ error, error";
     }
 
     [TestMethod]
-    [DataRow(true, DisplayName = "RowValidationEnabled")]
-    [DataRow(false, DisplayName = "RowValidationDisabled")]
-    public async Task GetItemsFromCsvStream_WithBrandFile_ValidatePropertiesAreMapped(bool rowValidationEnabled)
+    [DataRow(true, DisplayName = "UseMinimalClassMapsEnabled")]
+    [DataRow(false, DisplayName = "UseMinimalClassMapsDisabled")]
+    public async Task GetItemsFromCsvStream_WithBrandFile_ValidatePropertiesAreMapped(bool useMinimalClassMaps)
     {
         // Arrange
         string defraId = "145879";
@@ -196,32 +175,25 @@ error, error";
         string brandName = "Brand Name";
         string brandTypeCode = "Brand Type Code";
 
-        _featureManagerMock
-            .Setup(x => x.IsEnabledAsync(FeatureFlags.EnableRowValidation))
-            .ReturnsAsync(rowValidationEnabled);
-
         // Build csv string with header
         string header = "organisation_id,subsidiary_id,brand_name,brand_type_code";
         var csvString = $"{header}{Environment.NewLine}{defraId},{subsidiaryId},{brandName},{brandTypeCode}";
         using var memoryStream = CsvFileReader.ReadString(csvString);
 
         // Act
-        var items = await _sut.GetItemsFromCsvStreamAsync<BrandDataRow>(memoryStream);
+        var items = await _sut.GetItemsFromCsvStreamAsync<BrandDataRow>(memoryStream, useMinimalClassMaps);
 
         // Assert
-        foreach (var row in items)
-        {
-            items.First().DefraId.Should().Be(defraId);
-            items.First().SubsidiaryId.Should().Be(subsidiaryId);
-            items.First().BrandName.Should().Be(brandName);
-            items.First().BrandTypeCode.Should().Be(brandTypeCode);
-        }
+        items[0].DefraId.Should().Be(defraId);
+        items[0].SubsidiaryId.Should().Be(subsidiaryId);
+        items[0].BrandName.Should().Be(brandName);
+        items[0].BrandTypeCode.Should().Be(brandTypeCode);
     }
 
     [TestMethod]
-    [DataRow(true, DisplayName = "RowValidationEnabled")]
-    [DataRow(false, DisplayName = "RowValidationDisabled")]
-    public async Task GetItemsFromCsvStream_WithPartnerFile_ValidatePropertiesAreMapped(bool rowValidationEnabled)
+    [DataRow(true, DisplayName = "UseMinimalClassMapsEnabled")]
+    [DataRow(false, DisplayName = " Disabled")]
+    public async Task GetItemsFromCsvStream_WithPartnerFile_ValidatePropertiesAreMapped(bool useMinimalClassMaps)
     {
         // Arrange
         string defraId = "145879";
@@ -231,27 +203,20 @@ error, error";
         string partnerPhoneNumber = "Partner Phone Number";
         string partnerEmail = "Partner Email";
 
-        _featureManagerMock
-            .Setup(x => x.IsEnabledAsync(FeatureFlags.EnableRowValidation))
-            .ReturnsAsync(rowValidationEnabled);
-
         // Build csv string with header
         string header = "organisation_id,subsidiary_id,partner_first_name,partner_last_name,partner_phone_number,partner_email";
         var csvString = $"{header}{Environment.NewLine}{defraId},{subsidiaryId},{partnerFirstName},{partnerLastName},{partnerPhoneNumber},{partnerEmail}";
         using var memoryStream = CsvFileReader.ReadString(csvString);
 
         // Act
-        var items = await _sut.GetItemsFromCsvStreamAsync<PartnersDataRow>(memoryStream);
+        var items = await _sut.GetItemsFromCsvStreamAsync<PartnersDataRow>(memoryStream, useMinimalClassMaps);
 
         // Assert
-        foreach (var row in items)
-        {
-            items.First().DefraId.Should().Be(defraId);
-            items.First().SubsidiaryId.Should().Be(subsidiaryId);
-            items.First().PartnerFirstName.Should().Be(partnerFirstName);
-            items.First().PartnerLastName.Should().Be(partnerLastName);
-            items.First().PartnerPhoneNumber.Should().Be(partnerPhoneNumber);
-            items.First().PartnerEmail.Should().Be(partnerEmail);
-        }
+        items[0].DefraId.Should().Be(defraId);
+        items[0].SubsidiaryId.Should().Be(subsidiaryId);
+        items[0].PartnerFirstName.Should().Be(partnerFirstName);
+        items[0].PartnerLastName.Should().Be(partnerLastName);
+        items[0].PartnerPhoneNumber.Should().Be(partnerPhoneNumber);
+        items[0].PartnerEmail.Should().Be(partnerEmail);
     }
 }

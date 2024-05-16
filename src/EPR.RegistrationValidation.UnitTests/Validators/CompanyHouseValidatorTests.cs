@@ -7,13 +7,27 @@ using EPR.RegistrationValidation.Data.Models;
 using FluentAssertions;
 using FluentValidation.TestHelper;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NUnit.Framework;
 
 [TestClass]
 public class CompanyHouseValidatorTests
 {
-    [Test]
-    [TestCaseSource(nameof(TestCaseSourceData))]
+    private static IEnumerable<object[]> TestCases
+    {
+        get
+        {
+            return new[]
+            {
+                new object[] { UnIncorporationTypeCodes.Partnership },
+                new object[] { UnIncorporationTypeCodes.CoOperative },
+                new object[] { UnIncorporationTypeCodes.Others },
+                new object[] { UnIncorporationTypeCodes.OutsideUk },
+                new object[] { UnIncorporationTypeCodes.SoleTrader },
+            };
+        }
+    }
+
+    [TestMethod]
+    [DynamicData(nameof(TestCases))]
     public async Task Validate_WithEmptyCompanyHouseNumberWithSomeOrganisationType_IsValid(string code)
     {
         // Arrange
@@ -72,8 +86,8 @@ public class CompanyHouseValidatorTests
         result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.InvalidCompanyHouseNumber);
     }
 
-    [Test]
-    [TestCaseSource(nameof(TestCaseSourceData))]
+    [DataTestMethod]
+    [DynamicData(nameof(TestCases))]
     public async Task Validate_WithValidCompanyHouseNumberForOrganisationType_IsNotValid(string organisationTypeCode)
     {
         // Arrange
@@ -92,14 +106,5 @@ public class CompanyHouseValidatorTests
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.CompaniesHouseNumber);
         result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.CompanyHouseNumberMustBeEmpty);
-    }
-
-    private static IEnumerable<TestCaseData> TestCaseSourceData()
-    {
-        yield return new TestCaseData(UnIncorporationTypeCodes.Partnership);
-        yield return new TestCaseData(UnIncorporationTypeCodes.CoOperative);
-        yield return new TestCaseData(UnIncorporationTypeCodes.Others);
-        yield return new TestCaseData(UnIncorporationTypeCodes.OutsideUk);
-        yield return new TestCaseData(UnIncorporationTypeCodes.SoleTrader);
     }
 }

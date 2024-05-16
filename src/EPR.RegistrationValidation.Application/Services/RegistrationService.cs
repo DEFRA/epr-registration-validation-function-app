@@ -7,6 +7,8 @@ using Data.Enums;
 using Data.Models;
 using Data.Models.QueueMessages;
 using Data.Models.SubmissionApi;
+using EPR.RegistrationValidation.Application.Constants;
+using EPR.RegistrationValidation.Data.Models.OrganisationDataLookup;
 using Exceptions;
 using Helpers;
 using Microsoft.Extensions.Logging;
@@ -96,7 +98,12 @@ public class RegistrationService : IRegistrationService
         catch (Exception ex)
         {
             _logger.LogCritical(ex, "An unexpected error has occurred when processing the service bus message");
-            throw;
+
+            validationEvent = CreateValidationEvent(
+                GetEventType(blobQueueMessage.SubmissionSubType),
+                blobQueueMessage.BlobName,
+                _options.BlobContainerName,
+                ErrorCodes.UncaughtExceptionErrorCode);
         }
 
         try
@@ -114,24 +121,21 @@ public class RegistrationService : IRegistrationService
         }
     }
 
-    private static EventType GetEventType(string submissionSubType)
-    {
-        switch (submissionSubType)
+    private static EventType GetEventType(string submissionSubType) =>
+        submissionSubType switch
         {
-            case nameof(SubmissionSubType.CompanyDetails):
-                return EventType.Registration;
-            case nameof(SubmissionSubType.Brands):
-                return EventType.BrandValidation;
-            case nameof(SubmissionSubType.Partnerships):
-                return EventType.PartnerValidation;
-        }
-
-        throw new Exception("Invalid submissionSubType");
-    }
+            nameof(SubmissionSubType.CompanyDetails) => EventType.Registration,
+            nameof(SubmissionSubType.Brands) => EventType.BrandValidation,
+            nameof(SubmissionSubType.Partnerships) => EventType.PartnerValidation,
+            _ => throw new ArgumentException($"Invalid submissionSubType: '{submissionSubType}'"),
+        };
 
     private async Task<ValidationEvent> ValidateRegistrationFile(BlobQueueMessage blobQueueMessage)
     {
-        var csvRows = await ParseFile<OrganisationDataRow>(blobQueueMessage);
+        var isRowValidationEnabled = await IsRowValidationEnabledAsync();
+        var csvRows = await ParseFile<OrganisationDataRow>(
+            blobQueueMessage.BlobName,
+            !isRowValidationEnabled);
 
         if (!csvRows.Any())
         {
@@ -160,7 +164,10 @@ public class RegistrationService : IRegistrationService
                     ErrorCodes.CharacterLengthExceeded);
             }
 
-            validationErrors = await _validationService.ValidateOrganisationsAsync(csvRows, blobQueueMessage);
+            validationErrors = await _validationService.ValidateOrganisationsAsync(
+                csvRows,
+                blobQueueMessage,
+                await IsCompanyDetailsDataValidationEnabledAsync(blobQueueMessage));
         }
 
         if (!validationErrors.Any())
@@ -184,7 +191,7 @@ public class RegistrationService : IRegistrationService
 
         if (await IsBrandPartnerValidationEnabledAsync())
         {
-            var csvRows = await ParseFile<T>(blobQueueMessage);
+            var csvRows = await ParseFile<T>(blobQueueMessage.BlobName);
             if (!csvRows.Any())
             {
                 _logger.LogInformation(
@@ -198,7 +205,13 @@ public class RegistrationService : IRegistrationService
                     ErrorCodes.CsvFileEmptyErrorCode);
             }
 
-            fileErrors = await _validationService.ValidateAppendedFileAsync(csvRows);
+            var organisationDataLookup = await IsBrandPartnerCrossFileValidationEnabledAsync(blobQueueMessage)
+                ? await GetOrganisationFileDetailsLookup<T>(
+                    blobQueueMessage.SubmissionId,
+                    blobQueueMessage.BlobName)
+                : null;
+
+            fileErrors = await _validationService.ValidateAppendedFileAsync(csvRows, organisationDataLookup);
         }
 
         return CreateValidationEvent(
@@ -208,10 +221,75 @@ public class RegistrationService : IRegistrationService
             fileErrors.ToArray());
     }
 
-    private async Task<List<T>> ParseFile<T>(BlobQueueMessage blobQueueMessage)
+    private async Task<OrganisationDataLookupTable> GetOrganisationFileDetailsLookup<T>(
+        string submissionId,
+        string blobName)
+        where T : ICsvDataRow
     {
-        using var blobMemoryStream = _blobReader.DownloadBlobToStream(blobQueueMessage.BlobName);
-        return await _csvStreamParser.GetItemsFromCsvStreamAsync<T>(blobMemoryStream);
+        var organisationFileDetails = await _submissionApiClient.GetOrganisationFileDetails(submissionId, blobName);
+
+        if (organisationFileDetails == null || string.IsNullOrEmpty(organisationFileDetails.BlobName))
+        {
+            _logger.LogInformation(
+                "Registration blob for submission ID {SubmissionId} was not found",
+                submissionId);
+
+            throw new OrganisationDetailsException($"Registration blob for submission ID {submissionId} was not found");
+        }
+
+        _logger.LogInformation("Cross-file check found organisation blob {BlobName}", organisationFileDetails.BlobName);
+
+        var organisationRows = await ParseFile<OrganisationDataRow>(organisationFileDetails.BlobName, true);
+
+        _logger.LogInformation("Cross-file check loaded {OrganisationRows} from ", organisationRows.Count);
+
+        var brandPackagingActivities = new string[]
+        {
+                    PackagingActivities.Primary,
+                    PackagingActivities.Secondary,
+        };
+
+        var filteredOrganisationLookup = typeof(T).Name switch
+        {
+            nameof(BrandDataRow) =>
+                organisationRows
+                .Where(row => brandPackagingActivities.Contains(row.PackagingActivitySO, StringComparer.OrdinalIgnoreCase))
+                .GroupBy(o => o.DefraId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.DistinctBy(d => d.SubsidiaryId)
+                          .ToDictionary(
+                              i => i.SubsidiaryId ?? string.Empty,
+                              i => new OrganisationIdentifiers(i.DefraId, i.SubsidiaryId))),
+
+            nameof(PartnersDataRow) =>
+                organisationRows
+                .Where(row => string.Compare(row.OrganisationTypeCode, UnIncorporationTypeCodes.Partnership, StringComparison.OrdinalIgnoreCase) == 0)
+                .GroupBy(o => o.DefraId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.DistinctBy(d => d.SubsidiaryId)
+                          .ToDictionary(
+                              i => i.SubsidiaryId,
+                              i => new OrganisationIdentifiers(i.DefraId, i.SubsidiaryId))),
+        };
+
+        _logger.LogInformation("Cross-file check found {RowCount} rows for type {TypeName}", filteredOrganisationLookup.Count, typeof(T).Name);
+
+        return new OrganisationDataLookupTable(filteredOrganisationLookup);
+    }
+
+    private async Task<List<T>> ParseFile<T>(string blobName, bool useMinimalClassMaps = false)
+    {
+        using var blobMemoryStream = _blobReader.DownloadBlobToStream(blobName);
+        return await _csvStreamParser.GetItemsFromCsvStreamAsync<T>(
+            blobMemoryStream,
+            useMinimalClassMaps);
+    }
+
+    private async Task<bool> IsRowValidationEnabledAsync()
+    {
+        return await _featureManager.IsEnabledAsync(FeatureFlags.EnableRowValidation);
     }
 
     private async Task<bool> IsOrgDataValidationEnabledAsync(BlobQueueMessage blobQueueMessage)
@@ -225,5 +303,20 @@ public class RegistrationService : IRegistrationService
     {
         return await _featureManager.IsEnabledAsync(FeatureFlags.EnableRowValidation) &&
             await _featureManager.IsEnabledAsync(FeatureFlags.EnableBrandPartnerDataRowValidation);
+    }
+
+    private async Task<bool> IsBrandPartnerCrossFileValidationEnabledAsync(BlobQueueMessage blobQueueMessage)
+    {
+        return blobQueueMessage.RequiresRowValidation == true &&
+            await _featureManager.IsEnabledAsync(FeatureFlags.EnableRowValidation) &&
+            await _featureManager.IsEnabledAsync(FeatureFlags.EnableBrandPartnerCrossFileValidation);
+    }
+
+    private async Task<bool> IsCompanyDetailsDataValidationEnabledAsync(BlobQueueMessage blobQueueMessage)
+    {
+        return blobQueueMessage.RequiresRowValidation == true &&
+            await _featureManager.IsEnabledAsync(FeatureFlags.EnableRowValidation) &&
+            await _featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationDataRowValidation) &&
+            await _featureManager.IsEnabledAsync(FeatureFlags.EnableCompanyDetailsValidation);
     }
 }

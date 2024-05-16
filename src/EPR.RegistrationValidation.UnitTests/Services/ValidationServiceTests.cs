@@ -14,15 +14,20 @@ using EPR.RegistrationValidation.UnitTests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.FeatureManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
 [TestClass]
 public class ValidationServiceTests
 {
-    private Mock<IFeatureManager> _featureManagerMock;
     private Mock<ICompanyDetailsApiClient> _companyDetailsApiClientMock;
+    private Mock<ILogger<ValidationService>> _loggerMock;
+
+    [TestInitialize]
+    public void Setup()
+    {
+        _loggerMock = new Mock<ILogger<ValidationService>>();
+    }
 
     [TestMethod]
     public async Task Validate_WithoutOrgId_ExpectOrgIdValidationError()
@@ -36,10 +41,10 @@ public class ValidationServiceTests
         var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage);
+        var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage, false);
 
         // Assert
-        var validationError = results.First(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.MissingOrganisationId));
+        var validationError = results.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.MissingOrganisationId));
         validationError.Should().NotBeNull();
         validationError.RowNumber.Should().Be(expectedRow);
         validationError.ColumnErrors.First().ColumnIndex.Should().Be(expectedColumnIndex);
@@ -86,7 +91,7 @@ public class ValidationServiceTests
         var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage);
+        var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage, false);
 
         // Assert
         results.Should().BeEmpty();
@@ -103,7 +108,7 @@ public class ValidationServiceTests
         var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage);
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
 
         // Assert
         results.Should().BeEmpty();
@@ -120,7 +125,7 @@ public class ValidationServiceTests
         var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage);
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
 
         // Assert
         results.Should().BeEmpty();
@@ -138,10 +143,10 @@ public class ValidationServiceTests
         var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage);
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
 
         // Assert
-        var validationError = results.First(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.DuplicateOrganisationIdSubsidiaryId));
+        var validationError = results.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.DuplicateOrganisationIdSubsidiaryId));
         validationError.Should().NotBeNull();
     }
 
@@ -156,7 +161,7 @@ public class ValidationServiceTests
         var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage);
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
 
         // Assert
         results.Sum(x => x.ColumnErrors.Count).Should().Be(maxErrors);
@@ -215,7 +220,7 @@ public class ValidationServiceTests
         var results = service.ValidateOrganisationSubType(dataRows.ToList(), 0);
 
         // Assert
-        var validationError = results.ValidationErrors.First(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.HeadOrganisationMissingSubOrganisation));
+        var validationError = results.ValidationErrors.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.HeadOrganisationMissingSubOrganisation));
         validationError.Should().NotBeNull();
     }
 
@@ -236,7 +241,7 @@ public class ValidationServiceTests
         var results = service.ValidateOrganisationSubType(dataRows.ToList(), 0);
 
         // Assert
-        var validationError = results.ValidationErrors.First(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.HeadOrganisationMissingSubOrganisation));
+        var validationError = results.ValidationErrors.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.HeadOrganisationMissingSubOrganisation));
         validationError.Should().NotBeNull();
     }
 
@@ -257,7 +262,7 @@ public class ValidationServiceTests
         var results = service.ValidateOrganisationSubType(dataRows.ToList(), 0);
 
         // Assert
-        var validationError = results.ValidationErrors.FirstOrDefault(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.HeadOrganisationMissingSubOrganisation));
+        var validationError = results.ValidationErrors.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.HeadOrganisationMissingSubOrganisation));
         validationError.Should().BeNull();
     }
 
@@ -272,7 +277,7 @@ public class ValidationServiceTests
         var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow }, blobQueueMessage);
+        var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow }, blobQueueMessage, false);
 
         // Assert
         var columnError = errors.Single().ColumnErrors.Single();
@@ -292,7 +297,7 @@ public class ValidationServiceTests
         var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow }, blobQueueMessage);
+        var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow }, blobQueueMessage, false);
 
         // Assert
         var columnError = errors.Single().ColumnErrors.Single();
@@ -337,14 +342,86 @@ public class ValidationServiceTests
     {
         // Arrange
         int rowCount = 10;
-        var dataRows = RowDataTestHelper.GenerateBrand(rowCount);
+        var dataRows = RowDataTestHelper.GenerateBrand(rowCount).ToList();
         var service = CreateService();
 
         // Act
-        var results = await service.ValidateAppendedFileAsync(dataRows.ToList());
+        var results = await service.ValidateAppendedFileAsync(dataRows.ToList(), null);
 
         // Assert
         results.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task Validate_BrandFile_With_NonMatching_OrganisationData_ExpectValidationError()
+    {
+        // Arrange
+        int rowCount = 5;
+        var dataRows = RowDataTestHelper.GenerateBrand(rowCount).ToList();
+        var service = CreateService();
+
+        var organisationDataTable = OrganisationDataLookupTableTestHelper.GenerateWithInvalidData();
+
+        // Act
+        var results = await service.ValidateAppendedFileAsync(dataRows.ToList(), organisationDataTable);
+
+        // Assert
+        results.Should().NotBeEmpty();
+        results.Should().HaveCount(1);
+        results[0].Should().Be(ErrorCodes.BrandDetailsNotMatchingOrganisation);
+    }
+
+    [TestMethod]
+    public async Task Validate_BrandFile_With_Empty_LookupTable_ExpectNoValidationError()
+    {
+        // Arrange
+        int rowCount = 10;
+        var dataRows = RowDataTestHelper.GenerateBrand(rowCount).ToList();
+        var service = CreateService();
+
+        var organisationDataTable = OrganisationDataLookupTableTestHelper.GenerateEmptyTable();
+
+        // Act
+        var results = await service.ValidateAppendedFileAsync(dataRows.ToList(), organisationDataTable);
+
+        // Assert
+        results.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task Validate_BrandFile_With_Matching_OrganisationData_ExpectNoValidationError()
+    {
+        // Arrange
+        int rowCount = 5;
+        var dataRows = RowDataTestHelper.GenerateBrand(rowCount).ToList();
+        var service = CreateService();
+
+        var organisationDataTable = OrganisationDataLookupTableTestHelper.GenerateFromCsvRows(dataRows);
+
+        // Act
+        var results = await service.ValidateAppendedFileAsync(dataRows.ToList(), organisationDataTable);
+
+        // Assert
+        results.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task Validate_PartnerFile_With_NonMatching_OrganisationData_ExpectValidationError()
+    {
+        // Arrange
+        int rowCount = 5;
+        var dataRows = RowDataTestHelper.GeneratePartner(rowCount).ToList();
+        var service = CreateService();
+
+        var organisationDataTable = OrganisationDataLookupTableTestHelper.GenerateWithInvalidData();
+
+        // Act
+        var results = await service.ValidateAppendedFileAsync(dataRows.ToList(), organisationDataTable);
+
+        // Assert
+        results.Should().NotBeEmpty();
+        results.Should().HaveCount(1);
+        results[0].Should().Be(ErrorCodes.PartnerDetailsNotMatchingOrganisation);
     }
 
     [TestMethod]
@@ -359,7 +436,7 @@ public class ValidationServiceTests
         var dataRows = RowDataTestHelper.GenerateBrandWithExceededCharacterLimit(columnIndex);
 
         // Act
-        var results = await service.ValidateAppendedFileAsync(dataRows);
+        var results = await service.ValidateAppendedFileAsync(dataRows, null);
 
         // Assert
         results.Should().NotBeNull();
@@ -371,11 +448,50 @@ public class ValidationServiceTests
     {
         // Arrange
         int rowCount = 10;
-        var dataRows = RowDataTestHelper.GeneratePartner(rowCount);
+        var dataRows = RowDataTestHelper.GeneratePartner(rowCount).ToList();
         var service = CreateService();
 
         // Act
-        var results = await service.ValidateAppendedFileAsync(dataRows.ToList());
+        var results = await service.ValidateAppendedFileAsync(dataRows.ToList(), null);
+
+        // Assert
+        results.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task Validate_PartnerFile_With_Empty_LookupTable_ExpectNoValidationError()
+    {
+        // Arrange
+        int rowCount = 10;
+        var dataRows = RowDataTestHelper.GeneratePartner(rowCount).ToList();
+        var service = CreateService();
+
+        var organisationDataTable = OrganisationDataLookupTableTestHelper.GenerateEmptyTable();
+
+        // Act
+        var results = await service.ValidateAppendedFileAsync(dataRows.ToList(), organisationDataTable);
+
+        // Assert
+        results.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task Validate_PartnerFile_With_Matching_OrganisationData_ExpectNoValidationError()
+    {
+        // Arrange
+        int rowCount = 5;
+        var dataRows = RowDataTestHelper.GeneratePartner(rowCount).ToList();
+        var service = CreateService();
+
+        dataRows.Add(new PartnersDataRow { DefraId = "199", SubsidiaryId = null });
+        dataRows.Add(new PartnersDataRow { DefraId = "101", SubsidiaryId = null });
+        dataRows.Add(new PartnersDataRow { DefraId = "101", SubsidiaryId = "101" });
+        dataRows.Add(new PartnersDataRow { DefraId = "101", SubsidiaryId = "102" });
+        dataRows.Add(new PartnersDataRow { DefraId = "101", SubsidiaryId = "102" });
+        var organisationDataTable = OrganisationDataLookupTableTestHelper.GenerateFromCsvRows(dataRows);
+
+        // Act
+        var results = await service.ValidateAppendedFileAsync(dataRows.ToList(), organisationDataTable);
 
         // Assert
         results.Should().BeEmpty();
@@ -395,7 +511,7 @@ public class ValidationServiceTests
         var dataRows = RowDataTestHelper.GeneratePartnerWithExceededCharacterLimit(index);
 
         // Act
-        var results = await service.ValidateAppendedFileAsync(dataRows);
+        var results = await service.ValidateAppendedFileAsync(dataRows, null);
 
         // Assert
         results.Should().NotBeNull();
@@ -410,7 +526,7 @@ public class ValidationServiceTests
         var invalidRowTypes = new[] { new InvalidRowType() };
 
         // Act
-        var act = async () => await service.ValidateAppendedFileAsync(invalidRowTypes.ToList());
+        var act = async () => await service.ValidateAppendedFileAsync(invalidRowTypes.ToList(), null);
 
         // Assert
         act.Should().ThrowAsync<ArgumentException>();
@@ -427,7 +543,7 @@ public class ValidationServiceTests
         var service = CreateService();
 
         // Act
-        var results = await service.ValidateAppendedFileAsync(dataRows);
+        var results = await service.ValidateAppendedFileAsync(dataRows, null);
 
         // Assert
         results.Should().NotBeNull();
@@ -436,7 +552,82 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
-    public async Task ValidateOrganisation_AsProducerUser()
+    public async Task ValidateOrganisation_AsProducerUser_With_ValidateCompanyDetails_False()
+    {
+        // Arrange
+        int rowCount = 4;
+        int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        var organisation = new CompanyDetailsDataItem
+        {
+            ReferenceNumber = "123456",
+            CompaniesHouseNumber = "X1234567",
+        };
+
+        var companyDetailsOrganisations = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations.Add(organisation);
+        var companyDetailsDataResult = new CompanyDetailsDataResult();
+        companyDetailsDataResult.Organisations = companyDetailsOrganisations;
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetCompanyDetails(It.IsAny<string>()))
+            .ReturnsAsync(companyDetailsDataResult);
+
+        var blobQueueMessage = new BlobQueueMessage();
+
+        // Act
+        var errors = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
+
+        // Assert
+        errors.Should().BeEmpty();
+
+        _companyDetailsApiClientMock.Verify(
+            m => m.GetCompanyDetails(It.IsAny<string>()),
+            Times.Never());
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisation_AsProducerUser_With_ValidateCompanyDetails_True_FailureErrorMessage()
+    {
+        // Arrange
+        int rowCount = 6;
+        int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        var organisation = new CompanyDetailsDataItem
+        {
+            ReferenceNumber = "123456",
+            CompaniesHouseNumber = "X1234567",
+        };
+
+        var companyDetailsOrganisations = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations.Add(organisation);
+        var companyDetailsDataResult = new CompanyDetailsDataResult();
+        companyDetailsDataResult.Organisations = companyDetailsOrganisations;
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetCompanyDetails(It.IsAny<string>()))
+            .ReturnsAsync(companyDetailsDataResult);
+
+        var blobQueueMessage = new BlobQueueMessage();
+
+        // Act
+        var errors = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, true);
+
+        // Assert
+        var validationError = errors.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.CheckOrganisationId));
+        validationError.Should().NotBeNull();
+
+        _companyDetailsApiClientMock.Verify(
+            m => m.GetCompanyDetails(It.IsAny<string>()),
+            Times.AtLeastOnce());
+    }
+
+    [TestMethod]
+    public async Task ValidateCompanyDetails_AsProducerUser()
     {
         // Arrange
         int rowCount = 4;
@@ -451,12 +642,6 @@ public class ValidationServiceTests
         dataRows[3].DefraId = "400004";
         dataRows[3].CompaniesHouseNumber = "440044";
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
-        _featureManagerMock
-            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
-            .ReturnsAsync(true);
-        _featureManagerMock
-            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableCompanyDetailsValidation))
-            .ReturnsAsync(true);
 
         var companyDetailsOrganisations1 = new List<CompanyDetailsDataItem>();
         companyDetailsOrganisations1.Add(new CompanyDetailsDataItem { ReferenceNumber = "100001", CompaniesHouseNumber = "110011" });
@@ -495,12 +680,11 @@ public class ValidationServiceTests
         var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, string.Empty, string.Empty);
 
         // Assert
-        var validationError = results.ValidationErrors.Count;
         results.ValidationErrors.Should().BeEmpty();
     }
 
     [TestMethod]
-    public async Task ValidateOrganisation_AsComplianceSchemeUser()
+    public async Task ValidateCompanyDetails_AsComplianceSchemeUser()
     {
         // Arrange
         int rowCount = 4;
@@ -515,12 +699,6 @@ public class ValidationServiceTests
         dataRows[3].DefraId = "400004";
         dataRows[3].CompaniesHouseNumber = "440044";
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
-        _featureManagerMock
-            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
-            .ReturnsAsync(true);
-        _featureManagerMock
-            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableCompanyDetailsValidation))
-            .ReturnsAsync(true);
 
         var companyDetailsOrganisations1 = new List<CompanyDetailsDataItem>();
         companyDetailsOrganisations1.Add(new CompanyDetailsDataItem { ReferenceNumber = "100001", CompaniesHouseNumber = "110011" });
@@ -563,25 +741,17 @@ public class ValidationServiceTests
         var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, "85a8b24f-d192-461f-8a0b-87dc54f63453", string.Empty);
 
         // Assert
-        var validationError = results.ValidationErrors.Count;
         results.ValidationErrors.Should().BeEmpty();
     }
 
     [TestMethod]
-    public async Task ValidateOrganisation_AsProducerUser_FailureErrorMessage()
+    public async Task ValidateCompanyDetails_AsProducerUser_FailureErrorMessage()
     {
         // Arrange
         int rowCount = 6;
         int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
-
-        _featureManagerMock
-            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
-            .ReturnsAsync(true);
-        _featureManagerMock
-            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableCompanyDetailsValidation))
-            .ReturnsAsync(true);
 
         var organisation = new CompanyDetailsDataItem
         {
@@ -602,12 +772,12 @@ public class ValidationServiceTests
         var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, string.Empty, string.Empty);
 
         // Assert
-        var validationError = results.ValidationErrors.First(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.CheckOrganisationId));
+        var validationError = results.ValidationErrors.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.CheckOrganisationId));
         validationError.Should().NotBeNull();
     }
 
     [TestMethod]
-    public async Task ValidateOrganisation_AsComplianceSchemeUser_FailureErrorMessage()
+    public async Task ValidateCompanyDetails_AsProducerUser_Logs_Http_Failure()
     {
         // Arrange
         int rowCount = 6;
@@ -615,12 +785,27 @@ public class ValidationServiceTests
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
-        _featureManagerMock
-            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
-            .ReturnsAsync(true);
-        _featureManagerMock
-            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableCompanyDetailsValidation))
-            .ReturnsAsync(true);
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetCompanyDetails(It.IsAny<string>()))
+            .Throws<HttpRequestException>();
+
+        // Act
+        var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, string.Empty, string.Empty);
+
+        // Assert
+        results.ValidationErrors.Should().BeEmpty();
+
+        _loggerMock.VerifyLog(logger => logger.LogError(It.IsAny<HttpRequestException>(), It.IsAny<string>()));
+    }
+
+    [TestMethod]
+    public async Task ValidateCompanyDetails_AsComplianceSchemeUser_FailureErrorMessage()
+    {
+        // Arrange
+        int rowCount = 6;
+        int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
         var organisation = new CompanyDetailsDataItem
         {
@@ -645,7 +830,7 @@ public class ValidationServiceTests
         var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, "13202f0d-bde8-422c-974a-f1dec1b32fff", string.Empty);
 
         // Assert
-        var validationError = results.ValidationErrors.First(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.CheckOrganisationId));
+        var validationError = results.ValidationErrors.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.CheckOrganisationId));
         validationError.Should().NotBeNull();
 
         _companyDetailsApiClientMock.Verify(
@@ -657,20 +842,13 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
-    public async Task ValidateOrganisation_AsComplianceSchemeUser_AdditionalMembers_FailureErrorMessage()
+    public async Task ValidateCompanyDetails_AsComplianceSchemeUser_AdditionalMembers_FailureErrorMessage()
     {
         // Arrange
         int rowCount = 6;
         int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
-
-        _featureManagerMock
-            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation))
-            .ReturnsAsync(true);
-        _featureManagerMock
-            .Setup(f => f.IsEnabledAsync(FeatureFlags.EnableCompanyDetailsValidation))
-            .ReturnsAsync(true);
 
         var organisation = new CompanyDetailsDataItem
         {
@@ -695,7 +873,7 @@ public class ValidationServiceTests
         var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, "13202f0d-bde8-422c-974a-f1dec1b32fff", string.Empty);
 
         // Assert
-        var validationError = results.ValidationErrors.First(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.CheckOrganisationId));
+        var validationError = results.ValidationErrors.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.CheckOrganisationId));
         validationError.Should().NotBeNull();
 
         _companyDetailsApiClientMock.Verify(
@@ -708,7 +886,6 @@ public class ValidationServiceTests
 
     private ValidationService CreateService(ValidationSettings? settings = null)
     {
-        _featureManagerMock = new Mock<IFeatureManager>();
         _companyDetailsApiClientMock = new Mock<ICompanyDetailsApiClient>();
 
         return new ValidationService(
@@ -718,8 +895,7 @@ public class ValidationServiceTests
             new ColumnMetaDataProvider(),
             Options.Create(settings ?? new ValidationSettings()),
             _companyDetailsApiClientMock.Object,
-            _featureManagerMock.Object,
-            Mock.Of<ILogger<ValidationService>>());
+            _loggerMock.Object);
     }
 
     private class InvalidRowType : ICsvDataRow

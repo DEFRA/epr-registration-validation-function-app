@@ -25,8 +25,8 @@ public class CompanyHouseValidator : AbstractValidator<OrganisationDataRow>
             .WithErrorCode(ErrorCodes.InvalidCompanyHouseNumber);
     }
 
-    private static bool ValidNumber(string chNumber)
+    private static bool ValidNumber(string companiesHouseNumber)
     {
-        return chNumber != "00000000";
+        return companiesHouseNumber != "00000000";
     }
 }

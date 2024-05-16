@@ -2,7 +2,6 @@
 
 using Azure.Storage.Blobs;
 using Data.Config;
-using Helpers;
 using Microsoft.Extensions.Options;
 
 public class BlobReader : IBlobReader
@@ -18,9 +17,14 @@ public class BlobReader : IBlobReader
 
     public MemoryStream DownloadBlobToStream(string name)
     {
-        var blobClient = BlobStorageHelper.GetBlobClient(_blobServiceClient, _storageAccountConfig.BlobContainerName, name);
+        var blobClient = GetBlobClient(name);
         var memoryStream = new MemoryStream();
         blobClient.DownloadTo(memoryStream);
         return memoryStream;
+    }
+
+    public BlobClient GetBlobClient(string blobName)
+    {
+        return _blobServiceClient.GetBlobContainerClient(_storageAccountConfig.BlobContainerName).GetBlobClient(blobName);
     }
 }

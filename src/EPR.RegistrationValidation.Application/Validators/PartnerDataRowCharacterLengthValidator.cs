@@ -3,7 +3,6 @@
 using Data.Constants;
 using Data.Models;
 using EPR.RegistrationValidation.Application.Constants;
-using Extensions;
 using FluentValidation;
 
 public class PartnerDataRowCharacterLengthValidator : AbstractValidator<PartnersDataRow>

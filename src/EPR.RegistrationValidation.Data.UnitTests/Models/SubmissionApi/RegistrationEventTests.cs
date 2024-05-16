@@ -2,7 +2,6 @@
 
 using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Enums;
-using EPR.RegistrationValidation.Data.Models;
 using EPR.RegistrationValidation.Data.Models.SubmissionApi;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

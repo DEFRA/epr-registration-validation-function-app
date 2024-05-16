@@ -3,7 +3,8 @@
 public static class FeatureFlags
 {
     public const string EnableRowValidation = "EnableRowValidation";
-    public const string EnableOrganisationDataRowValidation = "EnableOrganisationDataRowValidation";
     public const string EnableBrandPartnerDataRowValidation = "EnableBrandPartnerDataRowValidation";
+    public const string EnableBrandPartnerCrossFileValidation = "EnableBrandPartnerCrossFileValidation";
+    public const string EnableOrganisationDataRowValidation = "EnableOrganisationDataRowValidation";
     public const string EnableCompanyDetailsValidation = "EnableCompanyDetailsValidation";
 }

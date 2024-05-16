@@ -1,6 +1,5 @@
 ﻿namespace EPR.RegistrationValidation.Application.Validators;
 
-using System.Text.RegularExpressions;
 using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
 using FluentValidation;

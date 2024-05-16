@@ -43,7 +43,7 @@ docker build -t registrationvalidation -f EPR.RegistrationValidation.Functions/D
 Fill out the environment variables and run the following command:
 
 ```
-docker run -e AzureWebJobsStorage="X" -e FUNCTIONS_EXTENSION_VERSION="X" -e FUNCTIONS_WORKER_RUNTIME="X" -e ServiceBus:ConnectionString="X" -e ServiceBus:UploadQueueName="X" -e StorageAccount:BlobContainerName="X" -e StorageAccount:ConnectionString="X" -e SubmissionApi:BaseUrl="X" -e SubmissionApi:SubmissionEndpoint="X" -e SubmissionApi:SubmissionEventEndpoint="X" -e SubmissionApi:Version="X" registrationvalidation
+docker run -e AzureWebJobsStorage="X" -e FUNCTIONS_EXTENSION_VERSION="X" -e FUNCTIONS_WORKER_RUNTIME="X" -e ServiceBus:ConnectionString="X" -e ServiceBus:UploadQueueName="X" -e StorageAccount:BlobContainerName="X" -e StorageAccount:ConnectionString="X" -e SubmissionApi:BaseUrl="X" -e SubmissionApi:SubmissionEndpoint="X" -e SubmissionApi:SubmissionEventEndpoint="X" -e SubmissionApi:Version="X" -e ValidationSettings:ErrorLimit="X" -e CompanyDetailsApi:BaseUrl="X" -e CompanyDetailsApi:Timeout="X" -e CompanyDetailsApi:ClientId="X" -e FeatureManagement:EnableRowValidation="X" -e FeatureManagement:EnableOrganisationDataRowValidation="X" -e FeatureManagement:EnableBrandPartnerDataRowValidation="X" -e FeatureManagement:EnableBrandPartnerCrossFileValidation="X" -e FeatureManagement:EnableCompanyDetailsValidation="X" registrationvalidation
 ```
 
 ## How To Test 
