@@ -26,9 +26,9 @@ public class PartnerDataRowOrganisationDataValidator : AbstractValidator<Partner
             .Must((x, val, context) =>
             {
                 var lookup = GetOrganisationDataLookupTableData(context);
-                if (lookup.Any() &&
-                    (!lookup.TryGetValue(x.DefraId, out var partnerSubsidiaryLookup)
-                        || (!string.IsNullOrEmpty(val) && !partnerSubsidiaryLookup.ContainsKey(val))))
+                if (!string.IsNullOrEmpty(val) &&
+                    lookup.TryGetValue(x.DefraId, out var partnerSubsidiaryLookup) &&
+                    !partnerSubsidiaryLookup.ContainsKey(val))
                 {
                     return false;
                 }

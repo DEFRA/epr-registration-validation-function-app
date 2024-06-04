@@ -371,41 +371,29 @@ public class ValidationService : IValidationService
             return errors;
         }
 
-        var rowsIdentifiers = rows switch
+        var rowIdentifiers = rows switch
         {
             List<BrandDataRow> _ => rows.Cast<BrandDataRow>().Select(x => new OrganisationIdentifiers(x.DefraId, x.SubsidiaryId)),
             List<PartnersDataRow> _ => rows.Cast<PartnersDataRow>().Select(x => new OrganisationIdentifiers(x.DefraId, x.SubsidiaryId)),
             _ => throw new ArgumentException("Unsupported row type"),
         };
 
-        var missingRows = organisationDataLookup.Data
-            .SelectMany(x => x.Value.Values, (_, b) => new { b.DefraId, b.SubsidiaryId })
-            .Where(x => !rowsIdentifiers.Any(row => row.DefraId == x.DefraId
-              && row.SubsidiaryId == x.SubsidiaryId))
-            .Select(x => new OrganisationIdentifiers(x.DefraId, x.SubsidiaryId))
-            .ToList();
+        var missingOrganisationRows = GetMissingOrganisationRows(organisationDataLookup.Data, rowIdentifiers);
+        var missingOrganisationErrorCode = GetMissingOrganisationErrorCode(rows, missingOrganisationRows);
 
-        if (missingRows.Any())
+        var missingSubsidiaryRows = GetMissingSubsidiaryRows(organisationDataLookup.Data, rowIdentifiers);
+        var missingSubsidiaryErrorCode = GetMissingSubsidiaryErrorCode(rows, missingSubsidiaryRows);
+
+        if (!string.IsNullOrEmpty(missingOrganisationErrorCode) && !errors.Contains(missingOrganisationErrorCode))
         {
-            var errorCode = rows switch
-            {
-                List<BrandDataRow> _ => ErrorCodes.BrandDetailsNotMatchingOrganisation,
-                List<PartnersDataRow> _ => ErrorCodes.PartnerDetailsNotMatchingOrganisation,
-            };
+            errors.Add(missingOrganisationErrorCode);
+            LogMissingIdentifierErrors(missingOrganisationRows, missingOrganisationErrorCode);
+        }
 
-            if (!errors.Contains(errorCode))
-            {
-                errors.Add(errorCode);
-            }
-
-            foreach (var missingRow in missingRows)
-            {
-                _logger.LogWarning(
-                    "Validation error - no row with organisation id {DefraId} and subsidiary id {SubsidiaryId}. Error code {ErrorCode}",
-                    missingRow.DefraId,
-                    missingRow.SubsidiaryId,
-                    errorCode);
-            }
+        if (!string.IsNullOrEmpty(missingSubsidiaryErrorCode) && !errors.Contains(missingSubsidiaryErrorCode))
+        {
+            errors.Add(missingSubsidiaryErrorCode);
+            LogMissingIdentifierErrors(missingSubsidiaryRows, missingSubsidiaryErrorCode);
         }
 
         return errors;
@@ -420,6 +408,75 @@ public class ValidationService : IValidationService
         }
 
         return context;
+    }
+
+    private IList<OrganisationIdentifiers?> GetMissingOrganisationRows(
+        Dictionary<string, Dictionary<string, OrganisationIdentifiers>> organisationData,
+        IEnumerable<OrganisationIdentifiers> rowIdentifiers)
+    {
+        return organisationData
+            .SelectMany(x => x.Value.Values, (_, b) => new { b.DefraId, b.SubsidiaryId })
+            .Where(x => !rowIdentifiers.Any(row => row.DefraId == x.DefraId))
+            .Select(x => new OrganisationIdentifiers(x.DefraId, x.SubsidiaryId))
+            .ToList();
+    }
+
+    private IList<OrganisationIdentifiers?> GetMissingSubsidiaryRows(
+        Dictionary<string, Dictionary<string, OrganisationIdentifiers>> organisationData,
+        IEnumerable<OrganisationIdentifiers> rowIdentifiers)
+    {
+        return organisationData
+            .SelectMany(x => x.Value.Values, (_, b) => new { b.DefraId, b.SubsidiaryId })
+            .Where(x => rowIdentifiers.Any(row => row.DefraId == x.DefraId)
+                && !string.IsNullOrEmpty(x.SubsidiaryId)
+                && !rowIdentifiers.Any(row => row.SubsidiaryId == x.SubsidiaryId))
+            .Select(x => new OrganisationIdentifiers(x.DefraId, x.SubsidiaryId))
+            .ToList();
+    }
+
+    private string GetMissingOrganisationErrorCode<T>(List<T> rows, IList<OrganisationIdentifiers> missingIdentifiers)
+    {
+        if (missingIdentifiers.Any())
+        {
+            return rows switch
+            {
+                List<BrandDataRow> _ => ErrorCodes.BrandDetailsNotMatchingOrganisation,
+                List<PartnersDataRow> _ => ErrorCodes.PartnerDetailsNotMatchingOrganisation,
+            };
+        }
+
+        return null;
+    }
+
+    private string GetMissingSubsidiaryErrorCode<T>(List<T> rows, IEnumerable<OrganisationIdentifiers> missingIdentifiers)
+    {
+        if (missingIdentifiers.Any())
+        {
+            return rows switch
+            {
+                List<BrandDataRow> _ => ErrorCodes.BrandDetailsNotMatchingSubsidiary,
+                List<PartnersDataRow> _ => ErrorCodes.PartnerDetailsNotMatchingOrganisation,
+            };
+        }
+
+        return null;
+    }
+
+    private void LogMissingIdentifierErrors(IEnumerable<OrganisationIdentifiers> missingIdentifiers, string errorCode)
+    {
+        if (!missingIdentifiers.Any())
+        {
+            return;
+        }
+
+        foreach (var missingRow in missingIdentifiers)
+        {
+            _logger.LogWarning(
+                "Validation error - no row in organisation registration file with organisation id {DefraId} and subsidiary id {SubsidiaryId}. Error code {ErrorCode}",
+                missingRow.DefraId,
+                missingRow.SubsidiaryId,
+                errorCode);
+        }
     }
 
     private void LogValidationWarning(int row, ValidationFailure validationError)

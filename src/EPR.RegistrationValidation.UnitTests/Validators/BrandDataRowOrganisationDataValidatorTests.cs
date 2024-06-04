@@ -1,6 +1,7 @@
 ﻿namespace EPR.RegistrationValidation.UnitTests.Validators;
 
 using EPR.RegistrationValidation.Application.Validators;
+using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
 using EPR.RegistrationValidation.Data.Models.OrganisationDataLookup;
 using FluentAssertions;
@@ -41,6 +42,10 @@ public class BrandDataRowOrganisationDataValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.DefraId);
+        var x = nameof(BrandDataRow.DefraId);
+        result.Errors.Should().Contain(x =>
+            x.PropertyName == nameof(BrandDataRow.DefraId) &&
+            x.ErrorCode == ErrorCodes.BrandDetailsNotMatchingOrganisation);
     }
 
     [TestMethod]

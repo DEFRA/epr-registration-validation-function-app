@@ -2,6 +2,7 @@
 
 using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Application.Validators;
+using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
 using FluentAssertions;
 using FluentValidation.TestHelper;
@@ -25,6 +26,9 @@ public class BrandDataRowCharacterLengthValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.DefraId);
+        result.Errors.Should().Contain(x =>
+            x.PropertyName == nameof(BrandDataRow.DefraId) &&
+            x.ErrorCode == ErrorCodes.CharacterLengthExceeded);
     }
 
     [TestMethod]
@@ -42,6 +46,9 @@ public class BrandDataRowCharacterLengthValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.SubsidiaryId);
+        result.Errors.Should().Contain(x =>
+            x.PropertyName == nameof(BrandDataRow.SubsidiaryId) &&
+            x.ErrorCode == ErrorCodes.CharacterLengthExceeded);
     }
 
     [TestMethod]
@@ -59,6 +66,9 @@ public class BrandDataRowCharacterLengthValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.BrandName);
+        result.Errors.Should().Contain(x =>
+            x.PropertyName == nameof(BrandDataRow.BrandName) &&
+            x.ErrorCode == ErrorCodes.CharacterLengthExceeded);
     }
 
     [TestMethod]
@@ -76,6 +86,9 @@ public class BrandDataRowCharacterLengthValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.BrandTypeCode);
+        result.Errors.Should().Contain(x =>
+            x.PropertyName == nameof(BrandDataRow.BrandTypeCode) &&
+            x.ErrorCode == ErrorCodes.CharacterLengthExceeded);
     }
 
     [TestMethod]

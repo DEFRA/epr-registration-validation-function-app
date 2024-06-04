@@ -26,16 +26,16 @@ public class BrandDataRowOrganisationDataValidator : AbstractValidator<BrandData
             .Must((x, val, context) =>
             {
                 var lookup = GetOrganisationDataLookupTableData(context);
-                if (lookup.Any() &&
-                    (!lookup.TryGetValue(x.DefraId, out var brandSubsidiaryLookup)
-                        || (!string.IsNullOrEmpty(val) && !brandSubsidiaryLookup.ContainsKey(val))))
+                if (!string.IsNullOrEmpty(val) &&
+                    lookup.TryGetValue(x.DefraId, out var brandSubsidiaryLookup) &&
+                    !brandSubsidiaryLookup.ContainsKey(val))
                 {
                     return false;
                 }
 
                 return true;
             })
-            .WithErrorCode(ErrorCodes.BrandDetailsNotMatchingOrganisation);
+            .WithErrorCode(ErrorCodes.BrandDetailsNotMatchingSubsidiary);
     }
 
     private Dictionary<string, Dictionary<string, OrganisationIdentifiers>> GetOrganisationDataLookupTableData(IValidationContext context)

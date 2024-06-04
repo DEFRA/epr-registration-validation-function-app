@@ -60,4 +60,5 @@ public static class ErrorCodes
     public const string CheckOrganisationId = "882";
     public const string BrandDetailsNotMatchingOrganisation = "890";
     public const string PartnerDetailsNotMatchingOrganisation = "891";
+    public const string BrandDetailsNotMatchingSubsidiary = "892";
 }

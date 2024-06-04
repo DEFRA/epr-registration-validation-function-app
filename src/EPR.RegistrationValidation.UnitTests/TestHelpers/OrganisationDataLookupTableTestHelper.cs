@@ -24,6 +24,48 @@ public static class OrganisationDataLookupTableTestHelper
             });
     }
 
+    public static OrganisationDataLookupTable GenerateWithInvalidOrganisationId()
+    {
+        return new OrganisationDataLookupTable(
+            new Dictionary<string, Dictionary<string, OrganisationIdentifiers>>
+            {
+                {
+                    "999999", new()
+                    {
+                        { "888888", new OrganisationIdentifiers("999999", "888888") },
+                    }
+                },
+            });
+    }
+
+    public static OrganisationDataLookupTable GenerateWithInvalidSubsidiaryId()
+    {
+        return new OrganisationDataLookupTable(
+            new Dictionary<string, Dictionary<string, OrganisationIdentifiers>>
+            {
+                {
+                    "999999", new()
+                    {
+                        { "888888", new OrganisationIdentifiers("999999", "888888") },
+                    }
+                },
+            });
+    }
+
+    public static OrganisationDataLookupTable GenerateWithValues(string defraId, string subsidiaryId)
+    {
+        return new OrganisationDataLookupTable(
+            new Dictionary<string, Dictionary<string, OrganisationIdentifiers>>
+            {
+                {
+                    defraId, new()
+                    {
+                        { subsidiaryId, new OrganisationIdentifiers(defraId, subsidiaryId) },
+                    }
+                },
+            });
+    }
+
     public static OrganisationDataLookupTable GenerateFromCsvRows<T>(IEnumerable<T> dataRows)
     {
         return typeof(T).Name switch

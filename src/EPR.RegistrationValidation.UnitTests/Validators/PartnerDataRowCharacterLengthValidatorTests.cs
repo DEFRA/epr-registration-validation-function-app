@@ -2,6 +2,7 @@
 
 using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Application.Validators;
+using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
 using FluentAssertions;
 using FluentValidation.TestHelper;
@@ -25,6 +26,9 @@ public class PartnerDataRowCharacterLengthValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.DefraId);
+        result.Errors.Should().Contain(x =>
+            x.PropertyName == nameof(PartnersDataRow.DefraId) &&
+            x.ErrorCode == ErrorCodes.CharacterLengthExceeded);
     }
 
     [TestMethod]
@@ -42,6 +46,9 @@ public class PartnerDataRowCharacterLengthValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.SubsidiaryId);
+        result.Errors.Should().Contain(x =>
+            x.PropertyName == nameof(PartnersDataRow.SubsidiaryId) &&
+            x.ErrorCode == ErrorCodes.CharacterLengthExceeded);
     }
 
     [TestMethod]
@@ -59,6 +66,9 @@ public class PartnerDataRowCharacterLengthValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.PartnerFirstName);
+        result.Errors.Should().Contain(x =>
+            x.PropertyName == nameof(PartnersDataRow.PartnerFirstName) &&
+            x.ErrorCode == ErrorCodes.CharacterLengthExceeded);
     }
 
     [TestMethod]
@@ -76,6 +86,9 @@ public class PartnerDataRowCharacterLengthValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.PartnerLastName);
+        result.Errors.Should().Contain(x =>
+            x.PropertyName == nameof(PartnersDataRow.PartnerLastName) &&
+            x.ErrorCode == ErrorCodes.CharacterLengthExceeded);
     }
 
     [TestMethod]
@@ -93,6 +106,9 @@ public class PartnerDataRowCharacterLengthValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.PartnerPhoneNumber);
+        result.Errors.Should().Contain(x =>
+            x.PropertyName == nameof(PartnersDataRow.PartnerPhoneNumber) &&
+            x.ErrorCode == ErrorCodes.CharacterLengthExceeded);
     }
 
     [TestMethod]
@@ -110,6 +126,9 @@ public class PartnerDataRowCharacterLengthValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.PartnerEmail);
+        result.Errors.Should().Contain(x =>
+            x.PropertyName == nameof(PartnersDataRow.PartnerEmail) &&
+            x.ErrorCode == ErrorCodes.CharacterLengthExceeded);
     }
 
     [TestMethod]

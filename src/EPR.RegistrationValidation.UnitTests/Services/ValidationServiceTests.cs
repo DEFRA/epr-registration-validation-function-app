@@ -101,8 +101,8 @@ public class ValidationServiceTests
     public async Task Validate_WithManyValidRows_AndRowCountGreaterThanErrorLimit_ExpectNoValidationErrors()
     {
         // Arrange
-        int rowCount = 20;
-        int maxErrors = 10;
+        const int rowCount = 20;
+        const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount);
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
         var blobQueueMessage = new BlobQueueMessage();
@@ -118,8 +118,8 @@ public class ValidationServiceTests
     public async Task Validate_WithNoDuplicateOrganisationIdSubsidiaryId_ExpectNoValidationErrors()
     {
         // Arrange
-        int rowCount = 6;
-        int maxErrors = 10;
+        const int rowCount = 6;
+        const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgIdSubId(rowCount);
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
         var blobQueueMessage = new BlobQueueMessage();
@@ -135,8 +135,8 @@ public class ValidationServiceTests
     public async Task Validate_WithDuplicateOrganisationIdSubsidiaryId_ExpectValidationErrors()
     {
         // Arrange
-        int rowCount = 6;
-        int maxErrors = 20;
+        const int rowCount = 6;
+        const int maxErrors = 20;
         var dataRows = RowDataTestHelper.GenerateDuplicateOrgIdSubId(rowCount);
 
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
@@ -154,8 +154,8 @@ public class ValidationServiceTests
     public async Task Validate_WithDuplicateRows_AndRowCountGreaterThanErrorLimit_ReturnsLimitedErrors()
     {
         // Arrange
-        int rowCount = 20;
-        int maxErrors = 10;
+        const int rowCount = 20;
+        const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateDuplicateOrgIdSubId(rowCount);
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
         var blobQueueMessage = new BlobQueueMessage();
@@ -171,8 +171,8 @@ public class ValidationServiceTests
     public async Task ValidateRowsAsync_WithInvalidRows_AndRowCountGreaterThanErrorLimit_ReturnsLimitedErrors()
     {
         // Arrange
-        int rowCount = 20;
-        int maxErrors = 10;
+        const int rowCount = 20;
+        const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateInvalidOrgs(rowCount);
 
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
@@ -188,10 +188,10 @@ public class ValidationServiceTests
     public async Task ValidateDuplicates_WithDuplicateRows_AndRowCountGreaterThanErrorLimit_ReturnsLimitedErrors()
     {
         // Arrange
-        int rowCount = 20;
-        int maxErrors = 10;
-        int initialTotalErrors = 5;
-        int expectedDuplicateErrors = 5;
+        const int rowCount = 20;
+        const int maxErrors = 10;
+        const int initialTotalErrors = 5;
+        const int expectedDuplicateErrors = 5;
         var dataRows = RowDataTestHelper.GenerateDuplicateOrgIdSubId(rowCount);
 
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
@@ -210,8 +210,8 @@ public class ValidationServiceTests
     public async Task ValidateOrganisationSubType_WithNoSubOrganisationType_ReturnsRowError()
     {
         // Arrange
-        int rowCount = 20;
-        int maxErrors = 10;
+        const int rowCount = 20;
+        const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         dataRows[0].OrganisationSubTypeCode = OrganisationSubTypeCodes.Licensor;
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
@@ -228,8 +228,8 @@ public class ValidationServiceTests
     public async Task ValidateOrganisationSubType_WithSubOrganisationTypeAndEmptySubsidiaryID_ReturnsRowError()
     {
         // Arrange
-        int rowCount = 20;
-        int maxErrors = 10;
+        const int rowCount = 20;
+        const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         dataRows[0].OrganisationSubTypeCode = OrganisationSubTypeCodes.Licensor;
         dataRows[1].DefraId = dataRows[0].DefraId;
@@ -249,8 +249,8 @@ public class ValidationServiceTests
     public async Task ValidateOrganisationSubType_WithSubOrganisationType_ExpectNoValidationErrors()
     {
         // Arrange
-        int rowCount = 20;
-        int maxErrors = 10;
+        const int rowCount = 20;
+        const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         dataRows[0].OrganisationSubTypeCode = OrganisationSubTypeCodes.Licensor;
         dataRows[1].DefraId = dataRows[0].DefraId;
@@ -310,7 +310,7 @@ public class ValidationServiceTests
     public async Task IsColumnLengthExceeded_WhenRowDoesNotExceedCharacterLimit_ReturnsFalse()
     {
         // Arrange
-        int rowCount = 10;
+        const int rowCount = 10;
         var dataRows = RowDataTestHelper.GenerateOrganisationCSVFile(rowCount);
         var service = CreateService();
 
@@ -341,7 +341,7 @@ public class ValidationServiceTests
     public async Task Validate_BrandFile_ExpectNoValidationError()
     {
         // Arrange
-        int rowCount = 10;
+        const int rowCount = 10;
         var dataRows = RowDataTestHelper.GenerateBrand(rowCount).ToList();
         var service = CreateService();
 
@@ -353,14 +353,15 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
-    public async Task Validate_BrandFile_With_NonMatching_OrganisationData_ExpectValidationError()
+    public async Task Validate_BrandFile_With_NonMatching_OrganisationId_ExpectValidationError()
     {
         // Arrange
-        int rowCount = 5;
+        const int rowCount = 1;
         var dataRows = RowDataTestHelper.GenerateBrand(rowCount).ToList();
         var service = CreateService();
 
-        var organisationDataTable = OrganisationDataLookupTableTestHelper.GenerateWithInvalidData();
+        var organisationDataTable = OrganisationDataLookupTableTestHelper
+            .GenerateWithValues(dataRows[0].DefraId + "99", dataRows[0].SubsidiaryId);
 
         // Act
         var results = await service.ValidateAppendedFileAsync(dataRows.ToList(), organisationDataTable);
@@ -372,10 +373,30 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
+    public async Task Validate_BrandFile_With_NonMatching_SubsidiaryId_ExpectValidationError()
+    {
+        // Arrange
+        const int rowCount = 1;
+        var dataRows = RowDataTestHelper.GenerateBrand(rowCount).ToList();
+        var service = CreateService();
+
+        var organisationDataTable = OrganisationDataLookupTableTestHelper
+            .GenerateWithValues(dataRows[0].DefraId, dataRows[0].SubsidiaryId + "99");
+
+        // Act
+        var results = await service.ValidateAppendedFileAsync(dataRows.ToList(), organisationDataTable);
+
+        // Assert
+        results.Should().NotBeEmpty();
+        results.Should().HaveCount(1);
+        results[0].Should().Be(ErrorCodes.BrandDetailsNotMatchingSubsidiary);
+    }
+
+    [TestMethod]
     public async Task Validate_BrandFile_With_Empty_LookupTable_ExpectNoValidationError()
     {
         // Arrange
-        int rowCount = 10;
+        const int rowCount = 10;
         var dataRows = RowDataTestHelper.GenerateBrand(rowCount).ToList();
         var service = CreateService();
 
@@ -392,7 +413,7 @@ public class ValidationServiceTests
     public async Task Validate_BrandFile_With_Matching_OrganisationData_ExpectNoValidationError()
     {
         // Arrange
-        int rowCount = 5;
+        const int rowCount = 5;
         var dataRows = RowDataTestHelper.GenerateBrand(rowCount).ToList();
         var service = CreateService();
 
@@ -406,14 +427,35 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
-    public async Task Validate_PartnerFile_With_NonMatching_OrganisationData_ExpectValidationError()
+    public async Task Validate_PartnerFile_With_NonMatching_OrganisationId_ExpectValidationError()
     {
         // Arrange
-        int rowCount = 5;
+        const int rowCount = 1;
         var dataRows = RowDataTestHelper.GeneratePartner(rowCount).ToList();
         var service = CreateService();
 
-        var organisationDataTable = OrganisationDataLookupTableTestHelper.GenerateWithInvalidData();
+        var organisationDataTable = OrganisationDataLookupTableTestHelper
+            .GenerateWithValues(dataRows[0].DefraId + "99", dataRows[0].SubsidiaryId);
+
+        // Act
+        var results = await service.ValidateAppendedFileAsync(dataRows.ToList(), organisationDataTable);
+
+        // Assert
+        results.Should().NotBeEmpty();
+        results.Should().HaveCount(1);
+        results[0].Should().Be(ErrorCodes.PartnerDetailsNotMatchingOrganisation);
+    }
+
+    [TestMethod]
+    public async Task Validate_PartnerFile_With_NonMatching_SubsidiaryId_ExpectValidationError()
+    {
+        // Arrange
+        const int rowCount = 1;
+        var dataRows = RowDataTestHelper.GeneratePartner(rowCount).ToList();
+        var service = CreateService();
+
+        var organisationDataTable = OrganisationDataLookupTableTestHelper
+            .GenerateWithValues(dataRows[0].DefraId, dataRows[0].SubsidiaryId + "99");
 
         // Act
         var results = await service.ValidateAppendedFileAsync(dataRows.ToList(), organisationDataTable);
@@ -447,7 +489,7 @@ public class ValidationServiceTests
     public async Task Validate_PartnerFile_ExpectNoValidationError()
     {
         // Arrange
-        int rowCount = 10;
+        const int rowCount = 10;
         var dataRows = RowDataTestHelper.GeneratePartner(rowCount).ToList();
         var service = CreateService();
 
@@ -462,7 +504,7 @@ public class ValidationServiceTests
     public async Task Validate_PartnerFile_With_Empty_LookupTable_ExpectNoValidationError()
     {
         // Arrange
-        int rowCount = 10;
+        const int rowCount = 10;
         var dataRows = RowDataTestHelper.GeneratePartner(rowCount).ToList();
         var service = CreateService();
 
@@ -479,7 +521,7 @@ public class ValidationServiceTests
     public async Task Validate_PartnerFile_With_Matching_OrganisationData_ExpectNoValidationError()
     {
         // Arrange
-        int rowCount = 5;
+        const int rowCount = 5;
         var dataRows = RowDataTestHelper.GeneratePartner(rowCount).ToList();
         var service = CreateService();
 
@@ -536,7 +578,7 @@ public class ValidationServiceTests
     public async Task ValidateAppendedFileAsync_WithSameErrorInMultipleRows_OnlyAddsErrorOnce()
     {
         // Arrange
-        int rowCount = 2;
+        const int rowCount = 2;
         var dataRows = RowDataTestHelper.GeneratePartner(rowCount).ToList();
         dataRows[0].DefraId = new string('a', CharacterLimits.MaxLength + 1);
         dataRows[1].DefraId = new string('b', CharacterLimits.MaxLength + 1);
@@ -555,8 +597,8 @@ public class ValidationServiceTests
     public async Task ValidateOrganisation_AsProducerUser_With_ValidateCompanyDetails_False()
     {
         // Arrange
-        int rowCount = 4;
-        int maxErrors = 10;
+        const int rowCount = 4;
+        const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
@@ -592,8 +634,8 @@ public class ValidationServiceTests
     public async Task ValidateOrganisation_AsProducerUser_With_ValidateCompanyDetails_True_FailureErrorMessage()
     {
         // Arrange
-        int rowCount = 6;
-        int maxErrors = 10;
+        const int rowCount = 6;
+        const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
@@ -630,8 +672,8 @@ public class ValidationServiceTests
     public async Task ValidateCompanyDetails_AsProducerUser()
     {
         // Arrange
-        int rowCount = 4;
-        int maxErrors = 10;
+        const int rowCount = 4;
+        const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         dataRows[0].DefraId = "100001";
         dataRows[0].CompaniesHouseNumber = "110011";
@@ -687,8 +729,8 @@ public class ValidationServiceTests
     public async Task ValidateCompanyDetails_AsComplianceSchemeUser()
     {
         // Arrange
-        int rowCount = 4;
-        int maxErrors = 10;
+        const int rowCount = 4;
+        const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         dataRows[0].DefraId = "100001";
         dataRows[0].CompaniesHouseNumber = "110011";
@@ -748,8 +790,8 @@ public class ValidationServiceTests
     public async Task ValidateCompanyDetails_AsProducerUser_FailureErrorMessage()
     {
         // Arrange
-        int rowCount = 6;
-        int maxErrors = 10;
+        const int rowCount = 6;
+        const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
@@ -780,8 +822,8 @@ public class ValidationServiceTests
     public async Task ValidateCompanyDetails_AsProducerUser_Logs_Http_Failure()
     {
         // Arrange
-        int rowCount = 6;
-        int maxErrors = 10;
+        const int rowCount = 6;
+        const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
@@ -802,8 +844,8 @@ public class ValidationServiceTests
     public async Task ValidateCompanyDetails_AsComplianceSchemeUser_FailureErrorMessage()
     {
         // Arrange
-        int rowCount = 6;
-        int maxErrors = 10;
+        const int rowCount = 6;
+        const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
@@ -845,8 +887,8 @@ public class ValidationServiceTests
     public async Task ValidateCompanyDetails_AsComplianceSchemeUser_AdditionalMembers_FailureErrorMessage()
     {
         // Arrange
-        int rowCount = 6;
-        int maxErrors = 10;
+        const int rowCount = 6;
+        const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
