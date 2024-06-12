@@ -59,7 +59,7 @@ public class CompanyDetailsApiClientTests
         var response = await sut.GetCompanyDetails("100001");
 
         // Assert
-        // Exception not expected
+        response.Should().NotBeNull("Exception not expected");
     }
 
     [DataRow(HttpStatusCode.Conflict)]
