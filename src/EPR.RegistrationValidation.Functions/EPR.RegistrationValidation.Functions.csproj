@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
     <DockerFastModeProjectMountDirectory>/home/site/wwwroot</DockerFastModeProjectMountDirectory>
@@ -31,7 +31,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <SonarQubeSetting Include="sonar.coverage.exclusions">
+    <SonarQubeSetting Include="sonar.exclusions">
       <Value>Startup.cs</Value>
     </SonarQubeSetting>
   </ItemGroup>
