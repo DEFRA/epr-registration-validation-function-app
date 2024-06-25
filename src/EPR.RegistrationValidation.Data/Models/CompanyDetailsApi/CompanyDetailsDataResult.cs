@@ -4,6 +4,6 @@ using Newtonsoft.Json;
 
 public class CompanyDetailsDataResult
 {
-    [JsonProperty("Organisations")]
+    [JsonProperty(nameof(Organisations))]
     public IEnumerable<CompanyDetailsDataItem> Organisations { get; set; }
 }

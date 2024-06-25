@@ -744,40 +744,20 @@ public class ValidationServiceTests
 
         var companyDetailsOrganisations1 = new List<CompanyDetailsDataItem>();
         companyDetailsOrganisations1.Add(new CompanyDetailsDataItem { ReferenceNumber = "100001", CompaniesHouseNumber = "110011" });
-        var companyDetailsDataResult1 = new CompanyDetailsDataResult { Organisations = companyDetailsOrganisations1 };
-        var companyDetailsOrganisations2 = new List<CompanyDetailsDataItem>();
-        companyDetailsOrganisations2.Add(new CompanyDetailsDataItem { ReferenceNumber = "200002", CompaniesHouseNumber = "220022" });
-        var companyDetailsDataResult2 = new CompanyDetailsDataResult { Organisations = companyDetailsOrganisations2 };
-        var companyDetailsOrganisations3 = new List<CompanyDetailsDataItem>();
-        companyDetailsOrganisations3.Add(new CompanyDetailsDataItem { ReferenceNumber = "300003", CompaniesHouseNumber = "330033" });
-        var companyDetailsDataResult3 = new CompanyDetailsDataResult { Organisations = companyDetailsOrganisations3 };
-        var companyDetailsOrganisations4 = new List<CompanyDetailsDataItem>();
-        companyDetailsOrganisations4.Add(new CompanyDetailsDataItem { ReferenceNumber = "400004", CompaniesHouseNumber = "440044" });
-        var companyDetailsDataResult4 = new CompanyDetailsDataResult { Organisations = companyDetailsOrganisations4 };
+        var complianceSchemeMembers = new CompanyDetailsDataResult { Organisations = companyDetailsOrganisations1 };
 
-        var companyDetailsComplianceSchemeMembers = new List<CompanyDetailsDataItem>();
-        companyDetailsComplianceSchemeMembers.Add(new CompanyDetailsDataItem { ReferenceNumber = "100005", CompaniesHouseNumber = "110055" });
-        companyDetailsComplianceSchemeMembers.Add(new CompanyDetailsDataItem { ReferenceNumber = "100006", CompaniesHouseNumber = "110066" });
-        companyDetailsComplianceSchemeMembers.Add(new CompanyDetailsDataItem { ReferenceNumber = "100007", CompaniesHouseNumber = "110077" });
-        var complianceSchemeMembers = new CompanyDetailsDataResult { Organisations = companyDetailsComplianceSchemeMembers };
-
-        var otherCompanyDetailsOrganisations = new List<CompanyDetailsDataItem>();
-        otherCompanyDetailsOrganisations.Add(new CompanyDetailsDataItem { ReferenceNumber = "200002", CompaniesHouseNumber = "220022" });
-        otherCompanyDetailsOrganisations.Add(new CompanyDetailsDataItem { ReferenceNumber = "300003", CompaniesHouseNumber = "330033" });
-        otherCompanyDetailsOrganisations.Add(new CompanyDetailsDataItem { ReferenceNumber = "400004", CompaniesHouseNumber = "440044" });
-        var otherCompanyDetailsDataResult = new CompanyDetailsDataResult { Organisations = otherCompanyDetailsOrganisations };
+        var producerOrganisations = new List<CompanyDetailsDataItem>();
+        producerOrganisations.Add(new CompanyDetailsDataItem { ReferenceNumber = "200002", CompaniesHouseNumber = "220022" });
+        producerOrganisations.Add(new CompanyDetailsDataItem { ReferenceNumber = "300003", CompaniesHouseNumber = "330033" });
+        producerOrganisations.Add(new CompanyDetailsDataItem { ReferenceNumber = "400004", CompaniesHouseNumber = "440044" });
+        var remainingProducers = new CompanyDetailsDataResult { Organisations = producerOrganisations };
 
         _companyDetailsApiClientMock
             .Setup(f => f.GetComplianceSchemeMembers("100001", "85a8b24f-d192-461f-8a0b-87dc54f63453"))
-            .ReturnsAsync(companyDetailsDataResult1);
-
-        _companyDetailsApiClientMock
-            .Setup(f => f.GetCompanyDetails("100001"))
-            .ReturnsAsync(companyDetailsDataResult1);
-
+            .ReturnsAsync(complianceSchemeMembers);
         _companyDetailsApiClientMock
             .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()))
-            .ReturnsAsync(otherCompanyDetailsDataResult);
+            .ReturnsAsync(remainingProducers);
 
         // Act
         var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, "85a8b24f-d192-461f-8a0b-87dc54f63453", string.Empty);
@@ -814,8 +794,47 @@ public class ValidationServiceTests
         var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, string.Empty, string.Empty);
 
         // Assert
-        var validationError = results.ValidationErrors.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.CheckOrganisationId));
-        validationError.Should().NotBeNull();
+        results.ValidationErrors.Should().Match(x => x.Any(x => x.ColumnErrors.Any(e =>
+            e.ErrorCode == ErrorCodes.CheckOrganisationId &&
+            e.ColumnName == "organisation_id")));
+    }
+
+    [TestMethod]
+    public async Task ValidateCompanyDetails_AsProducerUser_With_Invalid_CompaniesHouseNumber_FailureErrorMessage()
+    {
+        // Arrange
+        const int rowCount = 1;
+        const int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
+        dataRows[0].CompaniesHouseNumber = "99999999";
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        var organisation = new CompanyDetailsDataItem
+        {
+            ReferenceNumber = dataRows[0].DefraId,
+            CompaniesHouseNumber = "X1234567",
+        };
+
+        var companyDetailsOrganisations = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations.Add(organisation);
+        var companyDetailsDataResult = new CompanyDetailsDataResult();
+        companyDetailsDataResult.Organisations = companyDetailsOrganisations;
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetCompanyDetails(It.IsAny<string>()))
+            .ReturnsAsync(companyDetailsDataResult);
+
+        // Act
+        var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, string.Empty, string.Empty);
+
+        // Assert
+        results.ValidationErrors.Should().Match(x => x.Any(x => x.ColumnErrors.Any(e =>
+            e.ErrorCode == ErrorCodes.CompaniesHouseNumberNotMatchOrganisationId &&
+            e.ColumnName == "organisation_id")));
+        results.ValidationErrors.Should().Match(x => x.Any(x => x.ColumnErrors.Any(e =>
+            e.ErrorCode == ErrorCodes.CompaniesHouseNumberNotMatchOrganisationId &&
+            e.ColumnName == "companies_house_number")));
     }
 
     [TestMethod]
@@ -863,7 +882,6 @@ public class ValidationServiceTests
         _companyDetailsApiClientMock
             .Setup(f => f.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(companyDetailsDataResult);
-
         _companyDetailsApiClientMock
             .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()))
             .ReturnsAsync(companyDetailsDataResult);
@@ -872,15 +890,62 @@ public class ValidationServiceTests
         var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, "13202f0d-bde8-422c-974a-f1dec1b32fff", string.Empty);
 
         // Assert
-        var validationError = results.ValidationErrors.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.CheckOrganisationId));
-        validationError.Should().NotBeNull();
-
         _companyDetailsApiClientMock.Verify(
             m => m.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()),
             Times.Exactly(rowCount));
         _companyDetailsApiClientMock.Verify(
             m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()),
             Times.Once);
+
+        results.TotalErrors.Should().Be(6);
+        results.ValidationErrors.Should().Match(x => x.Any(x => x.ColumnErrors.Any(e =>
+            e.ErrorCode == ErrorCodes.CheckOrganisationId &&
+            e.ColumnName == "organisation_id")));
+    }
+
+    [TestMethod]
+    public async Task ValidateCompanyDetails_AsComplianceSchemeUser_With_Invalid_CompaniesHouseNumber_FailureErrorMessage()
+    {
+        // Arrange
+        const int rowCount = 1;
+        const int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
+        dataRows[0].CompaniesHouseNumber = "99999999";
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        var organisation = new CompanyDetailsDataItem
+        {
+            ReferenceNumber = dataRows[0].DefraId,
+            CompaniesHouseNumber = "X1234567",
+        };
+
+        var companyDetailsOrganisations = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations.Add(organisation);
+        var complianceSchemeMembers = new CompanyDetailsDataResult();
+        complianceSchemeMembers.Organisations = companyDetailsOrganisations;
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(complianceSchemeMembers);
+
+        // Act
+        var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, "13202f0d-bde8-422c-974a-f1dec1b32fff", string.Empty);
+
+        // Assert
+        _companyDetailsApiClientMock.Verify(
+            m => m.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Exactly(rowCount));
+        _companyDetailsApiClientMock.Verify(
+            m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()),
+            Times.Never);
+
+        results.ValidationErrors.Should().Match(x => x.Any(x => x.ColumnErrors.Any(e =>
+            e.ErrorCode == ErrorCodes.CompaniesHouseNumberNotMatchOrganisationId &&
+            e.ColumnName == "organisation_id")));
+        results.ValidationErrors.Should().Match(x => x.Any(x => x.ColumnErrors.Any(e =>
+            e.ErrorCode == ErrorCodes.CompaniesHouseNumberNotMatchOrganisationId &&
+            e.ColumnName == "companies_house_number")));
     }
 
     [TestMethod]
@@ -900,13 +965,12 @@ public class ValidationServiceTests
 
         var companyDetailsOrganisations = new List<CompanyDetailsDataItem>();
         companyDetailsOrganisations.Add(organisation);
-        var companyDetailsDataResult = new CompanyDetailsDataResult();
-        companyDetailsDataResult.Organisations = companyDetailsOrganisations;
+        var complianceSchemeMembers = new CompanyDetailsDataResult();
+        complianceSchemeMembers.Organisations = companyDetailsOrganisations;
 
         _companyDetailsApiClientMock
             .Setup(f => f.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(companyDetailsDataResult);
-
+            .ReturnsAsync(complianceSchemeMembers);
         _companyDetailsApiClientMock
             .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()))
             .ReturnsAsync(default(CompanyDetailsDataResult));
@@ -915,8 +979,107 @@ public class ValidationServiceTests
         var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, "13202f0d-bde8-422c-974a-f1dec1b32fff", string.Empty);
 
         // Assert
+        _companyDetailsApiClientMock.Verify(
+            m => m.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Exactly(rowCount));
+        _companyDetailsApiClientMock.Verify(
+           m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()),
+           Times.Once);
+
+        results.ValidationErrors.Should().Match(x => x.Any(x => x.ColumnErrors.Any(e =>
+            e.ErrorCode == ErrorCodes.CheckOrganisationId &&
+            e.ColumnName == "organisation_id")));
+    }
+
+    [TestMethod]
+    public async Task ValidateCompanyDetails_AsComplianceSchemeUser_AdditionalMembers_With_Invalid_CompaniesHouseNumber_FailureErrorMessage()
+    {
+        // Arrange
+        const int rowCount = 2;
+        const int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
+        dataRows[0].CompaniesHouseNumber = "99999999";
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        var organisation = new CompanyDetailsDataItem
+        {
+            ReferenceNumber = dataRows[0].DefraId,
+            CompaniesHouseNumber = "X1234567",
+        };
+
+        var companyDetailsOrganisations = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations.Add(organisation);
+        var companyDetailsDataResult = new CompanyDetailsDataResult();
+        companyDetailsDataResult.Organisations = companyDetailsOrganisations;
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(companyDetailsDataResult);
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()))
+            .ReturnsAsync(companyDetailsDataResult);
+
+        // Act
+        var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, "13202f0d-bde8-422c-974a-f1dec1b32fff", string.Empty);
+
+        // Assert
+        _companyDetailsApiClientMock.Verify(
+            m => m.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Exactly(rowCount));
+        _companyDetailsApiClientMock.Verify(
+            m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()),
+            Times.Once);
+
+        results.ValidationErrors.Should().Match(x => x.Any(x => x.ColumnErrors.Any(e =>
+            e.ErrorCode == ErrorCodes.CompaniesHouseNumberNotMatchOrganisationId &&
+            e.ColumnName == "organisation_id")));
+        results.ValidationErrors.Should().Match(x => x.Any(x => x.ColumnErrors.Any(e =>
+            e.ErrorCode == ErrorCodes.CompaniesHouseNumberNotMatchOrganisationId &&
+            e.ColumnName == "companies_house_number")));
+    }
+
+    [TestMethod]
+    public async Task ValidateCompanyDetails_AsComplianceSchemeUser_AdditionalMembersWithProducers_FailureErrorMessage()
+    {
+        // Arrange
+        int rowCount = 4;
+        int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        var organisation = new CompanyDetailsDataItem
+        {
+            ReferenceNumber = "123456",
+            CompaniesHouseNumber = "X1234567",
+        };
+
+        var companyDetailsOrganisations = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations.Add(organisation);
+        var companyDetailsDataResult = new CompanyDetailsDataResult();
+        companyDetailsDataResult.Organisations = companyDetailsOrganisations;
+        var remainingProducers = new CompanyDetailsDataResult();
+        var remainingProducerOrganisations = new List<CompanyDetailsDataItem>();
+        remainingProducerOrganisations.Add(new CompanyDetailsDataItem { CompaniesHouseNumber = "123", ReferenceNumber = dataRows[0].DefraId });
+        remainingProducerOrganisations.Add(new CompanyDetailsDataItem { CompaniesHouseNumber = "456", ReferenceNumber = dataRows[1].DefraId });
+        remainingProducerOrganisations.Add(new CompanyDetailsDataItem { CompaniesHouseNumber = "789", ReferenceNumber = dataRows[2].DefraId });
+        remainingProducerOrganisations.Add(new CompanyDetailsDataItem { CompaniesHouseNumber = "111", ReferenceNumber = dataRows[3].DefraId });
+        remainingProducers.Organisations = remainingProducerOrganisations;
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(companyDetailsDataResult);
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()))
+            .ReturnsAsync(remainingProducers);
+
+        // Act
+        var results = await service.ValidateCompanyDetails(dataRows.ToList(), 0, "13202f0d-bde8-422c-974a-f1dec1b32fff", string.Empty);
+
+        // Assert
         var validationError = results.ValidationErrors.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.CheckOrganisationId));
-        validationError.Should().NotBeNull();
+        validationError.Should().BeNull();
 
         _companyDetailsApiClientMock.Verify(
             m => m.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()),

@@ -31,6 +31,8 @@ public class ValidationService : IValidationService
     private readonly ValidationSettings _validationSettings;
     private readonly ILogger<ValidationService> _logger;
     private readonly ICompanyDetailsApiClient _companyDetailsApiClient;
+    private IDictionary<string, CompanyDetailsDataResult> _companyDetailsLookup;
+    private IDictionary<string, CompanyDetailsDataResult> _complianceSchemeMembersLookup;
 
     public ValidationService(
         OrganisationDataRowValidator organisationDataRowValidator,
@@ -232,40 +234,26 @@ public class ValidationService : IValidationService
 
         try
         {
-            var companyDetailsLookup = new Dictionary<string, CompanyDetailsDataResult>();
-            var complianceSchemeMembersLookup = new Dictionary<string, CompanyDetailsDataResult>();
+            _companyDetailsLookup = new Dictionary<string, CompanyDetailsDataResult>();
+            _complianceSchemeMembersLookup = new Dictionary<string, CompanyDetailsDataResult>();
 
             var unvalidatedComplianceSchemeRows = new List<OrganisationDataRow>();
 
             foreach (var row in rows.TakeWhile(_ => totalErrors < _validationSettings.ErrorLimit))
             {
-                if (!companyDetailsLookup.TryGetValue(row.DefraId, out var companyDetails))
-                {
-                    companyDetails = await _companyDetailsApiClient.GetCompanyDetails(row.DefraId);
-                    companyDetailsLookup[row.DefraId] = companyDetails;
-                }
-
-                var companiesHouseNumberValidationResult = await ValidateCompaniesHouseNumbers(row, companyDetails: companyDetails);
-                totalErrors += companiesHouseNumberValidationResult.TotalErrors;
-                validationErrors.AddRange(companiesHouseNumberValidationResult.ValidationErrors);
-
                 if (string.IsNullOrEmpty(complianceSchemeId))
                 {
-                    var producerValidationResult = await ValidateAsProducer(row, companyDetails: companyDetails);
+                    var producerValidationResult = await ValidateAsProducer(row);
                     totalErrors += producerValidationResult.TotalErrors;
                     validationErrors.AddRange(producerValidationResult.ValidationErrors);
                 }
                 else
                 {
-                    var complianceSchemeKey = $"{row.DefraId}_{complianceSchemeId}";
-                    if (!complianceSchemeMembersLookup.TryGetValue(complianceSchemeKey, out var complianceSchemeMembers))
-                    {
-                        complianceSchemeMembers = await _companyDetailsApiClient.GetComplianceSchemeMembers(row.DefraId, complianceSchemeId);
-                        complianceSchemeMembersLookup[complianceSchemeKey] = complianceSchemeMembers;
-                    }
+                    var complianceSchemeValidationResult = await ValidateAsComplianceSchemeUser(complianceSchemeId, row);
+                    totalErrors += complianceSchemeValidationResult.TotalErrors;
+                    validationErrors.AddRange(complianceSchemeValidationResult.ValidationErrors);
 
-                    var complianceSchemeValidationResult = await IsValidComplianceSchemeMember(row, complianceSchemeMembers);
-                    if (!complianceSchemeValidationResult)
+                    if (!complianceSchemeValidationResult.ValidComplianceSchemeMember)
                     {
                         unvalidatedComplianceSchemeRows.Add(row);
                     }
@@ -297,6 +285,58 @@ public class ValidationService : IValidationService
             .ToList();
 
         return rows.Exists(x => DoesExceedMaxCharacterLength(x, columnProperties));
+    }
+
+    private static IList<OrganisationIdentifiers?> GetMissingOrganisationRows(
+        Dictionary<string, Dictionary<string, OrganisationIdentifiers>> organisationData,
+        IEnumerable<OrganisationIdentifiers> rowIdentifiers)
+    {
+        return organisationData
+            .SelectMany(x => x.Value.Values, (_, b) => new { b.DefraId, b.SubsidiaryId })
+            .Where(x => !rowIdentifiers.Any(row => row.DefraId == x.DefraId))
+            .Select(x => new OrganisationIdentifiers(x.DefraId, x.SubsidiaryId))
+            .ToList();
+    }
+
+    private static IList<OrganisationIdentifiers?> GetMissingSubsidiaryRows(
+        Dictionary<string, Dictionary<string, OrganisationIdentifiers>> organisationData,
+        IEnumerable<OrganisationIdentifiers> rowIdentifiers)
+    {
+        return organisationData
+            .SelectMany(x => x.Value.Values, (_, b) => new { b.DefraId, b.SubsidiaryId })
+            .Where(x => rowIdentifiers.Any(row => row.DefraId == x.DefraId)
+                && !string.IsNullOrEmpty(x.SubsidiaryId)
+                && !rowIdentifiers.Any(row => row.SubsidiaryId == x.SubsidiaryId))
+            .Select(x => new OrganisationIdentifiers(x.DefraId, x.SubsidiaryId))
+            .ToList();
+    }
+
+    private static string GetMissingOrganisationErrorCode<T>(List<T> rows, IList<OrganisationIdentifiers> missingIdentifiers)
+    {
+        if (missingIdentifiers.Any())
+        {
+            return rows switch
+            {
+                List<BrandDataRow> _ => ErrorCodes.BrandDetailsNotMatchingOrganisation,
+                List<PartnersDataRow> _ => ErrorCodes.PartnerDetailsNotMatchingOrganisation,
+            };
+        }
+
+        return null;
+    }
+
+    private static string GetMissingSubsidiaryErrorCode<T>(List<T> rows, IEnumerable<OrganisationIdentifiers> missingIdentifiers)
+    {
+        if (missingIdentifiers.Any())
+        {
+            return rows switch
+            {
+                List<BrandDataRow> _ => ErrorCodes.BrandDetailsNotMatchingSubsidiary,
+                List<PartnersDataRow> _ => ErrorCodes.PartnerDetailsNotMatchingOrganisation,
+            };
+        }
+
+        return null;
     }
 
     private static bool DoesExceedMaxCharacterLength(OrganisationDataRow row, List<PropertyInfo> columnProperties)
@@ -410,58 +450,6 @@ public class ValidationService : IValidationService
         return context;
     }
 
-    private IList<OrganisationIdentifiers?> GetMissingOrganisationRows(
-        Dictionary<string, Dictionary<string, OrganisationIdentifiers>> organisationData,
-        IEnumerable<OrganisationIdentifiers> rowIdentifiers)
-    {
-        return organisationData
-            .SelectMany(x => x.Value.Values, (_, b) => new { b.DefraId, b.SubsidiaryId })
-            .Where(x => !rowIdentifiers.Any(row => row.DefraId == x.DefraId))
-            .Select(x => new OrganisationIdentifiers(x.DefraId, x.SubsidiaryId))
-            .ToList();
-    }
-
-    private IList<OrganisationIdentifiers?> GetMissingSubsidiaryRows(
-        Dictionary<string, Dictionary<string, OrganisationIdentifiers>> organisationData,
-        IEnumerable<OrganisationIdentifiers> rowIdentifiers)
-    {
-        return organisationData
-            .SelectMany(x => x.Value.Values, (_, b) => new { b.DefraId, b.SubsidiaryId })
-            .Where(x => rowIdentifiers.Any(row => row.DefraId == x.DefraId)
-                && !string.IsNullOrEmpty(x.SubsidiaryId)
-                && !rowIdentifiers.Any(row => row.SubsidiaryId == x.SubsidiaryId))
-            .Select(x => new OrganisationIdentifiers(x.DefraId, x.SubsidiaryId))
-            .ToList();
-    }
-
-    private string GetMissingOrganisationErrorCode<T>(List<T> rows, IList<OrganisationIdentifiers> missingIdentifiers)
-    {
-        if (missingIdentifiers.Any())
-        {
-            return rows switch
-            {
-                List<BrandDataRow> _ => ErrorCodes.BrandDetailsNotMatchingOrganisation,
-                List<PartnersDataRow> _ => ErrorCodes.PartnerDetailsNotMatchingOrganisation,
-            };
-        }
-
-        return null;
-    }
-
-    private string GetMissingSubsidiaryErrorCode<T>(List<T> rows, IEnumerable<OrganisationIdentifiers> missingIdentifiers)
-    {
-        if (missingIdentifiers.Any())
-        {
-            return rows switch
-            {
-                List<BrandDataRow> _ => ErrorCodes.BrandDetailsNotMatchingSubsidiary,
-                List<PartnersDataRow> _ => ErrorCodes.PartnerDetailsNotMatchingOrganisation,
-            };
-        }
-
-        return null;
-    }
-
     private void LogMissingIdentifierErrors(IEnumerable<OrganisationIdentifiers> missingIdentifiers, string errorCode)
     {
         if (!missingIdentifiers.Any())
@@ -510,7 +498,7 @@ public class ValidationService : IValidationService
         var organisationId = _metaDataProvider.GetOrganisationColumnMetaData(nameof(OrganisationDataRow.DefraId));
         var companiesHouseNumber = _metaDataProvider.GetOrganisationColumnMetaData(nameof(OrganisationDataRow.CompaniesHouseNumber));
 
-        var organisation = companyDetails?.Organisations?.FirstOrDefault();
+        var organisation = companyDetails?.Organisations?.FirstOrDefault(x => x.ReferenceNumber == row.DefraId);
 
         if (companyDetails != null && organisation != null && string.IsNullOrEmpty(row.SubsidiaryId))
         {
@@ -555,10 +543,16 @@ public class ValidationService : IValidationService
         return (totalErrors, validationErrors);
     }
 
-    private async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateAsProducer(OrganisationDataRow row, CompanyDetailsDataResult companyDetails)
+    private async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateAsProducer(OrganisationDataRow row)
     {
         List<RegistrationValidationError> validationErrors = new();
         int totalErrors = 0;
+
+        if (!_companyDetailsLookup.TryGetValue(row.DefraId, out var companyDetails))
+        {
+            companyDetails = await _companyDetailsApiClient.GetCompanyDetails(row.DefraId);
+            _companyDetailsLookup[row.DefraId] = companyDetails;
+        }
 
         if (companyDetails?.Organisations?.FirstOrDefault(x => x.ReferenceNumber == row.DefraId) == null)
         {
@@ -572,6 +566,10 @@ public class ValidationService : IValidationService
             totalErrors++;
         }
 
+        var companiesHouseNumberValidationResult = await ValidateCompaniesHouseNumbers(row, companyDetails: companyDetails);
+        totalErrors += companiesHouseNumberValidationResult.TotalErrors;
+        validationErrors.AddRange(companiesHouseNumberValidationResult.ValidationErrors);
+
         return (totalErrors, validationErrors);
     }
 
@@ -579,25 +577,31 @@ public class ValidationService : IValidationService
     {
         List<RegistrationValidationError> validationErrors = new();
         int totalErrors = 0;
-
         var organisationIds = rows.Select(r => r.DefraId);
-
         var remainingProducerDetails = await _companyDetailsApiClient.GetRemainingProducerDetails(organisationIds);
+        var producers = new Dictionary<string, string>();
+
+        if (remainingProducerDetails?.Organisations != null)
+        {
+            producers = remainingProducerDetails.Organisations.ToDictionary(x => x.ReferenceNumber, x => x.CompaniesHouseNumber);
+        }
 
         foreach (var row in rows)
         {
             if (remainingProducerDetails?.Organisations == null ||
-                !remainingProducerDetails.Organisations.Any(x => x.ReferenceNumber == row.DefraId))
+                !producers.ContainsKey(row.DefraId))
             {
                 var error = CreateOrganisationIdValidationError(row);
-
                 var errorMessage = $"Check organisation ID - this one is either invalid or for an organisation that does not need to submit data";
-
                 LogValidationWarning(row.LineNumber, errorMessage, ErrorCodes.CheckOrganisationId);
 
                 validationErrors.Add(error);
                 totalErrors++;
             }
+
+            var companiesHouseNumberValidationResult = await ValidateCompaniesHouseNumbers(row, companyDetails: remainingProducerDetails);
+            totalErrors += companiesHouseNumberValidationResult.TotalErrors;
+            validationErrors.AddRange(companiesHouseNumberValidationResult.ValidationErrors);
         }
 
         return (totalErrors, validationErrors);
@@ -624,5 +628,29 @@ public class ValidationService : IValidationService
         error.ColumnErrors.Add(columnValidationError);
 
         return error;
+    }
+
+    private async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors, bool ValidComplianceSchemeMember)> ValidateAsComplianceSchemeUser(string complianceSchemeId, OrganisationDataRow row)
+    {
+        List<RegistrationValidationError> validationErrors = new();
+        int totalErrors = 0;
+        var complianceSchemeKey = $"{row.DefraId}_{complianceSchemeId}";
+
+        if (!_complianceSchemeMembersLookup.TryGetValue(complianceSchemeKey, out var complianceSchemeMembers))
+        {
+            complianceSchemeMembers = await _companyDetailsApiClient.GetComplianceSchemeMembers(row.DefraId, complianceSchemeId);
+            _complianceSchemeMembersLookup[complianceSchemeKey] = complianceSchemeMembers;
+        }
+
+        var validComplianceSchemeMember = await IsValidComplianceSchemeMember(row, complianceSchemeMembers);
+
+        if (validComplianceSchemeMember)
+        {
+            var companiesHouseNumberValidationResult = await ValidateCompaniesHouseNumbers(row, companyDetails: complianceSchemeMembers);
+            totalErrors += companiesHouseNumberValidationResult.TotalErrors;
+            validationErrors.AddRange(companiesHouseNumberValidationResult.ValidationErrors);
+        }
+
+        return (totalErrors, validationErrors, validComplianceSchemeMember);
     }
 }
