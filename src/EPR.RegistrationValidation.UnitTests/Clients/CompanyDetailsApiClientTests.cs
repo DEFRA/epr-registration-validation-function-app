@@ -29,7 +29,7 @@ public class CompanyDetailsApiClientTests
     }
 
     [TestMethod]
-    public async Task TestGetCompanyDetails_WhenSendAsyncIsSuccessful_DoesNotThrowError()
+    public async Task GetCompanyDetails_WhenSendAsyncIsSuccessful_DoesNotThrowError()
     {
         // Arrange
         var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
@@ -67,7 +67,7 @@ public class CompanyDetailsApiClientTests
     [DataRow(HttpStatusCode.BadGateway)]
     [DataRow(HttpStatusCode.Unauthorized)]
     [TestMethod]
-    public async Task TestGetCompanyDetails_WhenSendAsyncNotSuccessful_ThrowsError(HttpStatusCode statusCode)
+    public async Task GetCompanyDetails_WhenSendAsyncNotSuccessful_ThrowsError(HttpStatusCode statusCode)
     {
         // Arrange
         var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
@@ -98,7 +98,7 @@ public class CompanyDetailsApiClientTests
     }
 
     [TestMethod]
-    public async Task TestGetCompanyDetails_WhenSendAsyncNotFound_ReturnsNull()
+    public async Task GetCompanyDetails_WhenSendAsyncNotFound_ReturnsNull()
     {
         // Arrange
         var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
@@ -128,7 +128,7 @@ public class CompanyDetailsApiClientTests
     }
 
     [TestMethod]
-    public async Task TestGetCompanyDetails_WhenParametersAreValid_BuildsCorrectHTTPRequestMessage()
+    public async Task GetCompanyDetails_WhenParametersAreValid_BuildsCorrectHTTPRequestMessage()
     {
         // Arrange
         var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
@@ -346,7 +346,7 @@ public class CompanyDetailsApiClientTests
         referenceNumberList.Add("33000033");
 
         // Act
-        var response = await sut.GetRemainingProducerDetails(referenceNumberList);
+        var response = await sut.GetRemainingProducerDetails(referenceNumberList, string.Empty);
 
         // Assert
         response.Should().NotBeNull("Exception not expected");
@@ -382,7 +382,7 @@ public class CompanyDetailsApiClientTests
         var referenceNumberList = new List<string>();
 
         // Act
-        Func<Task> act = () => sut.GetRemainingProducerDetails(referenceNumberList);
+        Func<Task> act = () => sut.GetRemainingProducerDetails(referenceNumberList, string.Empty);
 
         // Assert
         await act.Should().ThrowAsync<CompanyDetailsApiClientException>();
@@ -414,7 +414,7 @@ public class CompanyDetailsApiClientTests
         var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
 
         // Act
-        var result = await sut.GetRemainingProducerDetails(referenceNumberList);
+        var result = await sut.GetRemainingProducerDetails(referenceNumberList, string.Empty);
 
         // Assert
         result.Should().BeNull();
@@ -463,12 +463,154 @@ public class CompanyDetailsApiClientTests
         referenceNumberList.Add("33000033");
 
         // Act
-        var responseContent = await sut.GetRemainingProducerDetails(referenceNumberList);
+        var responseContent = await sut.GetRemainingProducerDetails(referenceNumberList, string.Empty);
 
         // Assert
         var responseAsString = JsonConvert.SerializeObject(responseContent);
         var companyDetailsAsString = JsonConvert.SerializeObject(companyDetails);
         responseContent.Organisations.Count().Should().BeGreaterThan(1);
+        responseAsString.Should().Be(companyDetailsAsString);
+    }
+
+    [TestMethod]
+    public async Task GetCompanyDetailsByProducer_WhenSendAsyncIsSuccessful_DoesNotThrowError()
+    {
+        // Arrange
+        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        var companyDetails = new CompanyDetailsDataResult();
+        var content = JsonConvert.SerializeObject(companyDetails);
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(content),
+            })
+            .Verifiable();
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri(_config.BaseUrl),
+            Timeout = TimeSpan.FromSeconds(_config.Timeout),
+        };
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
+
+        // Act
+        var response = await sut.GetCompanyDetailsByProducer("9649AF7C-A3EE-44BE-BCD5-ECCD92428125");
+
+        // Assert
+        response.Should().NotBeNull("Exception not expected");
+    }
+
+    [DataRow(HttpStatusCode.Conflict)]
+    [DataRow(HttpStatusCode.BadRequest)]
+    [DataRow(HttpStatusCode.BadGateway)]
+    [DataRow(HttpStatusCode.Unauthorized)]
+    [TestMethod]
+    public async Task GetCompanyDetailsByProducer_WhenSendAsyncNotSuccessful_ThrowsError(HttpStatusCode statusCode)
+    {
+        // Arrange
+        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = statusCode,
+            })
+            .Verifiable();
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri(_config.BaseUrl),
+            Timeout = TimeSpan.FromSeconds(_config.Timeout),
+        };
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
+
+        // Act
+        Func<Task> act = () => sut.GetCompanyDetailsByProducer("9649AF7C-A3EE-44BE-BCD5-ECCD92428125");
+
+        // Assert
+        await act.Should().ThrowAsync<CompanyDetailsApiClientException>();
+    }
+
+    [TestMethod]
+    public async Task GetCompanyDetailsByProducer_WhenSendAsyncNotFound_ReturnsNull()
+    {
+        // Arrange
+        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.NotFound,
+            })
+            .Verifiable();
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri(_config.BaseUrl),
+        };
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
+
+        // Act
+        var result = await sut.GetCompanyDetailsByProducer("9649AF7C-A3EE-44BE-BCD5-ECCD92428125");
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [TestMethod]
+    public async Task GetCompanyDetailsByProducer_WhenParametersAreValid_BuildsCorrectHTTPRequestMessage()
+    {
+        // Arrange
+        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        var organisation = new CompanyDetailsDataItem
+        {
+            ReferenceNumber = "123456",
+            CompaniesHouseNumber = "X1234567",
+        };
+        var companyDetailsOrganisations = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations.Add(organisation);
+        var companyDetails = new CompanyDetailsDataResult { Organisations = companyDetailsOrganisations };
+        var content = JsonConvert.SerializeObject(companyDetails);
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(content),
+            })
+            .Verifiable();
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri(_config.BaseUrl),
+            Timeout = TimeSpan.FromSeconds(_config.Timeout),
+        };
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
+
+        // Act
+        var responseContent = await sut.GetCompanyDetailsByProducer("9649AF7C-A3EE-44BE-BCD5-ECCD92428125");
+
+        // Assert
+        var responseAsString = JsonConvert.SerializeObject(responseContent);
+        var companyDetailsAsString = JsonConvert.SerializeObject(companyDetails);
         responseAsString.Should().Be(companyDetailsAsString);
     }
 }

@@ -34,17 +34,31 @@ public class CompanyDetailsApiClient : ICompanyDetailsApiClient
 
             response.EnsureSuccessStatusCode();
 
-            if (_logger.IsEnabled(LogLevel.Debug))
+            return await DeserializeCompanyDetailsData(response);
+        }
+        catch (HttpRequestException exception)
+        {
+            const string message = "A success status code was not received when requesting company details";
+            _logger.LogError(exception, message);
+            throw new CompanyDetailsApiClientException(message, exception);
+        }
+    }
+
+    public async Task<CompanyDetailsDataResult> GetCompanyDetailsByProducer(string producerOrganisationId)
+    {
+        try
+        {
+            var uriString = $"api/company-details-by-producer/{producerOrganisationId}";
+            var response = await _httpClient.GetAsync(uriString);
+
+            if (HttpStatusCode.NotFound.Equals(response.StatusCode))
             {
-                _logger.LogDebug("Organisation details received from Company Details Api");
+                return null;
             }
 
-            if (!string.IsNullOrEmpty(await response.Content.ReadAsStringAsync()))
-            {
-                return JsonConvert.DeserializeObject<CompanyDetailsDataResult>(await response.Content.ReadAsStringAsync());
-            }
+            response.EnsureSuccessStatusCode();
 
-            return new CompanyDetailsDataResult();
+            return await DeserializeCompanyDetailsData(response);
         }
         catch (HttpRequestException exception)
         {
@@ -68,17 +82,7 @@ public class CompanyDetailsApiClient : ICompanyDetailsApiClient
 
             response.EnsureSuccessStatusCode();
 
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("Compliance scheme member list received from Company Details Api");
-            }
-
-            if (!string.IsNullOrEmpty(await response.Content.ReadAsStringAsync()))
-            {
-                return JsonConvert.DeserializeObject<CompanyDetailsDataResult>(await response.Content.ReadAsStringAsync());
-            }
-
-            return new CompanyDetailsDataResult();
+            return await DeserializeCompanyDetailsData(response);
         }
         catch (HttpRequestException exception)
         {
@@ -88,13 +92,19 @@ public class CompanyDetailsApiClient : ICompanyDetailsApiClient
         }
     }
 
-    public async Task<CompanyDetailsDataResult> GetRemainingProducerDetails(IEnumerable<string> referenceNumbers)
+    public async Task<CompanyDetailsDataResult> GetRemainingProducerDetails(IEnumerable<string> referenceNumbers, string producerOrganisationId)
     {
         try
         {
             var uriString = $"api/company-details";
 
-            var json = JsonConvert.SerializeObject(referenceNumbers);
+            var organisationReferences = new OrganisationReferences
+            {
+                ReferenceNumbers = referenceNumbers,
+                OrganisationExternalId = producerOrganisationId,
+            };
+
+            var json = JsonConvert.SerializeObject(organisationReferences);
             var httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync(uriString, httpContent);
@@ -106,17 +116,7 @@ public class CompanyDetailsApiClient : ICompanyDetailsApiClient
 
             response.EnsureSuccessStatusCode();
 
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("Remaining producer details received from Company Details Api");
-            }
-
-            if (!string.IsNullOrEmpty(await response.Content.ReadAsStringAsync()))
-            {
-                return JsonConvert.DeserializeObject<CompanyDetailsDataResult>(await response.Content.ReadAsStringAsync());
-            }
-
-            return new CompanyDetailsDataResult();
+            return await DeserializeCompanyDetailsData(response);
         }
         catch (HttpRequestException exception)
         {
@@ -124,5 +124,15 @@ public class CompanyDetailsApiClient : ICompanyDetailsApiClient
             _logger.LogError(exception, message);
             throw new CompanyDetailsApiClientException(message, exception);
         }
+    }
+
+    private async Task<CompanyDetailsDataResult> DeserializeCompanyDetailsData(HttpResponseMessage response)
+    {
+        if (!string.IsNullOrEmpty(await response.Content.ReadAsStringAsync()))
+        {
+            return JsonConvert.DeserializeObject<CompanyDetailsDataResult>(await response.Content.ReadAsStringAsync());
+        }
+
+        return new CompanyDetailsDataResult();
     }
 }

@@ -16,6 +16,7 @@ using EPR.RegistrationValidation.Data.Models;
 using EPR.RegistrationValidation.Data.Models.CompanyDetailsApi;
 using EPR.RegistrationValidation.Data.Models.OrganisationDataLookup;
 using EPR.RegistrationValidation.Data.Models.QueueMessages;
+using EPR.RegistrationValidation.Data.Models.Services;
 using EPR.RegistrationValidation.Data.Models.SubmissionApi;
 using FluentValidation;
 using FluentValidation.Results;
@@ -67,7 +68,15 @@ public class ValidationService : IValidationService
 
         if (validateCompanyDetailsData)
         {
-            var companyDetailsValidationResult = await ValidateCompanyDetails(rows, organisationSubTypeValidationResult.TotalErrors, blobQueueMessage.ComplianceSchemeId, blobQueueMessage.UserId);
+            var companyDetailsValidationResult = await ValidateCompanyDetails(new ValidateCompanyDetailsModel
+            {
+                OrganisationDataRows = rows,
+                TotalErrors = organisationSubTypeValidationResult.TotalErrors,
+                ComplianceSchemeId = blobQueueMessage.ComplianceSchemeId,
+                UserId = blobQueueMessage.UserId,
+                ProducerOrganisationId = blobQueueMessage.OrganisationId,
+            });
+
             validationErrors.AddRange(companyDetailsValidationResult.ValidationErrors);
             _logger.LogInformation("Total validation errors {Count}", companyDetailsValidationResult.TotalErrors);
         }
@@ -228,7 +237,7 @@ public class ValidationService : IValidationService
         return (totalErrors, validationErrors);
     }
 
-    public async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateCompanyDetails(IList<OrganisationDataRow> rows, int totalErrors, string complianceSchemeId, string userId)
+    public async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateCompanyDetails(ValidateCompanyDetailsModel validateCompanyDetailsModel)
     {
         List<RegistrationValidationError> validationErrors = new();
 
@@ -239,18 +248,18 @@ public class ValidationService : IValidationService
 
             var unvalidatedComplianceSchemeRows = new List<OrganisationDataRow>();
 
-            foreach (var row in rows.TakeWhile(_ => totalErrors < _validationSettings.ErrorLimit))
+            foreach (var row in validateCompanyDetailsModel.OrganisationDataRows.TakeWhile(_ => validateCompanyDetailsModel.TotalErrors < _validationSettings.ErrorLimit))
             {
-                if (string.IsNullOrEmpty(complianceSchemeId))
+                if (string.IsNullOrEmpty(validateCompanyDetailsModel.ComplianceSchemeId))
                 {
-                    var producerValidationResult = await ValidateAsProducer(row);
-                    totalErrors += producerValidationResult.TotalErrors;
+                    var producerValidationResult = await ValidateAsProducer(row, validateCompanyDetailsModel.ProducerOrganisationId);
+                    validateCompanyDetailsModel.TotalErrors += producerValidationResult.TotalErrors;
                     validationErrors.AddRange(producerValidationResult.ValidationErrors);
                 }
                 else
                 {
-                    var complianceSchemeValidationResult = await ValidateAsComplianceSchemeUser(complianceSchemeId, row);
-                    totalErrors += complianceSchemeValidationResult.TotalErrors;
+                    var complianceSchemeValidationResult = await ValidateAsComplianceSchemeUser(validateCompanyDetailsModel.ComplianceSchemeId, row);
+                    validateCompanyDetailsModel.TotalErrors += complianceSchemeValidationResult.TotalErrors;
                     validationErrors.AddRange(complianceSchemeValidationResult.ValidationErrors);
 
                     if (!complianceSchemeValidationResult.ValidComplianceSchemeMember)
@@ -260,20 +269,20 @@ public class ValidationService : IValidationService
                 }
             }
 
-            if (!string.IsNullOrEmpty(complianceSchemeId) && unvalidatedComplianceSchemeRows.Any())
+            if (!string.IsNullOrEmpty(validateCompanyDetailsModel.ComplianceSchemeId) && unvalidatedComplianceSchemeRows.Any())
             {
-                var remainingMembersValidationResult = await ValidateRemainingComplianceSchemeMembers(unvalidatedComplianceSchemeRows);
+                var remainingMembersValidationResult = await ValidateRemainingComplianceSchemeMembers(unvalidatedComplianceSchemeRows, validateCompanyDetailsModel.ProducerOrganisationId);
 
-                totalErrors += remainingMembersValidationResult.TotalErrors;
+                validateCompanyDetailsModel.TotalErrors += remainingMembersValidationResult.TotalErrors;
                 validationErrors.AddRange(remainingMembersValidationResult.ValidationErrors);
             }
 
-            return (totalErrors, validationErrors);
+            return (validateCompanyDetailsModel.TotalErrors, validationErrors);
         }
         catch (HttpRequestException exception)
         {
             _logger.LogError(exception, "Error comparing organisation details");
-            return (totalErrors, validationErrors);
+            return (validateCompanyDetailsModel.TotalErrors, validationErrors);
         }
     }
 
@@ -543,14 +552,14 @@ public class ValidationService : IValidationService
         return (totalErrors, validationErrors);
     }
 
-    private async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateAsProducer(OrganisationDataRow row)
+    private async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateAsProducer(OrganisationDataRow row, string producerOrganistionId)
     {
         List<RegistrationValidationError> validationErrors = new();
         int totalErrors = 0;
 
         if (!_companyDetailsLookup.TryGetValue(row.DefraId, out var companyDetails))
         {
-            companyDetails = await _companyDetailsApiClient.GetCompanyDetails(row.DefraId);
+            companyDetails = await _companyDetailsApiClient.GetCompanyDetailsByProducer(producerOrganistionId);
             _companyDetailsLookup[row.DefraId] = companyDetails;
         }
 
@@ -573,12 +582,12 @@ public class ValidationService : IValidationService
         return (totalErrors, validationErrors);
     }
 
-    private async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateRemainingComplianceSchemeMembers(IList<OrganisationDataRow> rows)
+    private async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateRemainingComplianceSchemeMembers(IList<OrganisationDataRow> rows, string producerOrganisationId)
     {
         List<RegistrationValidationError> validationErrors = new();
         int totalErrors = 0;
         var organisationIds = rows.Select(r => r.DefraId);
-        var remainingProducerDetails = await _companyDetailsApiClient.GetRemainingProducerDetails(organisationIds);
+        var remainingProducerDetails = await _companyDetailsApiClient.GetRemainingProducerDetails(organisationIds, producerOrganisationId);
         var producers = new Dictionary<string, string>();
 
         if (remainingProducerDetails?.Organisations != null)
