@@ -92,19 +92,13 @@ public class CompanyDetailsApiClient : ICompanyDetailsApiClient
         }
     }
 
-    public async Task<CompanyDetailsDataResult> GetRemainingProducerDetails(IEnumerable<string> referenceNumbers, string producerOrganisationId)
+    public async Task<CompanyDetailsDataResult> GetRemainingProducerDetails(IEnumerable<string> referenceNumbers)
     {
         try
         {
             var uriString = $"api/company-details";
 
-            var organisationReferences = new OrganisationReferences
-            {
-                ReferenceNumbers = referenceNumbers,
-                OrganisationExternalId = producerOrganisationId,
-            };
-
-            var json = JsonConvert.SerializeObject(organisationReferences);
+            var json = JsonConvert.SerializeObject(referenceNumbers);
             var httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync(uriString, httpContent);

@@ -10,5 +10,5 @@ public interface ICompanyDetailsApiClient
 
     Task<CompanyDetailsDataResult> GetComplianceSchemeMembers(string organisationId, string complianceSchemeId);
 
-    Task<CompanyDetailsDataResult> GetRemainingProducerDetails(IEnumerable<string> referenceNumbers, string producerOrganisationId);
+    Task<CompanyDetailsDataResult> GetRemainingProducerDetails(IEnumerable<string> referenceNumbers);
 }

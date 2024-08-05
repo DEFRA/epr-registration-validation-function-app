@@ -587,7 +587,7 @@ public class ValidationService : IValidationService
         List<RegistrationValidationError> validationErrors = new();
         int totalErrors = 0;
         var organisationIds = rows.Select(r => r.DefraId);
-        var remainingProducerDetails = await _companyDetailsApiClient.GetRemainingProducerDetails(organisationIds, producerOrganisationId);
+        var remainingProducerDetails = await _companyDetailsApiClient.GetRemainingProducerDetails(organisationIds);
         var producers = new Dictionary<string, string>();
 
         if (remainingProducerDetails?.Organisations != null)

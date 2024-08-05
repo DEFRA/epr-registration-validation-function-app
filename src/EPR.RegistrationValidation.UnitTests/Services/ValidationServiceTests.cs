@@ -742,7 +742,7 @@ public class ValidationServiceTests
             .Setup(f => f.GetComplianceSchemeMembers("100001", "85a8b24f-d192-461f-8a0b-87dc54f63453"))
             .ReturnsAsync(complianceSchemeMembers);
         _companyDetailsApiClientMock
-            .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>(), string.Empty))
+            .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()))
             .ReturnsAsync(remainingProducers);
 
         // Act
@@ -897,7 +897,7 @@ public class ValidationServiceTests
             .Setup(f => f.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(companyDetailsDataResult);
         _companyDetailsApiClientMock
-            .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>(), string.Empty))
+            .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()))
             .ReturnsAsync(companyDetailsDataResult);
 
         // Act
@@ -915,7 +915,7 @@ public class ValidationServiceTests
             m => m.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()),
             Times.Exactly(rowCount));
         _companyDetailsApiClientMock.Verify(
-            m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>(), string.Empty),
+            m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()),
             Times.Once);
 
         results.TotalErrors.Should().Be(6);
@@ -965,7 +965,7 @@ public class ValidationServiceTests
             m => m.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()),
             Times.Exactly(rowCount));
         _companyDetailsApiClientMock.Verify(
-            m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>(), string.Empty),
+            m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()),
             Times.Never);
 
         results.ValidationErrors.Should().Match(x => x.Any(x => x.ColumnErrors.Any(e =>
@@ -1000,7 +1000,7 @@ public class ValidationServiceTests
             .Setup(f => f.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(complianceSchemeMembers);
         _companyDetailsApiClientMock
-            .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>(), string.Empty))
+            .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()))
             .ReturnsAsync(default(CompanyDetailsDataResult));
 
         // Act
@@ -1018,7 +1018,7 @@ public class ValidationServiceTests
             m => m.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()),
             Times.Exactly(rowCount));
         _companyDetailsApiClientMock.Verify(
-           m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>(), string.Empty),
+           m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()),
            Times.Once);
 
         results.ValidationErrors.Should().Match(x => x.Any(x => x.ColumnErrors.Any(e =>
@@ -1052,7 +1052,7 @@ public class ValidationServiceTests
             .Setup(f => f.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(companyDetailsDataResult);
         _companyDetailsApiClientMock
-            .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>(), string.Empty))
+            .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()))
             .ReturnsAsync(companyDetailsDataResult);
 
         // Act
@@ -1070,7 +1070,7 @@ public class ValidationServiceTests
             m => m.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()),
             Times.Exactly(rowCount));
         _companyDetailsApiClientMock.Verify(
-            m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>(), string.Empty),
+            m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()),
             Times.Once);
 
         results.ValidationErrors.Should().Match(x => x.Any(x => x.ColumnErrors.Any(e =>
@@ -1113,7 +1113,7 @@ public class ValidationServiceTests
             .ReturnsAsync(companyDetailsDataResult);
 
         _companyDetailsApiClientMock
-            .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>(), string.Empty))
+            .Setup(f => f.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()))
             .ReturnsAsync(remainingProducers);
 
         // Act
@@ -1134,7 +1134,7 @@ public class ValidationServiceTests
             m => m.GetComplianceSchemeMembers(It.IsAny<string>(), It.IsAny<string>()),
             Times.Exactly(rowCount));
         _companyDetailsApiClientMock.Verify(
-            m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>(), string.Empty),
+            m => m.GetRemainingProducerDetails(It.IsAny<IEnumerable<string>>()),
             Times.Once);
     }
 

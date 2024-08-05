@@ -318,7 +318,7 @@ public class CompanyDetailsApiClientTests
     }
 
     [TestMethod]
-    public async Task TestGetRemainingProducerDetails_WhenSendAsyncIsSuccessful_DoesNotThrowError()
+    public async Task GetRemainingProducerDetails_WhenSendAsyncIsSuccessful_DoesNotThrowError()
     {
         // Arrange
         var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
@@ -346,7 +346,7 @@ public class CompanyDetailsApiClientTests
         referenceNumberList.Add("33000033");
 
         // Act
-        var response = await sut.GetRemainingProducerDetails(referenceNumberList, string.Empty);
+        var response = await sut.GetRemainingProducerDetails(referenceNumberList);
 
         // Assert
         response.Should().NotBeNull("Exception not expected");
@@ -357,7 +357,7 @@ public class CompanyDetailsApiClientTests
     [DataRow(HttpStatusCode.BadGateway)]
     [DataRow(HttpStatusCode.Unauthorized)]
     [TestMethod]
-    public async Task TestGetRemainingProducerDetails_WhenSendAsyncNotSuccessful_ThrowsError(HttpStatusCode statusCode)
+    public async Task GetRemainingProducerDetails_WhenSendAsyncNotSuccessful_ThrowsError(HttpStatusCode statusCode)
     {
         // Arrange
         var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
@@ -382,14 +382,14 @@ public class CompanyDetailsApiClientTests
         var referenceNumberList = new List<string>();
 
         // Act
-        Func<Task> act = () => sut.GetRemainingProducerDetails(referenceNumberList, string.Empty);
+        Func<Task> act = () => sut.GetRemainingProducerDetails(referenceNumberList);
 
         // Assert
         await act.Should().ThrowAsync<CompanyDetailsApiClientException>();
     }
 
     [TestMethod]
-    public async Task TestGetRemainingProducerDetails_WhenSendAsyncNotFound_ReturnsNull()
+    public async Task GetRemainingProducerDetails_WhenSendAsyncNotFound_ReturnsNull()
     {
         // Arrange
         var referenceNumberList = new List<string>();
@@ -414,14 +414,14 @@ public class CompanyDetailsApiClientTests
         var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
 
         // Act
-        var result = await sut.GetRemainingProducerDetails(referenceNumberList, string.Empty);
+        var result = await sut.GetRemainingProducerDetails(referenceNumberList);
 
         // Assert
         result.Should().BeNull();
     }
 
     [TestMethod]
-    public async Task TestGetRemainingProducerDetails_WhenParametersAreValid_BuildsCorrectHTTPRequestMessage()
+    public async Task GetRemainingProducerDetails_WhenParametersAreValid_BuildsCorrectHTTPRequestMessage()
     {
         // Arrange
         var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
@@ -463,7 +463,7 @@ public class CompanyDetailsApiClientTests
         referenceNumberList.Add("33000033");
 
         // Act
-        var responseContent = await sut.GetRemainingProducerDetails(referenceNumberList, string.Empty);
+        var responseContent = await sut.GetRemainingProducerDetails(referenceNumberList);
 
         // Assert
         var responseAsString = JsonConvert.SerializeObject(responseContent);
