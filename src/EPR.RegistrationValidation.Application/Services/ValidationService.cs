@@ -271,7 +271,7 @@ public class ValidationService : IValidationService
 
             if (!string.IsNullOrEmpty(validateCompanyDetailsModel.ComplianceSchemeId) && unvalidatedComplianceSchemeRows.Any())
             {
-                var remainingMembersValidationResult = await ValidateRemainingComplianceSchemeMembers(unvalidatedComplianceSchemeRows, validateCompanyDetailsModel.ProducerOrganisationId);
+                var remainingMembersValidationResult = await ValidateRemainingComplianceSchemeMembers(unvalidatedComplianceSchemeRows);
 
                 validateCompanyDetailsModel.TotalErrors += remainingMembersValidationResult.TotalErrors;
                 validationErrors.AddRange(remainingMembersValidationResult.ValidationErrors);
@@ -297,8 +297,8 @@ public class ValidationService : IValidationService
     }
 
     private static IList<OrganisationIdentifiers?> GetMissingOrganisationRows(
-        Dictionary<string, Dictionary<string, OrganisationIdentifiers>> organisationData,
-        IEnumerable<OrganisationIdentifiers> rowIdentifiers)
+    Dictionary<string, Dictionary<string, OrganisationIdentifiers>> organisationData,
+    IEnumerable<OrganisationIdentifiers> rowIdentifiers)
     {
         return organisationData
             .SelectMany(x => x.Value.Values, (_, b) => new { b.DefraId, b.SubsidiaryId })
@@ -308,8 +308,8 @@ public class ValidationService : IValidationService
     }
 
     private static IList<OrganisationIdentifiers?> GetMissingSubsidiaryRows(
-        Dictionary<string, Dictionary<string, OrganisationIdentifiers>> organisationData,
-        IEnumerable<OrganisationIdentifiers> rowIdentifiers)
+    Dictionary<string, Dictionary<string, OrganisationIdentifiers>> organisationData,
+    IEnumerable<OrganisationIdentifiers> rowIdentifiers)
     {
         return organisationData
             .SelectMany(x => x.Value.Values, (_, b) => new { b.DefraId, b.SubsidiaryId })
@@ -433,7 +433,7 @@ public class ValidationService : IValidationService
         var missingSubsidiaryRows = GetMissingSubsidiaryRows(organisationDataLookup.Data, rowIdentifiers);
         var missingSubsidiaryErrorCode = GetMissingSubsidiaryErrorCode(rows, missingSubsidiaryRows);
 
-        if (!string.IsNullOrEmpty(missingOrganisationErrorCode) && !errors.Contains(missingOrganisationErrorCode))
+        if (!string.IsNullOrEmpty(missingOrganisationErrorCode))
         {
             errors.Add(missingOrganisationErrorCode);
             LogMissingIdentifierErrors(missingOrganisationRows, missingOrganisationErrorCode);
@@ -542,8 +542,8 @@ public class ValidationService : IValidationService
                 error.ColumnErrors.Add(organisationIdColumnValidationError);
                 error.ColumnErrors.Add(companiesHouseNumberColumnValidationError);
                 var errorMessage = $"Companies House number does not match this organisation ID - check both";
-                LogValidationWarning(row.LineNumber, (int)organisationId?.Index, errorMessage, ErrorCodes.CompaniesHouseNumberNotMatchOrganisationId);
-                LogValidationWarning(row.LineNumber, (int)companiesHouseNumber?.Index, errorMessage, ErrorCodes.CompaniesHouseNumberNotMatchOrganisationId);
+                LogValidationWarning(row.LineNumber, organisationId is null ? 0 : (int)organisationId.Index, errorMessage, ErrorCodes.CompaniesHouseNumberNotMatchOrganisationId);
+                LogValidationWarning(row.LineNumber, companiesHouseNumber is null ? 0 : (int)companiesHouseNumber.Index, errorMessage, ErrorCodes.CompaniesHouseNumberNotMatchOrganisationId);
                 validationErrors.Add(error);
                 totalErrors++;
             }
@@ -582,7 +582,7 @@ public class ValidationService : IValidationService
         return (totalErrors, validationErrors);
     }
 
-    private async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateRemainingComplianceSchemeMembers(IList<OrganisationDataRow> rows, string producerOrganisationId)
+    private async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateRemainingComplianceSchemeMembers(IList<OrganisationDataRow> rows)
     {
         List<RegistrationValidationError> validationErrors = new();
         int totalErrors = 0;

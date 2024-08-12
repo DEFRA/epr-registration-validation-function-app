@@ -120,7 +120,7 @@ public class CompanyDetailsApiClient : ICompanyDetailsApiClient
         }
     }
 
-    private async Task<CompanyDetailsDataResult> DeserializeCompanyDetailsData(HttpResponseMessage response)
+    private static async Task<CompanyDetailsDataResult> DeserializeCompanyDetailsData(HttpResponseMessage response)
     {
         if (!string.IsNullOrEmpty(await response.Content.ReadAsStringAsync()))
         {
