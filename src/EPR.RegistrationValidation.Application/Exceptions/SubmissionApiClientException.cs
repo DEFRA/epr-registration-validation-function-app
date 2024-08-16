@@ -21,9 +21,4 @@ public class SubmissionApiClientException : Exception
         : base(message, inner)
     {
     }
-
-    protected SubmissionApiClientException(SerializationInfo info, StreamingContext context)
-        : base(info, context)
-    {
-    }
 }

@@ -1,4 +1,5 @@
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS installer-env
+# FROM defradigital/dotnetcore-development:dotnet8.0 AS installer-env
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS installer-env
 
 # Copy everything
 COPY stylecop.ruleset ./
@@ -9,7 +10,8 @@ COPY EPR.RegistrationValidation.Functions/. ./EPR.RegistrationValidation.Functio
 
 RUN dotnet publish EPR.RegistrationValidation.Functions/*.csproj --output /home/site/wwwroot
 
-FROM mcr.microsoft.com/azure-functions/dotnet:4
+# FROM defradigital/dotnetcore:dotnet8.0
+FROM mcr.microsoft.com/azure-functions/dotnet:4-dotnet8
 
 # Create a non-root user and set permissions
 RUN groupadd -r dotnet && \

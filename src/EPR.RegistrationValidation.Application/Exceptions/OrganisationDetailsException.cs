@@ -21,9 +21,4 @@ public class OrganisationDetailsException : Exception
         : base(message, inner)
     {
     }
-
-    protected OrganisationDetailsException(SerializationInfo info, StreamingContext context)
-        : base(info, context)
-    {
-    }
 }

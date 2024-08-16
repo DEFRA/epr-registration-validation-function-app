@@ -21,9 +21,4 @@ public class CompanyDetailsApiClientException : Exception
         : base(message, inner)
     {
     }
-
-    protected CompanyDetailsApiClientException(SerializationInfo info, StreamingContext context)
-        : base(info, context)
-    {
-    }
 }
