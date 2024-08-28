@@ -32,8 +32,8 @@ public class ValidationService : IValidationService
     private readonly ValidationSettings _validationSettings;
     private readonly ILogger<ValidationService> _logger;
     private readonly ICompanyDetailsApiClient _companyDetailsApiClient;
-    private IDictionary<string, CompanyDetailsDataResult> _companyDetailsLookup;
-    private IDictionary<string, CompanyDetailsDataResult> _complianceSchemeMembersLookup;
+    private Dictionary<string, CompanyDetailsDataResult> _companyDetailsLookup;
+    private Dictionary<string, CompanyDetailsDataResult> _complianceSchemeMembersLookup;
 
     public ValidationService(
         OrganisationDataRowValidator organisationDataRowValidator,
@@ -269,7 +269,7 @@ public class ValidationService : IValidationService
                 }
             }
 
-            if (!string.IsNullOrEmpty(validateCompanyDetailsModel.ComplianceSchemeId) && unvalidatedComplianceSchemeRows.Any())
+            if (!string.IsNullOrEmpty(validateCompanyDetailsModel.ComplianceSchemeId) && unvalidatedComplianceSchemeRows.Count > 0)
             {
                 var remainingMembersValidationResult = await ValidateRemainingComplianceSchemeMembers(unvalidatedComplianceSchemeRows);
 
@@ -296,7 +296,7 @@ public class ValidationService : IValidationService
         return rows.Exists(x => DoesExceedMaxCharacterLength(x, columnProperties));
     }
 
-    private static IList<OrganisationIdentifiers?> GetMissingOrganisationRows(
+    private static List<OrganisationIdentifiers?> GetMissingOrganisationRows(
     Dictionary<string, Dictionary<string, OrganisationIdentifiers>> organisationData,
     IEnumerable<OrganisationIdentifiers> rowIdentifiers)
     {
@@ -307,7 +307,7 @@ public class ValidationService : IValidationService
             .ToList();
     }
 
-    private static IList<OrganisationIdentifiers?> GetMissingSubsidiaryRows(
+    private static List<OrganisationIdentifiers?> GetMissingSubsidiaryRows(
     Dictionary<string, Dictionary<string, OrganisationIdentifiers>> organisationData,
     IEnumerable<OrganisationIdentifiers> rowIdentifiers)
     {
@@ -451,7 +451,7 @@ public class ValidationService : IValidationService
     private ValidationContext<T> CreateValidationContextWithLookupData<T>(T row, OrganisationDataLookupTable organisationDataLookup)
     {
         var context = new ValidationContext<T>(row);
-        if (organisationDataLookup?.Data is not null && organisationDataLookup.Data.Any())
+        if (organisationDataLookup?.Data is not null && organisationDataLookup.Data.Count > 0)
         {
             context.RootContextData[nameof(OrganisationDataLookupTable)] = organisationDataLookup;
         }

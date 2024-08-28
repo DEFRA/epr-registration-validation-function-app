@@ -137,7 +137,7 @@ public class RegistrationService : IRegistrationService
             blobQueueMessage.BlobName,
             !isRowValidationEnabled);
 
-        if (!csvRows.Any())
+        if (csvRows.Count == 0)
         {
             _logger.LogInformation(
                 "The CSV file for submission ID {SubmissionId} is empty",
@@ -170,7 +170,7 @@ public class RegistrationService : IRegistrationService
                 await IsCompanyDetailsDataValidationEnabledAsync(blobQueueMessage));
         }
 
-        if (!validationErrors.Any())
+        if (validationErrors.Count == 0)
         {
             organisationMemberCount = csvRows.GroupBy(row => row?.DefraId).Count();
         }
@@ -192,7 +192,7 @@ public class RegistrationService : IRegistrationService
         if (await IsBrandPartnerValidationEnabledAsync())
         {
             var csvRows = await ParseFile<T>(blobQueueMessage.BlobName);
-            if (!csvRows.Any())
+            if (csvRows.Count == 0)
             {
                 _logger.LogInformation(
                     "The CSV file for submission ID {SubmissionId} is empty",

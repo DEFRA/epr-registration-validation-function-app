@@ -18,7 +18,7 @@ public static class RegistrationEventBuilder
             BlobName = blobName,
             BlobContainerName = blobContainerName,
             Errors = errorCodes.ToList(),
-            IsValid = !errorCodes.Any(),
+            IsValid = errorCodes.Length == 0,
         };
     }
 
@@ -33,7 +33,7 @@ public static class RegistrationEventBuilder
         return BuildRegistrationValidationEvent(csvItems, validationErrors: validationErrors, blobName, blobContainerName, errorLimit, organisationMemberCount);
     }
 
-    private static ValidationEvent BuildRegistrationValidationEvent(
+    private static RegistrationValidationEvent BuildRegistrationValidationEvent(
         List<OrganisationDataRow> csvItems,
         List<RegistrationValidationError>? validationErrors,
         string blobName,

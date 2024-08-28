@@ -13,7 +13,7 @@ public class BrandDataRowOrganisationDataValidator : AbstractValidator<BrandData
             .Must((_, val, context) =>
             {
                 var lookup = GetOrganisationDataLookupTableData(context);
-                if (lookup.Any() && !lookup.ContainsKey(val))
+                if (lookup.Count > 0 && !lookup.ContainsKey(val))
                 {
                     return false;
                 }

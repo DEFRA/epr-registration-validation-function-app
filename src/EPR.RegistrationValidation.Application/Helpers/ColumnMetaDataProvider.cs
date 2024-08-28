@@ -34,7 +34,7 @@ public class ColumnMetaDataProvider
         return _organisationMetaData[propertyName];
     }
 
-    private static IDictionary<string, ColumnMetaData> LoadColumnMetaData<T>()
+    private static Dictionary<string, ColumnMetaData> LoadColumnMetaData<T>()
     {
         var columnValues = typeof(T).GetProperties()
             .Where(x => x.GetCustomAttribute<ColumnAttribute>() != null)
@@ -44,7 +44,7 @@ public class ColumnMetaDataProvider
                 Name: x.GetCustomAttribute<NameAttribute>()?.Names.Single()))
             .ToList();
 
-        if (columnValues.Any())
+        if (columnValues.Count > 0)
         {
             return columnValues.ToDictionary(x => x.Key, x => new ColumnMetaData(x.Name, x.Index));
         }
