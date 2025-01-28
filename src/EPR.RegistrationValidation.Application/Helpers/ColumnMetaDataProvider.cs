@@ -1,18 +1,26 @@
 ﻿namespace EPR.RegistrationValidation.Application.Helpers;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using CsvHelper.Configuration.Attributes;
 using EPR.RegistrationValidation.Data.Attributes;
+using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
+using Microsoft.FeatureManagement;
 
 public class ColumnMetaDataProvider
 {
+    private const string OrganisationSizeColumnName = "OrganisationSize";
+    private static IFeatureManager _featureManager;
+
     private readonly IDictionary<string, ColumnMetaData> _organisationMetaData;
     private readonly IDictionary<string, ColumnMetaData> _brandMetaData;
     private readonly IDictionary<string, ColumnMetaData> _partnerMetaData;
 
-    public ColumnMetaDataProvider()
+    public ColumnMetaDataProvider(IFeatureManager featureManager)
     {
+        _featureManager = featureManager;
+
         _organisationMetaData = LoadColumnMetaData<OrganisationDataRow>();
         _brandMetaData = LoadColumnMetaData<BrandDataRow>();
         _partnerMetaData = LoadColumnMetaData<PartnersDataRow>();
@@ -34,6 +42,7 @@ public class ColumnMetaDataProvider
         return _organisationMetaData[propertyName];
     }
 
+    [ExcludeFromCodeCoverage]
     private static Dictionary<string, ColumnMetaData> LoadColumnMetaData<T>()
     {
         var columnValues = typeof(T).GetProperties()
@@ -44,11 +53,13 @@ public class ColumnMetaDataProvider
                 Name: x.GetCustomAttribute<NameAttribute>()?.Names.Single()))
             .ToList();
 
-        if (columnValues.Count > 0)
+        var returnDictionary = columnValues.Count > 0 ? columnValues.ToDictionary(x => x.Key, x => new ColumnMetaData(x.Name, x.Index)) : new Dictionary<string, ColumnMetaData>();
+
+        if (typeof(T).Equals(typeof(OrganisationDataRow)) && _featureManager != null && !_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result)
         {
-            return columnValues.ToDictionary(x => x.Key, x => new ColumnMetaData(x.Name, x.Index));
+            returnDictionary.Remove(OrganisationSizeColumnName);
         }
 
-        return new Dictionary<string, ColumnMetaData>();
+        return returnDictionary;
     }
 }

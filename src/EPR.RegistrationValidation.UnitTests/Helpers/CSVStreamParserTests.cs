@@ -4,8 +4,11 @@ using Application.Exceptions;
 using Application.Helpers;
 using Data.Enums;
 using Data.Models;
+using EPR.RegistrationValidation.Data.Constants;
 using FluentAssertions;
+using Microsoft.FeatureManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using TestHelpers;
 
 [TestClass]
@@ -16,7 +19,12 @@ public class CsvStreamParserTests
     [TestInitialize]
     public void Setup()
     {
-        _sut = new CsvStreamParser(new ColumnMetaDataProvider());
+        var featureManageMock = new Mock<IFeatureManager>();
+        featureManageMock
+            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation))
+            .Returns(Task.FromResult(true));
+
+        _sut = new CsvStreamParser(new ColumnMetaDataProvider(null), featureManageMock.Object);
     }
 
     [TestMethod]
@@ -218,5 +226,50 @@ error, error";
         items[0].PartnerLastName.Should().Be(partnerLastName);
         items[0].PartnerPhoneNumber.Should().Be(partnerPhoneNumber);
         items[0].PartnerEmail.Should().Be(partnerEmail);
+    }
+
+    [TestMethod]
+    [DataRow(false, "ValidFileWithCorrectHeaders.csv")]
+    [DataRow(true, "InvalidFileTooFewHeaders.csv")]
+    public async Task TestGetItemsFromCsvStream_FeatureFlag_EnableOrganisationSizeFieldValidation_Toggle_WhenFileDoesNotMatch_ThrowsException(bool featureFlag, string csvFile)
+    {
+        // Arrange
+        var featureManageMock = CreateFeatureManagerMock(featureFlag);
+        var sutLocal = new CsvStreamParser(new ColumnMetaDataProvider(null), featureManageMock.Object);
+        var memoryStream = CsvFileReader.ReadFile(csvFile);
+
+        // Act
+        Func<Task> act = () => sutLocal.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+
+        // Assert
+        await act.Should().ThrowAsync<CsvHeaderException>().WithMessage("The CSV file header is invalid.");
+    }
+
+    [TestMethod]
+    [DataRow(true, "ValidFileWithCorrectHeaders.csv", 2)]
+    [DataRow(false, "InvalidFileTooFewHeaders.csv", 2)]
+    public async Task TestGetItemsFromCsvStream_FeatureFlag_EnableOrganisationSizeFieldValidation_True_WhenCsvFileContainsSizeColumn_ReturnValidList(bool featureFlag, string csvFile, int expectedResultCount)
+    {
+        // Arrange
+        var featureManageMock = CreateFeatureManagerMock(featureFlag);
+        var sutLocal = new CsvStreamParser(new ColumnMetaDataProvider(null), featureManageMock.Object);
+        var memoryStream = CsvFileReader.ReadFile(csvFile);
+
+        // Act
+        var result = sutLocal.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream).Result;
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual(expectedResultCount, result.Count());
+    }
+
+    private Mock<IFeatureManager> CreateFeatureManagerMock(bool featureFlag)
+    {
+        var featureManageMock = new Mock<IFeatureManager>();
+        featureManageMock
+            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation))
+            .Returns(Task.FromResult(featureFlag));
+
+        return featureManageMock;
     }
 }

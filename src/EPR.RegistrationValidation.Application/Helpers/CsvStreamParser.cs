@@ -4,15 +4,24 @@ using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
 using EPR.RegistrationValidation.Application.ClassMaps;
+using EPR.RegistrationValidation.Data.Constants;
 using Exceptions;
+using Microsoft.FeatureManagement;
 
 public class CsvStreamParser : ICsvStreamParser
 {
     private readonly ColumnMetaDataProvider _metaDataProvider;
+    private readonly IFeatureManager _featureManager;
 
     public CsvStreamParser(ColumnMetaDataProvider metaDataProvider)
     {
         _metaDataProvider = metaDataProvider;
+    }
+
+    public CsvStreamParser(ColumnMetaDataProvider metaDataProvider, IFeatureManager featureManager)
+    {
+        _metaDataProvider = metaDataProvider;
+        _featureManager = featureManager;
     }
 
     private static CsvConfiguration CsvConfiguration => new(CultureInfo.InvariantCulture)
@@ -27,6 +36,13 @@ public class CsvStreamParser : ICsvStreamParser
             memoryStream.Position = 0;
             using var reader = new StreamReader(memoryStream);
             using var csv = new CsvReader(reader, CsvConfiguration);
+
+            if (_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result == false)
+            {
+                // Register class map to populate data row without the (newer) organisation size property
+                csv.Context.RegisterClassMap<OrganisationDataRowWithoutOrgSizeColumnMap>();
+            }
+
             if (useMinimalClassMaps)
             {
                 // Register class map to populate minimal set of properties to keep memory usage to a minimum
@@ -42,6 +58,15 @@ public class CsvStreamParser : ICsvStreamParser
                 .Select(x => x.Value)
                 .OrderBy(x => x.Index)
                 .ToList();
+
+            if (_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result == false)
+            {
+                var toBeRemoved = orderedHeaders.SingleOrDefault(x => x.Name == "organisation_size");
+                if (toBeRemoved != null)
+                {
+                    orderedHeaders.Remove(toBeRemoved);
+                }
+            }
 
             if (!header.SequenceEqual(orderedHeaders.Select(x => x.Name)))
             {

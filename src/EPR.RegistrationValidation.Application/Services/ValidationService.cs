@@ -5,9 +5,11 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 using EPR.RegistrationValidation.Application.Clients;
 using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Application.Helpers;
+using EPR.RegistrationValidation.Application.Services.Subsidiary;
 using EPR.RegistrationValidation.Application.Validators;
 using EPR.RegistrationValidation.Data.Attributes;
 using EPR.RegistrationValidation.Data.Config;
@@ -22,6 +24,7 @@ using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.FeatureManagement;
 
 public class ValidationService : IValidationService
 {
@@ -31,7 +34,9 @@ public class ValidationService : IValidationService
     private readonly ColumnMetaDataProvider _metaDataProvider;
     private readonly ValidationSettings _validationSettings;
     private readonly ILogger<ValidationService> _logger;
+    private readonly IFeatureManager _featureManager;
     private readonly ICompanyDetailsApiClient _companyDetailsApiClient;
+    private readonly ISubsidiaryDetailsRequestBuilder _subsidiaryDetailsRequestBuilder;
     private Dictionary<string, CompanyDetailsDataResult> _companyDetailsLookup;
     private Dictionary<string, CompanyDetailsDataResult> _complianceSchemeMembersLookup;
 
@@ -42,7 +47,9 @@ public class ValidationService : IValidationService
         ColumnMetaDataProvider metaDataProvider,
         IOptions<ValidationSettings> validationSettings,
         ICompanyDetailsApiClient companyDetailsApiClient,
-        ILogger<ValidationService> logger)
+        ILogger<ValidationService> logger,
+        IFeatureManager featureManager,
+        ISubsidiaryDetailsRequestBuilder subsidiaryDetailsRequestBuilder)
     {
         _organisationDataRowValidator = organisationDataRowValidator;
         _brandDataRowValidator = brandDataRowValidator;
@@ -50,7 +57,9 @@ public class ValidationService : IValidationService
         _metaDataProvider = metaDataProvider;
         _companyDetailsApiClient = companyDetailsApiClient;
         _logger = logger;
+        _featureManager = featureManager;
         _validationSettings = validationSettings.Value;
+        _subsidiaryDetailsRequestBuilder = subsidiaryDetailsRequestBuilder;
     }
 
     public async Task<List<RegistrationValidationError>> ValidateOrganisationsAsync(List<OrganisationDataRow> rows, BlobQueueMessage blobQueueMessage, bool validateCompanyDetailsData)
@@ -59,6 +68,9 @@ public class ValidationService : IValidationService
 
         var rowValidationResult = await ValidateRowsAsync(rows);
         validationErrors.AddRange(rowValidationResult.ValidationErrors);
+
+        var organisationSubsidiaryRelationshipsResult = ValidateOrganisationSubsidiaryRelationships(rows, rowValidationResult.TotalErrors);
+        validationErrors.AddRange(organisationSubsidiaryRelationshipsResult.ValidationErrors);
 
         var duplicateValidationResult = ValidateDuplicates(rows, rowValidationResult.TotalErrors);
         validationErrors.AddRange(duplicateValidationResult.ValidationErrors);
@@ -83,6 +95,12 @@ public class ValidationService : IValidationService
         else
         {
             _logger.LogInformation("Total validation errors {Count}", organisationSubTypeValidationResult.TotalErrors);
+        }
+
+        if (await _featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryValidation))
+        {
+            var subValidationResult = await ValidateSubsidiary(rows, rowValidationResult.TotalErrors);
+            validationErrors.AddRange(subValidationResult.ValidationErrors);
         }
 
         return validationErrors;
@@ -163,6 +181,42 @@ public class ValidationService : IValidationService
             LogValidationWarning(row.LineNumber, errorMessage, ErrorCodes.DuplicateOrganisationIdSubsidiaryId);
             validationErrors.Add(error);
             totalErrors++;
+        }
+
+        return (totalErrors, validationErrors);
+    }
+
+    public (int TotalErrors, List<RegistrationValidationError> ValidationErrors) ValidateOrganisationSubsidiaryRelationships(List<OrganisationDataRow> rows, int totalErrors)
+    {
+        List<RegistrationValidationError> validationErrors = new();
+
+        var defraIdColumn = _metaDataProvider.GetOrganisationColumnMetaData(nameof(OrganisationDataRow.DefraId));
+
+        var defraIdValidationError = new ColumnValidationError
+        {
+            ErrorCode = ErrorCodes.MissingOrganisationId,
+            ColumnIndex = defraIdColumn?.Index,
+            ColumnName = defraIdColumn?.Name,
+        };
+
+        foreach (var row in rows.Where(x => !string.IsNullOrEmpty(x.SubsidiaryId)))
+        {
+            if (!rows.Exists(x => x.DefraId == row.DefraId && string.IsNullOrEmpty(x.SubsidiaryId)))
+            {
+                var error = new RegistrationValidationError
+                {
+                    RowNumber = row.LineNumber,
+                    OrganisationId = row.DefraId,
+                    SubsidiaryId = row.SubsidiaryId,
+                };
+                error.ColumnErrors.Add(defraIdValidationError);
+
+                var errorMessage = $"Organisation parent record not found for organisation id = {row.DefraId} subsidiary id = {row.SubsidiaryId}";
+
+                LogValidationWarning(row.LineNumber, errorMessage, ErrorCodes.MissingOrganisationId);
+                validationErrors.Add(error);
+                totalErrors++;
+            }
         }
 
         return (totalErrors, validationErrors);
@@ -286,6 +340,85 @@ public class ValidationService : IValidationService
         }
     }
 
+    public async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateSubsidiary(List<OrganisationDataRow> rows, int totalErrors)
+    {
+        List<RegistrationValidationError> validationErrors = new();
+        try
+        {
+            var subsidiaryDetailsRequest = _subsidiaryDetailsRequestBuilder.CreateRequest(rows);
+            if (subsidiaryDetailsRequest == null || subsidiaryDetailsRequest.SubsidiaryOrganisationDetails == null || !subsidiaryDetailsRequest.SubsidiaryOrganisationDetails.Any())
+            {
+                return (totalErrors, validationErrors);
+            }
+
+            var result = await _companyDetailsApiClient.GetSubsidiaryDetails(subsidiaryDetailsRequest);
+
+            foreach (var row in rows.TakeWhile(_ => totalErrors < _validationSettings.ErrorLimit))
+            {
+                var matchingOrg = result.SubsidiaryOrganisationDetails
+                    .FirstOrDefault(org => org.OrganisationReference == row.DefraId);
+
+                if (matchingOrg == null)
+                {
+                    continue;
+                }
+
+                var matchingSub = matchingOrg.SubsidiaryDetails
+                    .FirstOrDefault(sub => sub.ReferenceNumber == row.SubsidiaryId);
+
+                if (matchingSub == null)
+                {
+                    continue;
+                }
+
+                if (!matchingSub.SubsidiaryExists)
+                {
+                    var error = CreateSubValidationError(row, ErrorCodes.SubsidiaryIdDoesNotExist);
+                    var errorMessage = $"Subsidiary ID does not exist";
+                    LogValidationWarning(row.LineNumber, errorMessage, ErrorCodes.SubsidiaryIdDoesNotExist);
+                    validationErrors.Add(error);
+                    totalErrors++;
+                    continue;
+                }
+
+                if (matchingSub.SubsidiaryBelongsToAnyOtherOrganisation)
+                {
+                    var error = CreateSubValidationError(row, ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation);
+                    var errorMessage = $"Subsidiary ID is assigned to a different organisation";
+                    LogValidationWarning(row.LineNumber, errorMessage, ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation);
+                    validationErrors.Add(error);
+                    totalErrors++;
+                }
+
+                if (matchingSub.SubsidiaryDoesNotBelongToAnyOrganisation)
+                {
+                    var error = CreateSubValidationError(row, ErrorCodes.SubsidiaryDoesNotBelongToAnyOrganisation);
+                    var errorMessage = $"Subsidiary ID does not belong to any organisation";
+                    LogValidationWarning(row.LineNumber, errorMessage, ErrorCodes.SubsidiaryDoesNotBelongToAnyOrganisation);
+                    validationErrors.Add(error);
+                    totalErrors++;
+                }
+
+                if (!string.Equals(row.CompaniesHouseNumber, matchingSub.CompaniesHouseNumber))
+                {
+                    var columnName = nameof(OrganisationDataRow.CompaniesHouseNumber);
+                    var error = CreateColumnValidationError(row, ErrorCodes.SubsidiaryIdDoesNotMatchCompaniesHouseNumber, columnName);
+                    var errorMessage = "This companies house number does not match the subsidiary ID";
+                    LogValidationWarning(row.LineNumber, errorMessage, ErrorCodes.SubsidiaryIdDoesNotMatchCompaniesHouseNumber);
+                    validationErrors.Add(error);
+                    totalErrors++;
+                }
+            }
+
+            return (totalErrors, validationErrors);
+        }
+        catch (HttpRequestException exception)
+        {
+            _logger.LogError(exception, "Error Subsidiary validation");
+            return (totalErrors, validationErrors);
+        }
+    }
+
     public bool IsColumnLengthExceeded(List<OrganisationDataRow> rows)
     {
         var columnProperties = typeof(OrganisationDataRow)
@@ -341,7 +474,7 @@ public class ValidationService : IValidationService
             return rows switch
             {
                 List<BrandDataRow> _ => ErrorCodes.BrandDetailsNotMatchingSubsidiary,
-                List<PartnersDataRow> _ => ErrorCodes.PartnerDetailsNotMatchingOrganisation,
+                List<PartnersDataRow> _ => ErrorCodes.PartnerDetailsNotMatchingSubsidiary,
             };
         }
 
@@ -636,6 +769,50 @@ public class ValidationService : IValidationService
 
         error.ColumnErrors.Add(columnValidationError);
 
+        return error;
+    }
+
+    private RegistrationValidationError CreateSubValidationError(OrganisationDataRow row, string errorCode)
+    {
+        var subColumn = _metaDataProvider.GetOrganisationColumnMetaData(nameof(OrganisationDataRow.SubsidiaryId));
+
+        var columnValidationError = new ColumnValidationError
+        {
+            ErrorCode = errorCode,
+            ColumnIndex = subColumn?.Index,
+            ColumnName = subColumn?.Name,
+        };
+
+        var error = new RegistrationValidationError
+        {
+            RowNumber = row.LineNumber,
+            OrganisationId = row.DefraId,
+            SubsidiaryId = row.SubsidiaryId,
+        };
+
+        error.ColumnErrors.Add(columnValidationError);
+        return error;
+    }
+
+    private RegistrationValidationError CreateColumnValidationError(OrganisationDataRow row, string errorCode, string columnHeader)
+    {
+        var column = _metaDataProvider.GetOrganisationColumnMetaData(columnHeader);
+
+        var columnValidationError = new ColumnValidationError
+        {
+            ErrorCode = errorCode,
+            ColumnIndex = column?.Index,
+            ColumnName = column?.Name,
+        };
+
+        var error = new RegistrationValidationError
+        {
+            RowNumber = row.LineNumber,
+            OrganisationId = row.DefraId,
+            SubsidiaryId = row.SubsidiaryId,
+        };
+
+        error.ColumnErrors.Add(columnValidationError);
         return error;
     }
 

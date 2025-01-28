@@ -2,6 +2,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using EPR.RegistrationValidation.Application.Handlers;
+using EPR.RegistrationValidation.Application.Services.Subsidiary;
 using EPR.RegistrationValidation.Application.Validators;
 using Helpers;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +28,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<OrganisationDataRowValidator>();
         services.AddScoped<BrandDataRowValidator>();
         services.AddScoped<PartnerDataRowValidator>();
+        services.AddScoped<ISubsidiaryDetailsRequestBuilder, SubsidiaryDetailsRequestBuilder>();
 
         return services;
     }

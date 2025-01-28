@@ -1,13 +1,15 @@
 ﻿namespace EPR.RegistrationValidation.Application.Validators;
 
 using System.Diagnostics.CodeAnalysis;
+using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
 using FluentValidation;
+using Microsoft.FeatureManagement;
 
 [ExcludeFromCodeCoverage]
 public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRow>
 {
-    public OrganisationDataRowValidator()
+    public OrganisationDataRowValidator(IFeatureManager featureManager)
     {
         Include(new OrganisationIdValidator());
         Include(new OrganisationNameValidator());
@@ -25,5 +27,11 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
         Include(new TotalTonnageValidator());
         Include(new CompanyHouseValidator());
         Include(new OrganisationTypeValidator());
+
+        if (featureManager != null && featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result)
+        {
+            Include(new OrganisationSizeValidator());
+            Include(new OrganisationSizeTurnoverValidator());
+        }
     }
 }

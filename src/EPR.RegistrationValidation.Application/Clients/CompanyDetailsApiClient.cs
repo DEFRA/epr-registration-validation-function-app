@@ -3,6 +3,7 @@
 using System.Net;
 using System.Net.Http;
 using Data.Models.CompanyDetailsApi;
+using Data.Models.Subsidiary;
 using Exceptions;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -68,6 +69,26 @@ public class CompanyDetailsApiClient : ICompanyDetailsApiClient
         }
     }
 
+    public async Task<SubsidiaryDetailsResponse> GetSubsidiaryDetails(SubsidiaryDetailsRequest subsidiaryDetailsRequest)
+    {
+        try
+        {
+            var uriString = "api/subsidiary-details";
+            var httpContent = CreateHttpContent(subsidiaryDetailsRequest);
+
+            var response = await _httpClient.PostAsync(uriString, httpContent);
+
+            response.EnsureSuccessStatusCode();
+
+            return await DeserializeResponseData<SubsidiaryDetailsResponse>(response);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Error occurred while requesting subsidiary details");
+            throw;
+        }
+    }
+
     public async Task<CompanyDetailsDataResult> GetComplianceSchemeMembers(string organisationId, string complianceSchemeId)
     {
         try
@@ -128,5 +149,23 @@ public class CompanyDetailsApiClient : ICompanyDetailsApiClient
         }
 
         return new CompanyDetailsDataResult();
+    }
+
+    private static async Task<T> DeserializeResponseData<T>(HttpResponseMessage response)
+    {
+        var content = await response.Content.ReadAsStringAsync();
+
+        if (!string.IsNullOrEmpty(content))
+        {
+            return JsonConvert.DeserializeObject<T>(content);
+        }
+
+        return default;
+    }
+
+    private StringContent CreateHttpContent(object data)
+    {
+        var json = JsonConvert.SerializeObject(data);
+        return new StringContent(json, System.Text.Encoding.UTF8, "application/json");
     }
 }

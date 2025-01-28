@@ -7,4 +7,6 @@ public static class FeatureFlags
     public const string EnableBrandPartnerCrossFileValidation = "EnableBrandPartnerCrossFileValidation";
     public const string EnableOrganisationDataRowValidation = "EnableOrganisationDataRowValidation";
     public const string EnableCompanyDetailsValidation = "EnableCompanyDetailsValidation";
+    public const string EnableSubsidiaryValidation = "EnableSubsidiaryValidation";
+    public const string EnableOrganisationSizeFieldValidation = "EnableOrganisationSizeFieldValidation";
 }

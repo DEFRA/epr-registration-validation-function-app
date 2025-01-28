@@ -4,6 +4,7 @@ using EPR.RegistrationValidation.Application.Clients;
 using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Application.Helpers;
 using EPR.RegistrationValidation.Application.Services;
+using EPR.RegistrationValidation.Application.Services.Subsidiary;
 using EPR.RegistrationValidation.Application.Validators;
 using EPR.RegistrationValidation.Data.Config;
 using EPR.RegistrationValidation.Data.Constants;
@@ -11,10 +12,12 @@ using EPR.RegistrationValidation.Data.Models;
 using EPR.RegistrationValidation.Data.Models.CompanyDetailsApi;
 using EPR.RegistrationValidation.Data.Models.QueueMessages;
 using EPR.RegistrationValidation.Data.Models.Services;
+using EPR.RegistrationValidation.Data.Models.Subsidiary;
 using EPR.RegistrationValidation.UnitTests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.FeatureManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -23,11 +26,15 @@ public class ValidationServiceTests
 {
     private Mock<ICompanyDetailsApiClient> _companyDetailsApiClientMock;
     private Mock<ILogger<ValidationService>> _loggerMock;
+    private Mock<ISubsidiaryDetailsRequestBuilder> _subsidiaryDetailsRequestBuilderMock;
+    private Mock<IFeatureManager> _featureManagerMock;
 
     [TestInitialize]
     public void Setup()
     {
         _loggerMock = new Mock<ILogger<ValidationService>>();
+        _subsidiaryDetailsRequestBuilderMock = new Mock<ISubsidiaryDetailsRequestBuilder>();
+        _featureManagerMock = new Mock<IFeatureManager>();
     }
 
     [TestMethod]
@@ -50,6 +57,48 @@ public class ValidationServiceTests
         validationError.RowNumber.Should().Be(expectedRow);
         validationError.ColumnErrors.First().ColumnIndex.Should().Be(expectedColumnIndex);
         validationError.ColumnErrors.First().ColumnName.Should().Be(expectedColumnName);
+    }
+
+    [TestMethod]
+    public async Task Validate_WithSubFeatureFlagOn_ShouldCallSubValidation()
+    {
+        // Arrange
+        const int expectedRow = 0;
+        const int expectedColumnIndex = 0;
+        const string expectedColumnName = "organisation_id";
+        var service = CreateService();
+        var blobQueueMessage = new BlobQueueMessage();
+        var dataRows = new List<OrganisationDataRow>
+        {
+            new() { DefraId = "ORG1", SubsidiaryId = "SUB1", LineNumber = 1 },
+        };
+        _featureManagerMock
+            .Setup(fm => fm.IsEnabledAsync(FeatureFlags.EnableSubsidiaryValidation))
+            .ReturnsAsync(true);
+        var subsidiaryDetailsResponse = new SubsidiaryDetailsResponse
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true, SubsidiaryBelongsToAnyOtherOrganisation = false },
+                    },
+                },
+            },
+        };
+
+        _companyDetailsApiClientMock
+            .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
+            .ReturnsAsync(subsidiaryDetailsResponse);
+
+        // Act
+        var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage, false);
+
+        // Assert
+        var validationError = results.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation));
     }
 
     [TestMethod]
@@ -87,6 +136,8 @@ public class ValidationServiceTests
                 PrincipalAddressPostcode = "Principal Address Postcode",
                 PrincipalAddressPhoneNumber = "01237946",
                 OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
+                OrganisationSize = OrganisationSizeCodes.L.ToString(),
+                TotalTonnage = "50.1",
             },
         };
         var blobQueueMessage = new BlobQueueMessage();
@@ -205,6 +256,28 @@ public class ValidationServiceTests
         results.ValidationErrors.SelectMany(x => x.ColumnErrors)
             .Count(x => x.ErrorCode == ErrorCodes.DuplicateOrganisationIdSubsidiaryId).Should()
             .Be(expectedDuplicateErrors);
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisationSubsidiaryRelationships_WithMissingOrgParent_ReturnsLimitedErrors()
+    {
+        // Arrange
+        const int rowCount = 20;
+        const int maxErrors = 25;
+        const int initialTotalErrors = 5;
+        const int expectedErrors = 20;
+        var dataRows = RowDataTestHelper.GenerateOrgIdSubIdWithoutParentOrg(rowCount);
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        // Act
+        var results = service.ValidateOrganisationSubsidiaryRelationships(dataRows.ToList(), initialTotalErrors);
+
+        // Assert
+        results.TotalErrors.Should().Be(maxErrors);
+        results.ValidationErrors.SelectMany(x => x.ColumnErrors)
+            .Count(x => x.ErrorCode == ErrorCodes.MissingOrganisationId).Should()
+            .Be(expectedErrors);
     }
 
     [TestMethod]
@@ -464,7 +537,7 @@ public class ValidationServiceTests
         // Assert
         results.Should().NotBeEmpty();
         results.Should().HaveCount(1);
-        results[0].Should().Be(ErrorCodes.PartnerDetailsNotMatchingOrganisation);
+        results[0].Should().Be(ErrorCodes.PartnerDetailsNotMatchingSubsidiary);
     }
 
     [TestMethod]
@@ -1218,18 +1291,686 @@ public class ValidationServiceTests
             e.ColumnName == "organisation_id")));
     }
 
+    [TestMethod]
+    public async Task ValidateSubsidiary_ShouldReturnTotalErrorsAndValidationErrors_WhenNoErrorsFound()
+    {
+        // Arrange
+        var rows = new List<OrganisationDataRow>
+        {
+            new() { DefraId = "ORG1", SubsidiaryId = "SUB1", LineNumber = 1 },
+        };
+
+        var subsidiaryDetailsRequest = new SubsidiaryDetailsRequest
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true, SubsidiaryBelongsToAnyOtherOrganisation = true },
+                    },
+                },
+            },
+        };
+        var subsidiaryDetailsResponse = new SubsidiaryDetailsResponse
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true, SubsidiaryBelongsToAnyOtherOrganisation = false },
+                    },
+                },
+            },
+        };
+        _subsidiaryDetailsRequestBuilderMock
+            .Setup(x => x.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
+            .Returns(subsidiaryDetailsRequest);
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = 50 });
+
+        _companyDetailsApiClientMock
+            .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
+            .ReturnsAsync(subsidiaryDetailsResponse);
+
+        // Act
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0);
+
+        // Assert
+        Assert.AreEqual(0, totalErrors);
+        Assert.AreEqual(0, validationErrors.Count);
+    }
+
+    [TestMethod]
+    public async Task ValidateSubsidiary_ShouldAddError_WhenSubsidiaryDoesNotExist()
+    {
+        // Arrange
+        var rows = new List<OrganisationDataRow>
+        {
+            new() { DefraId = "ORG1", SubsidiaryId = "SUB1", LineNumber = 1 },
+        };
+
+        var subsidiaryDetailsRequest = new SubsidiaryDetailsRequest
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = false },
+                    },
+                },
+            },
+        };
+
+        var subsidiaryDetailsResponse = new SubsidiaryDetailsResponse
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = false },
+                    },
+                },
+            },
+        };
+        _subsidiaryDetailsRequestBuilderMock
+            .Setup(x => x.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
+            .Returns(subsidiaryDetailsRequest);
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = 50 });
+
+        _companyDetailsApiClientMock
+            .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
+            .ReturnsAsync(subsidiaryDetailsResponse);
+
+        // Act
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0);
+
+        // Assert
+        Assert.AreEqual(1, totalErrors);
+        Assert.AreEqual(1, validationErrors.Count);
+        Assert.AreEqual(ErrorCodes.SubsidiaryIdDoesNotExist, validationErrors.First().ColumnErrors.First().ErrorCode);
+    }
+
+    [TestMethod]
+    public async Task ValidateSubsidiary_ShouldAddError_WhenSubsidiaryBelongsToDifferentOrganisation()
+    {
+        // Arrange
+        var rows = new List<OrganisationDataRow>
+        {
+            new() { DefraId = "ORG1", SubsidiaryId = "SUB1", LineNumber = 1 },
+        };
+
+        var subsidiaryDetailsRequest = new SubsidiaryDetailsRequest
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true, SubsidiaryBelongsToAnyOtherOrganisation = false },
+                    },
+                },
+            },
+        };
+
+        var subsidiaryDetailsResponse = new SubsidiaryDetailsResponse
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true, SubsidiaryBelongsToAnyOtherOrganisation = true },
+                    },
+                },
+            },
+        };
+
+        _subsidiaryDetailsRequestBuilderMock
+            .Setup(x => x.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
+            .Returns(subsidiaryDetailsRequest);
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = 50 });
+
+        _companyDetailsApiClientMock
+            .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
+            .ReturnsAsync(subsidiaryDetailsResponse);
+
+        // Act
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0);
+
+        // Assert
+        Assert.AreEqual(1, totalErrors);
+        Assert.AreEqual(1, validationErrors.Count);
+        Assert.AreEqual(ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation, validationErrors.First().ColumnErrors.First().ErrorCode);
+    }
+
+    [TestMethod]
+    public async Task ValidateSubsidiary_ShouldAddError_WhenSubsidiaryDoesNotBelongToAnyOrganisation()
+    {
+        // Arrange
+        var rows = new List<OrganisationDataRow>
+        {
+            new() { DefraId = "ORG1", SubsidiaryId = "SUB1", LineNumber = 1 },
+        };
+
+        var subsidiaryDetailsRequest = new SubsidiaryDetailsRequest
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true, SubsidiaryBelongsToAnyOtherOrganisation = false, SubsidiaryDoesNotBelongToAnyOrganisation = false },
+                    },
+                },
+            },
+        };
+
+        var subsidiaryDetailsResponse = new SubsidiaryDetailsResponse
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true, SubsidiaryBelongsToAnyOtherOrganisation = false, SubsidiaryDoesNotBelongToAnyOrganisation = true },
+                    },
+                },
+            },
+        };
+
+        _subsidiaryDetailsRequestBuilderMock
+            .Setup(x => x.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
+            .Returns(subsidiaryDetailsRequest);
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = 50 });
+
+        _companyDetailsApiClientMock
+            .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
+            .ReturnsAsync(subsidiaryDetailsResponse);
+
+        // Act
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0);
+
+        // Assert
+        Assert.AreEqual(1, totalErrors);
+        Assert.AreEqual(1, validationErrors.Count);
+        Assert.AreEqual(ErrorCodes.SubsidiaryDoesNotBelongToAnyOrganisation, validationErrors.First().ColumnErrors.First().ErrorCode);
+    }
+
+    [TestMethod]
+    public async Task ValidateSubsidiary_ShouldStopValidation_WhenErrorLimitReached()
+    {
+        // Arrange
+        var rows = new List<OrganisationDataRow>
+        {
+            new() { DefraId = "ORG1", SubsidiaryId = "SUB1", LineNumber = 1 },
+            new() { DefraId = "ORG2", SubsidiaryId = "SUB2", LineNumber = 2 },
+        };
+
+        var subsidiaryDetailsRequest = new SubsidiaryDetailsRequest
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = false },
+                    },
+                },
+            },
+        };
+        var subsidiaryDetailsResponse = new SubsidiaryDetailsResponse
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true, SubsidiaryBelongsToAnyOtherOrganisation = true },
+                    },
+                },
+            },
+        };
+        _subsidiaryDetailsRequestBuilderMock
+            .Setup(x => x.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
+            .Returns(subsidiaryDetailsRequest);
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = 1 });
+
+        _companyDetailsApiClientMock
+            .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
+            .ReturnsAsync(subsidiaryDetailsResponse);
+
+        // Act
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0);
+
+        // Assert
+        Assert.AreEqual(1, totalErrors);
+        Assert.AreEqual(1, validationErrors.Count);
+        _companyDetailsApiClientMock.Verify(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task ValidateSubsidiary_ShouldLogHttpRequestException()
+    {
+        // Arrange
+        var rows = new List<OrganisationDataRow>
+        {
+            new() { DefraId = "ORG1", SubsidiaryId = "SUB1", LineNumber = 1 },
+        };
+
+        _subsidiaryDetailsRequestBuilderMock
+            .Setup(x => x.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
+            .Returns(new SubsidiaryDetailsRequest() { SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>() { new SubsidiaryOrganisationDetail() } });
+        var service = CreateService(new ValidationSettings { ErrorLimit = 1 });
+
+        _companyDetailsApiClientMock
+            .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
+            .ThrowsAsync(new HttpRequestException());
+
+        // Act
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0);
+
+        // Assert
+        Assert.AreEqual(0, totalErrors);
+        Assert.AreEqual(0, validationErrors.Count);
+        _loggerMock.Verify(
+        x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Error Subsidiary validation")),
+            It.IsAny<HttpRequestException>(),
+            (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
+        Times.Once);
+    }
+
+    [TestMethod]
+    public async Task ValidateSubsidiary_ShouldReturnTotalErrorsAndValidationErrors_WhenRequestIsNull()
+    {
+        // Arrange
+        var rows = new List<OrganisationDataRow>();
+        var totalErrors = 0;
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = 100 });
+        _subsidiaryDetailsRequestBuilderMock
+            .Setup(builder => builder.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
+            .Returns((SubsidiaryDetailsRequest)null); // Simulating null request
+
+        // Act
+        var result = await service.ValidateSubsidiary(rows, totalErrors);
+
+        // Assert
+        Assert.AreEqual(totalErrors, result.TotalErrors);
+        Assert.AreEqual(0, result.ValidationErrors.Count);
+    }
+
+    [TestMethod]
+    public async Task ValidateSubsidiary_ShouldReturnTotalErrorsAndValidationErrors_WhenOrganisationDetailsIsNull()
+    {
+        // Arrange
+        var rows = new List<OrganisationDataRow>();
+        var totalErrors = 0;
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = 100 });
+        _subsidiaryDetailsRequestBuilderMock
+            .Setup(builder => builder.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
+            .Returns(new SubsidiaryDetailsRequest { SubsidiaryOrganisationDetails = null });
+
+        // Act
+        var result = await service.ValidateSubsidiary(rows, totalErrors);
+
+        // Assert
+        Assert.AreEqual(totalErrors, result.TotalErrors);
+        Assert.AreEqual(0, result.ValidationErrors.Count);
+    }
+
+    [TestMethod]
+    public async Task ValidateSubsidiary_ShouldReturnTotalErrorsAndValidationErrors_WhenOrganisationDetailsIsEmpty()
+    {
+        // Arrange
+        var rows = new List<OrganisationDataRow>();
+        var totalErrors = 0;
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = 100 });
+        _subsidiaryDetailsRequestBuilderMock
+            .Setup(builder => builder.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
+            .Returns(new SubsidiaryDetailsRequest { SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>() });
+
+        // Act
+        var result = await service.ValidateSubsidiary(rows, totalErrors);
+
+        // Assert
+        Assert.AreEqual(totalErrors, result.TotalErrors);
+        Assert.AreEqual(0, result.ValidationErrors.Count);
+    }
+
+    [TestMethod]
+    public async Task ValidateSubsidiary_SubsidiaryID_ShouldBelongToOrganisation()
+    {
+        // Arrange
+        var rows = new List<OrganisationDataRow>
+        {
+            new() { DefraId = "ORG1", SubsidiaryId = "SUB001", OrganisationName = "Subsidiary XZ01", LineNumber = 1 },
+            new() { DefraId = "ORG1", SubsidiaryId = "SUB002", OrganisationName = "Subsidiary NM02", LineNumber = 2 },
+        };
+
+        var subsidiaryDetailsRequest = new SubsidiaryDetailsRequest
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB001", SubsidiaryExists = false },
+                        new() { ReferenceNumber = "SUB002", SubsidiaryExists = false },
+                    },
+                },
+            },
+        };
+
+        var subsidiaryDetailsResponse = new SubsidiaryDetailsResponse
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB001", SubsidiaryExists = true, SubsidiaryBelongsToAnyOtherOrganisation = false, SubsidiaryDoesNotBelongToAnyOrganisation = false },
+                        new() { ReferenceNumber = "SUB002", SubsidiaryExists = true, SubsidiaryBelongsToAnyOtherOrganisation = false, SubsidiaryDoesNotBelongToAnyOrganisation = false },
+                    },
+                },
+            },
+        };
+
+        _subsidiaryDetailsRequestBuilderMock
+            .Setup(x => x.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
+            .Returns(subsidiaryDetailsRequest);
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = 1 });
+
+        _companyDetailsApiClientMock
+            .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
+            .ReturnsAsync(subsidiaryDetailsResponse);
+
+        // Act
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0);
+
+        // Assert
+        Assert.AreEqual(0, totalErrors);
+        Assert.AreEqual(0, validationErrors.Count);
+        _companyDetailsApiClientMock.Verify(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task ValidateSubsidiary_SubsidiaryID_MatchesCompaniesHouseNumber()
+    {
+        // Arrange
+        var rows = new List<OrganisationDataRow>
+        {
+            new() { DefraId = "ORG1", SubsidiaryId = "SUB001", OrganisationName = "Subsidiary XZ01", CompaniesHouseNumber = "1001001", LineNumber = 1 },
+            new() { DefraId = "ORG1", SubsidiaryId = "SUB002", OrganisationName = "Subsidiary NM02", CompaniesHouseNumber = "2002002", LineNumber = 2 },
+        };
+
+        var subsidiaryDetailsRequest = new SubsidiaryDetailsRequest
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB001", SubsidiaryExists = false },
+                        new() { ReferenceNumber = "SUB002", SubsidiaryExists = false },
+                    },
+                },
+            },
+        };
+
+        var subsidiaryDetailsResponse = new SubsidiaryDetailsResponse
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB001", CompaniesHouseNumber = "1001001", SubsidiaryExists = true, SubsidiaryBelongsToAnyOtherOrganisation = false, SubsidiaryDoesNotBelongToAnyOrganisation = false },
+                        new() { ReferenceNumber = "SUB002", CompaniesHouseNumber = "2002002", SubsidiaryExists = true, SubsidiaryBelongsToAnyOtherOrganisation = false, SubsidiaryDoesNotBelongToAnyOrganisation = false },
+                    },
+                },
+            },
+        };
+
+        _subsidiaryDetailsRequestBuilderMock
+            .Setup(x => x.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
+            .Returns(subsidiaryDetailsRequest);
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = 1 });
+
+        _companyDetailsApiClientMock
+            .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
+            .ReturnsAsync(subsidiaryDetailsResponse);
+
+        // Act
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0);
+
+        // Assert
+        Assert.AreEqual(0, totalErrors);
+        Assert.AreEqual(0, validationErrors.Count);
+        _companyDetailsApiClientMock.Verify(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task ValidateSubsidiary_SubsidiaryID_DoesNotMatchCompaniesHouseNumber()
+    {
+        // Arrange
+        var rows = new List<OrganisationDataRow>
+        {
+            new() { DefraId = "ORG1", SubsidiaryId = "SUB001", OrganisationName = "Subsidiary XZ01", CompaniesHouseNumber = "1001001", LineNumber = 1 },
+            new() { DefraId = "ORG1", SubsidiaryId = "SUB002", OrganisationName = "Subsidiary NM02", CompaniesHouseNumber = "2002002", LineNumber = 2 },
+        };
+
+        var subsidiaryDetailsRequest = new SubsidiaryDetailsRequest
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB001", SubsidiaryExists = false },
+                        new() { ReferenceNumber = "SUB002", SubsidiaryExists = false },
+                    },
+                },
+            },
+        };
+
+        var subsidiaryDetailsResponse = new SubsidiaryDetailsResponse
+        {
+            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
+            {
+                new SubsidiaryOrganisationDetail
+                {
+                    OrganisationReference = "ORG1",
+                    SubsidiaryDetails = new List<SubsidiaryDetail>
+                    {
+                        new() { ReferenceNumber = "SUB001", CompaniesHouseNumber = "1XX1XX1", SubsidiaryExists = true, SubsidiaryBelongsToAnyOtherOrganisation = false, SubsidiaryDoesNotBelongToAnyOrganisation = false },
+                        new() { ReferenceNumber = "SUB002", CompaniesHouseNumber = "2XX2XX2", SubsidiaryExists = true, SubsidiaryBelongsToAnyOtherOrganisation = false, SubsidiaryDoesNotBelongToAnyOrganisation = false },
+                    },
+                },
+            },
+        };
+
+        _subsidiaryDetailsRequestBuilderMock
+            .Setup(x => x.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
+            .Returns(subsidiaryDetailsRequest);
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = 100 });
+
+        _companyDetailsApiClientMock
+            .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
+            .ReturnsAsync(subsidiaryDetailsResponse);
+
+        // Act
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0);
+
+        // Assert
+        Assert.AreEqual(2, totalErrors);
+        Assert.AreEqual(2, validationErrors.Count);
+        _companyDetailsApiClientMock.Verify(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisationsAsync_WithOutOrgSizeFieldInRow_WithOrgSizeFlagOn_ThrowException()
+    {
+        // Arrange
+        const int rowCount = 4;
+        const int maxErrors = 10;
+        var organisationSizeFlag = true;
+        var dataRows = RowDataTestHelper.GenerateOrgs_WithoutOrganisationSizeField(rowCount).ToArray();
+        var service = CreateServiceWithOrganisationSizeFieldValidationToggle(organisationSizeFlag, new ValidationSettings { ErrorLimit = maxErrors });
+
+        var organisation = new CompanyDetailsDataItem
+        {
+            ReferenceNumber = "123456",
+            CompaniesHouseNumber = "X1234567",
+        };
+
+        var companyDetailsOrganisations = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations.Add(organisation);
+        var companyDetailsDataResult = new CompanyDetailsDataResult();
+        companyDetailsDataResult.Organisations = companyDetailsOrganisations;
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetCompanyDetailsByProducer(It.IsAny<string>()))
+            .ReturnsAsync(companyDetailsDataResult);
+
+        var blobQueueMessage = new BlobQueueMessage();
+
+        // Act
+        var errors = async () => await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
+
+        // Assert
+        errors.Should().ThrowAsync<ArgumentException>();
+
+        _companyDetailsApiClientMock.Verify(
+            m => m.GetCompanyDetailsByProducer(It.IsAny<string>()),
+            Times.Never());
+    }
+
+    [TestMethod]
+    [DataRow(true, true, 0)]
+    [DataRow(true, false, 0)]
+    [DataRow(false, false, 0)]
+    public async Task ValidateOrganisationsAsync_WithOutOrgSizeFieldInRow_WithOrgSizeFlagOff_True(bool includeOrgSizeFieldInRows, bool orgSizeFeatureFlag, int errorCount)
+    {
+        // Arrange
+        const int rowCount = 4;
+        const int maxErrors = 10;
+        var dataRows = includeOrgSizeFieldInRows ? RowDataTestHelper.GenerateOrgs(rowCount).ToArray() : RowDataTestHelper.GenerateOrgs_WithoutOrganisationSizeField(rowCount).ToArray();
+        var service = CreateServiceWithOrganisationSizeFieldValidationToggle(orgSizeFeatureFlag, new ValidationSettings { ErrorLimit = maxErrors });
+
+        var organisation = new CompanyDetailsDataItem
+        {
+            ReferenceNumber = "123456",
+            CompaniesHouseNumber = "X1234567",
+        };
+
+        var companyDetailsOrganisations = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations.Add(organisation);
+        var companyDetailsDataResult = new CompanyDetailsDataResult();
+        companyDetailsDataResult.Organisations = companyDetailsOrganisations;
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetCompanyDetailsByProducer(It.IsAny<string>()))
+            .ReturnsAsync(companyDetailsDataResult);
+
+        var blobQueueMessage = new BlobQueueMessage();
+
+        // Act
+        var errors = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
+
+        // Assert
+        errors.Count().Should().Be(errorCount);
+
+        _companyDetailsApiClientMock.Verify(
+            m => m.GetCompanyDetailsByProducer(It.IsAny<string>()),
+            Times.Never());
+    }
+
     private ValidationService CreateService(ValidationSettings? settings = null)
     {
+        var featureManageMock = new Mock<IFeatureManager>();
+        featureManageMock
+            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation))
+            .Returns(Task.FromResult(true));
+
         _companyDetailsApiClientMock = new Mock<ICompanyDetailsApiClient>();
 
         return new ValidationService(
-            new OrganisationDataRowValidator(),
+            new OrganisationDataRowValidator(featureManageMock.Object),
             new BrandDataRowValidator(),
             new PartnerDataRowValidator(),
-            new ColumnMetaDataProvider(),
+            new ColumnMetaDataProvider(featureManageMock.Object),
             Options.Create(settings ?? new ValidationSettings()),
             _companyDetailsApiClientMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            _featureManagerMock.Object,
+            _subsidiaryDetailsRequestBuilderMock.Object);
+    }
+
+    private ValidationService CreateServiceWithOrganisationSizeFieldValidationToggle(bool enableOrgSizeFieldValidation, ValidationSettings? settings = null)
+    {
+        var featureManageMock = new Mock<IFeatureManager>();
+        featureManageMock
+            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation))
+            .Returns(Task.FromResult(enableOrgSizeFieldValidation));
+
+        _companyDetailsApiClientMock = new Mock<ICompanyDetailsApiClient>();
+
+        return new ValidationService(
+            new OrganisationDataRowValidator(featureManageMock.Object),
+            new BrandDataRowValidator(),
+            new PartnerDataRowValidator(),
+            new ColumnMetaDataProvider(featureManageMock.Object),
+            Options.Create(settings ?? new ValidationSettings()),
+            _companyDetailsApiClientMock.Object,
+            _loggerMock.Object,
+            _featureManagerMock.Object,
+            _subsidiaryDetailsRequestBuilderMock.Object);
     }
 
     private class InvalidRowType : ICsvDataRow

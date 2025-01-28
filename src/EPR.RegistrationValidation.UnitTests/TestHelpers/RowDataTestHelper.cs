@@ -15,6 +15,44 @@ public static class RowDataTestHelper
         }
     }
 
+    public static OrganisationDataRow GenerateParentOrganisation(string defraId)
+    {
+        var i = "999";
+
+        return new OrganisationDataRow
+        {
+            DefraId = defraId,
+            SubsidiaryId = string.Empty,
+            OrganisationName = $"{i} ltd",
+            HomeNationCode = "EN",
+            PrimaryContactPersonFirstName = $"{i}FName",
+            PrimaryContactPersonLastName = $"{i}LName",
+            PrimaryContactPersonEmail = $"email{i}@test.com",
+            PrimaryContactPersonPhoneNumber = $"07895462{i}",
+            PackagingActivitySO = "Primary",
+            PackagingActivityHl = "Secondary",
+            PackagingActivityPf = "Secondary",
+            PackagingActivitySl = "Secondary",
+            PackagingActivityIm = "No",
+            PackagingActivityOm = "No",
+            PackagingActivitySe = "Secondary",
+            ProduceBlankPackagingFlag = "Yes",
+            Turnover = "9.99",
+            ServiceOfNoticeAddressLine1 = "9 Surrey",
+            ServiceOfNoticeAddressPostcode = "KT5 8JU",
+            ServiceOfNoticeAddressPhoneNumber = "0123456789",
+            AuditAddressLine1 = "10 Southcote",
+            AuditAddressCountry = AuditingCountryCodes.England.ToLower(),
+            AuditAddressPostcode = "KT5 9UW",
+            TotalTonnage = "25",
+            PrincipalAddressLine1 = "Principal Address Line 1",
+            PrincipalAddressPostcode = "Principal Address Postcode",
+            PrincipalAddressPhoneNumber = "01237946",
+            OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
+            OrganisationSize = OrganisationSizeCodes.L.ToString(),
+        };
+    }
+
     public static IEnumerable<OrganisationDataRow> GenerateOrgs(int total)
     {
         for (int i = 0; i < total; i++)
@@ -50,15 +88,18 @@ public static class RowDataTestHelper
                 PrincipalAddressPostcode = "Principal Address Postcode",
                 PrincipalAddressPhoneNumber = "01237946",
                 OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
+                OrganisationSize = OrganisationSizeCodes.L.ToString(),
             };
         }
     }
 
     public static IEnumerable<OrganisationDataRow> GenerateOrgIdSubId(int total)
     {
+        var rows = new List<OrganisationDataRow>();
+
         for (int i = 0; i < total; i++)
         {
-            yield return new OrganisationDataRow
+            var row = new OrganisationDataRow
             {
                 DefraId = "12345" + i,
                 SubsidiaryId = "678",
@@ -88,15 +129,66 @@ public static class RowDataTestHelper
                 PrincipalAddressPostcode = "Principal Address Postcode",
                 PrincipalAddressPhoneNumber = "01237946",
                 OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
+                OrganisationSize = OrganisationSizeCodes.L.ToString(),
             };
+            rows.Add(row);
+            rows.Add(GenerateParentOrganisation(row.DefraId));
         }
+
+        return rows;
+    }
+
+    public static IEnumerable<OrganisationDataRow> GenerateOrgIdSubIdWithoutParentOrg(int total)
+    {
+        var rows = new List<OrganisationDataRow>();
+
+        for (int i = 0; i < total; i++)
+        {
+            var row = new OrganisationDataRow
+            {
+                DefraId = "12345" + i,
+                SubsidiaryId = "678",
+                OrganisationName = $"{i} ltd",
+                HomeNationCode = "EN",
+                PrimaryContactPersonFirstName = $"{i}FName",
+                PrimaryContactPersonLastName = $"{i}LName",
+                PrimaryContactPersonEmail = $"email{i}@test.com",
+                PrimaryContactPersonPhoneNumber = $"07895462{i}",
+                PackagingActivitySO = "Primary",
+                PackagingActivityHl = "Secondary",
+                PackagingActivityPf = "Secondary",
+                PackagingActivitySl = "Secondary",
+                PackagingActivityIm = "No",
+                PackagingActivityOm = "No",
+                PackagingActivitySe = "Secondary",
+                ProduceBlankPackagingFlag = "Yes",
+                Turnover = "9.99",
+                ServiceOfNoticeAddressLine1 = "9 Surrey",
+                ServiceOfNoticeAddressPostcode = "KT5 8JU",
+                ServiceOfNoticeAddressPhoneNumber = "0123456789",
+                AuditAddressLine1 = "10 Southcote",
+                AuditAddressCountry = AuditingCountryCodes.England.ToLower(),
+                AuditAddressPostcode = "KT5 9UW",
+                TotalTonnage = "25",
+                PrincipalAddressLine1 = "Principal Address Line 1",
+                PrincipalAddressPostcode = "Principal Address Postcode",
+                PrincipalAddressPhoneNumber = "01237946",
+                OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
+                OrganisationSize = OrganisationSizeCodes.L.ToString(),
+            };
+            rows.Add(row);
+        }
+
+        return rows;
     }
 
     public static IEnumerable<OrganisationDataRow> GenerateDuplicateOrgIdSubId(int total)
     {
+        var rows = new List<OrganisationDataRow>();
+
         for (int i = 0; i < total; i++)
         {
-            yield return new OrganisationDataRow
+            var row = new OrganisationDataRow
             {
                 DefraId = "12345",
                 SubsidiaryId = "678", OrganisationName = $"{i} ltd",
@@ -121,8 +213,13 @@ public static class RowDataTestHelper
                 PrincipalAddressPostcode = "Principal Address Postcode",
                 PrincipalAddressPhoneNumber = "01237946",
                 OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
+                OrganisationSize = OrganisationSizeCodes.L.ToString(),
             };
+            rows.Add(row);
+            rows.Add(GenerateParentOrganisation(row.DefraId));
         }
+
+        return rows;
     }
 
     public static IEnumerable<BrandDataRow> GenerateBrand(int total)
@@ -232,6 +329,45 @@ public static class RowDataTestHelper
             {
                 DefraId = $"{_randomizer.Next(100, 100 + total)}",
                 SubsidiaryId = $"{_randomizer.Next(100, 100 + total)}",
+            };
+        }
+    }
+
+    public static IEnumerable<OrganisationDataRow> GenerateOrgs_WithoutOrganisationSizeField(int total)
+    {
+        for (int i = 0; i < total; i++)
+        {
+            yield return new OrganisationDataRow
+            {
+                DefraId = "12345" + i,
+                OrganisationName = $"{i} ltd",
+                TradingName = $"{i} trading name",
+                HomeNationCode = "EN",
+                MainActivitySic = "99999", // Dormant Company
+                PrimaryContactPersonFirstName = $"{i}FName",
+                PrimaryContactPersonLastName = $"{i}LName",
+                PrimaryContactPersonEmail = $"email{i}@test.com",
+                PrimaryContactPersonPhoneNumber = $"07895462{i}",
+                PackagingActivitySO = "Primary",
+                PackagingActivityHl = "Secondary",
+                PackagingActivityPf = "Secondary",
+                PackagingActivitySl = "Secondary",
+                PackagingActivityIm = "No",
+                PackagingActivityOm = "No",
+                PackagingActivitySe = "Secondary",
+                ProduceBlankPackagingFlag = "Yes",
+                Turnover = "9.99",
+                ServiceOfNoticeAddressLine1 = "9 Surrey",
+                ServiceOfNoticeAddressPostcode = "KT5 8JU",
+                ServiceOfNoticeAddressPhoneNumber = "0123456789",
+                AuditAddressLine1 = "10 Southcote",
+                AuditAddressCountry = AuditingCountryCodes.England,
+                AuditAddressPostcode = "KT5 9UW",
+                TotalTonnage = "25",
+                PrincipalAddressLine1 = "Principal Address Line 1",
+                PrincipalAddressPostcode = "Principal Address Postcode",
+                PrincipalAddressPhoneNumber = "01237946",
+                OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
             };
         }
     }

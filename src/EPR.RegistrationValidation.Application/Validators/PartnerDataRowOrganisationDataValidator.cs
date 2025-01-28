@@ -35,7 +35,7 @@ public class PartnerDataRowOrganisationDataValidator : AbstractValidator<Partner
 
                 return true;
             })
-            .WithErrorCode(ErrorCodes.PartnerDetailsNotMatchingOrganisation);
+            .WithErrorCode(ErrorCodes.PartnerDetailsNotMatchingSubsidiary);
     }
 
     private Dictionary<string, Dictionary<string, OrganisationIdentifiers>> GetOrganisationDataLookupTableData(IValidationContext context)

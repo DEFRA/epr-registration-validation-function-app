@@ -301,4 +301,8 @@ public class OrganisationDataRow : ICsvDataRow
     [Column(72)]
     [Name("secondary_contact_person_job_title")]
     public string SecondaryContactPersonJobTitle { get; set; }
+
+    [Column(73)]
+    [Name("organisation_size")]
+    public string OrganisationSize { get; set; }
 }

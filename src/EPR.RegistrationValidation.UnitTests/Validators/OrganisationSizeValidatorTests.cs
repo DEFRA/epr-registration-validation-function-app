@@ -7,14 +7,14 @@ using FluentValidation.TestHelper;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 [TestClass]
-public class OrganisationIdValidatorTests
+public class OrganisationSizeValidatorTests
 {
     [TestMethod]
-    public async Task Validate_WithNullOrganisationId_IsNotValid()
+    public async Task Validate_WithOrganisationSize_IsNull_ReturnError()
     {
         // Arrange
-        var validator = CreateValidator();
-        var orgDataRow = new OrganisationDataRow();
+        var validator = CreateOrganisationSizeValidator();
+        var orgDataRow = new OrganisationDataRow { DefraId = "1234567890", OrganisationSize = null };
 
         // Act
         var result = await validator.TestValidateAsync(orgDataRow);
@@ -22,26 +22,26 @@ public class OrganisationIdValidatorTests
         // Assert
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
-        result.ShouldHaveValidationErrorFor(x => x.DefraId);
     }
 
     [TestMethod]
-    public async Task Validate_WithOrganisationId_IsValid()
+    public async Task Validate_WithOrganisationSize_IsInValid_ReturnError()
     {
         // Arrange
-        var validator = CreateValidator();
-        var orgDataRow = new OrganisationDataRow { DefraId = "1234567890" };
+        var validator = CreateOrganisationSizeValidator();
+        var invalidSizeValue = "x";
+        var orgDataRow = new OrganisationDataRow { DefraId = "1234567890", OrganisationSize = invalidSizeValue };
 
         // Act
         var result = await validator.TestValidateAsync(orgDataRow);
 
         // Assert
-        result.IsValid.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
     }
 
     [TestMethod]
-    public async Task Validate_WithOrganisationId_IsValid_ReturnTrue()
+    public async Task Validate_WithOrganisationSize_IsValid_ReturnTrue()
     {
         // Arrange
         var validator = CreateOrganisationSizeValidator();
@@ -53,11 +53,6 @@ public class OrganisationIdValidatorTests
         // Assert
         result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
-    }
-
-    private static OrganisationIdValidator CreateValidator()
-    {
-        return new OrganisationIdValidator();
     }
 
     private static OrganisationSizeValidator CreateOrganisationSizeValidator()

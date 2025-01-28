@@ -1,10 +1,12 @@
 ﻿namespace EPR.RegistrationValidation.UnitTests.Clients;
 
 using System.Net;
+using System.Net.Http;
 using Application.Clients;
 using Data.Config;
 using EPR.RegistrationValidation.Application.Exceptions;
 using EPR.RegistrationValidation.Data.Models.CompanyDetailsApi;
+using EPR.RegistrationValidation.Data.Models.Subsidiary;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -612,5 +614,85 @@ public class CompanyDetailsApiClientTests
         var responseAsString = JsonConvert.SerializeObject(responseContent);
         var companyDetailsAsString = JsonConvert.SerializeObject(companyDetails);
         responseAsString.Should().Be(companyDetailsAsString);
+    }
+
+    [TestMethod]
+    public async Task GetSubsidiaryDetails_ShouldReturnSubsidiaryDetailsRequest_OnSuccess()
+    {
+        // Arrange
+        var request = new SubsidiaryDetailsRequest();
+        var content = JsonConvert.SerializeObject(request);
+        var responseMessage = new HttpResponseMessage
+        {
+            StatusCode = HttpStatusCode.OK,
+            Content = new StringContent(content),
+        };
+        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        handlerMock
+        .Protected()
+        .Setup<Task<HttpResponseMessage>>(
+        "SendAsync",
+        ItExpr.IsAny<HttpRequestMessage>(),
+        ItExpr.IsAny<CancellationToken>())
+        .ReturnsAsync(new HttpResponseMessage()
+        {
+            StatusCode = HttpStatusCode.OK,
+            Content = new StringContent(content),
+        })
+        .Verifiable();
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri(_config.BaseUrl),
+            Timeout = TimeSpan.FromSeconds(_config.Timeout),
+        };
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
+
+        // Act
+        var result = await sut.GetSubsidiaryDetails(request);
+
+        // Assert
+        result.Should().BeEquivalentTo(request);
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(req =>
+                req.Method == HttpMethod.Post &&
+                req.RequestUri.ToString().EndsWith("api/subsidiary-details")),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    [DataRow(HttpStatusCode.Conflict)]
+    [DataRow(HttpStatusCode.BadRequest)]
+    [DataRow(HttpStatusCode.BadGateway)]
+    [DataRow(HttpStatusCode.Unauthorized)]
+    [TestMethod]
+    public async Task GetSubsidiaryDetails_WhenSendAsyncNotSuccessful_ThrowsError(HttpStatusCode statusCode)
+    {
+        // Arrange
+        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = statusCode,
+            })
+            .Verifiable();
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri(_config.BaseUrl),
+            Timeout = TimeSpan.FromSeconds(_config.Timeout),
+        };
+        var sut = new CompanyDetailsApiClient(httpClient, NullLogger<CompanyDetailsApiClient>.Instance);
+
+        // Act
+        Func<Task> act = () => sut.GetSubsidiaryDetails(new SubsidiaryDetailsRequest());
+
+        // Assert
+        await act.Should().ThrowAsync<Exception>();
     }
 }

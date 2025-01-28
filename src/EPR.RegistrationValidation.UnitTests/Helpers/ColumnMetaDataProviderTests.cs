@@ -1,9 +1,12 @@
 ﻿namespace EPR.RegistrationValidation.UnitTests.Helpers;
 
 using EPR.RegistrationValidation.Application.Helpers;
+using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
 using FluentAssertions;
+using Microsoft.FeatureManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 [TestClass]
 public class ColumnMetaDataProviderTests
@@ -12,7 +15,12 @@ public class ColumnMetaDataProviderTests
     public void ListColumnsMetaData_FromCsvModelClass_ReturnsPopulatedList()
     {
         // Arrange
-        var metaDataProvider = new ColumnMetaDataProvider();
+        var featureManageMock = new Mock<IFeatureManager>();
+        featureManageMock
+            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation))
+            .Returns(Task.FromResult(false));
+
+        var metaDataProvider = new ColumnMetaDataProvider(featureManageMock.Object);
 
         // Act
         var columnMetaData = metaDataProvider.ListColumnMetaData<OrganisationDataRow>();
@@ -28,7 +36,12 @@ public class ColumnMetaDataProviderTests
     public void ListColumnsMetaData_FromClassWithoutAttributes_ReturnsEmptyList()
     {
         // Arrange
-        var metaDataProvider = new ColumnMetaDataProvider();
+        var featureManageMock = new Mock<IFeatureManager>();
+        featureManageMock
+            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation))
+            .Returns(Task.FromResult(false));
+
+        var metaDataProvider = new ColumnMetaDataProvider(featureManageMock.Object);
 
         // Act
         var columnMetaData = metaDataProvider.ListColumnMetaData<TestModel>();
@@ -41,7 +54,12 @@ public class ColumnMetaDataProviderTests
     public void GetOrganisationColumnMetaData_ReturnsCorrectMetaData()
     {
         // Arrange
-        var metaDataProvider = new ColumnMetaDataProvider();
+        var featureManageMock = new Mock<IFeatureManager>();
+        featureManageMock
+            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation))
+            .Returns(Task.FromResult(false));
+
+        var metaDataProvider = new ColumnMetaDataProvider(featureManageMock.Object);
 
         // Act
         var metaData = metaDataProvider.GetOrganisationColumnMetaData(nameof(OrganisationDataRow.DefraId));
