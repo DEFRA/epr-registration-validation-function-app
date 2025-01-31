@@ -880,6 +880,7 @@ public class ValidationServiceTests
         const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         dataRows[0].CompaniesHouseNumber = "99999999";
+        dataRows[0].OrganisationTypeCode = "LTD";
 
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
@@ -915,6 +916,52 @@ public class ValidationServiceTests
         results.ValidationErrors.Should().Match(x => x.Any(x => x.ColumnErrors.Any(e =>
             e.ErrorCode == ErrorCodes.CompaniesHouseNumberNotMatchOrganisationId &&
             e.ColumnName == "companies_house_number")));
+    }
+
+    [TestMethod]
+    [DataRow("OUT")]
+    [DataRow("COP")]
+    [DataRow("SOL")]
+    [DataRow("PAR")]
+    [DataRow("OTH")]
+    public async Task ValidateCompanyDetails_AsProducerUser_With_No_CompaniesHouseNumber(string organisationTypeCode)
+    {
+        // Arrange
+        const int rowCount = 1;
+        const int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
+        dataRows[0].CompaniesHouseNumber = string.Empty;
+        dataRows[0].OrganisationTypeCode = organisationTypeCode;
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        var organisation = new CompanyDetailsDataItem
+        {
+            ReferenceNumber = dataRows[0].DefraId,
+            CompaniesHouseNumber = string.Empty,
+        };
+
+        var companyDetailsOrganisations = new List<CompanyDetailsDataItem>();
+        companyDetailsOrganisations.Add(organisation);
+        var companyDetailsDataResult = new CompanyDetailsDataResult();
+        companyDetailsDataResult.Organisations = companyDetailsOrganisations;
+
+        _companyDetailsApiClientMock
+            .Setup(f => f.GetCompanyDetailsByProducer(It.IsAny<string>()))
+            .ReturnsAsync(companyDetailsDataResult);
+
+        // Act
+        var results = await service.ValidateCompanyDetails(new ValidateCompanyDetailsModel
+        {
+            OrganisationDataRows = dataRows.ToList(),
+            TotalErrors = 0,
+            ComplianceSchemeId = string.Empty,
+            UserId = string.Empty,
+            ProducerOrganisationId = string.Empty,
+        });
+
+        // Assert
+        results.ValidationErrors.Should().BeEmpty();
     }
 
     [TestMethod]
@@ -1005,6 +1052,7 @@ public class ValidationServiceTests
         const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         dataRows[0].CompaniesHouseNumber = "99999999";
+        dataRows[0].OrganisationTypeCode = "LTD";
 
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
@@ -1107,6 +1155,7 @@ public class ValidationServiceTests
         const int maxErrors = 10;
         var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
         dataRows[0].CompaniesHouseNumber = "99999999";
+        dataRows[0].OrganisationTypeCode = "LTD";
 
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 

@@ -28,6 +28,15 @@ using Microsoft.FeatureManagement;
 
 public class ValidationService : IValidationService
 {
+    private readonly string[] _codes =
+    {
+        UnIncorporationTypeCodes.CoOperative,
+        UnIncorporationTypeCodes.SoleTrader,
+        UnIncorporationTypeCodes.Partnership,
+        UnIncorporationTypeCodes.Others,
+        UnIncorporationTypeCodes.OutsideUk,
+    };
+
     private readonly OrganisationDataRowValidator _organisationDataRowValidator;
     private readonly BrandDataRowValidator _brandDataRowValidator;
     private readonly PartnerDataRowValidator _partnerDataRowValidator;
@@ -645,6 +654,11 @@ public class ValidationService : IValidationService
         if (companyDetails != null && organisation != null && string.IsNullOrEmpty(row.SubsidiaryId))
         {
             if (string.IsNullOrEmpty(row.CompaniesHouseNumber) && string.IsNullOrEmpty(organisation.CompaniesHouseNumber))
+            {
+                return (totalErrors, validationErrors);
+            }
+
+            if (_codes.Any(typeCode => string.Equals(typeCode, row.OrganisationTypeCode, StringComparison.OrdinalIgnoreCase)))
             {
                 return (totalErrors, validationErrors);
             }
