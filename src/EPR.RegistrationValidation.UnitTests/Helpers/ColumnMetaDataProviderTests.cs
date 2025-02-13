@@ -19,6 +19,9 @@ public class ColumnMetaDataProviderTests
         featureManageMock
             .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation))
             .Returns(Task.FromResult(false));
+        featureManageMock
+            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns))
+            .Returns(Task.FromResult(false));
 
         var metaDataProvider = new ColumnMetaDataProvider(featureManageMock.Object);
 
@@ -40,6 +43,9 @@ public class ColumnMetaDataProviderTests
         featureManageMock
             .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation))
             .Returns(Task.FromResult(false));
+        featureManageMock
+            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns))
+            .Returns(Task.FromResult(false));
 
         var metaDataProvider = new ColumnMetaDataProvider(featureManageMock.Object);
 
@@ -57,6 +63,9 @@ public class ColumnMetaDataProviderTests
         var featureManageMock = new Mock<IFeatureManager>();
         featureManageMock
             .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation))
+            .Returns(Task.FromResult(false));
+        featureManageMock
+            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns))
             .Returns(Task.FromResult(false));
 
         var metaDataProvider = new ColumnMetaDataProvider(featureManageMock.Object);

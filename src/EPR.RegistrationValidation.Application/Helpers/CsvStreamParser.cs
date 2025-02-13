@@ -37,10 +37,20 @@ public class CsvStreamParser : ICsvStreamParser
             using var reader = new StreamReader(memoryStream);
             using var csv = new CsvReader(reader, CsvConfiguration);
 
-            if (_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result == false)
+            if (_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result == false &&
+                _featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result == false)
+            {
+                csv.Context.RegisterClassMap<OrganisationDataRowWithoutOrgSizeLeaverAndJoinerColumnsMap>();
+            }
+            else if (_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result == false)
             {
                 // Register class map to populate data row without the (newer) organisation size property
                 csv.Context.RegisterClassMap<OrganisationDataRowWithoutOrgSizeColumnMap>();
+            }
+            else if (_featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result == false)
+            {
+                // Register class map to populate data row without the (newer) organisation size property
+                csv.Context.RegisterClassMap<OrganisationDataRowWithoutLeaverAndJoinerColumnsMap>();
             }
 
             if (useMinimalClassMaps)
@@ -66,6 +76,20 @@ public class CsvStreamParser : ICsvStreamParser
                 {
                     orderedHeaders.Remove(toBeRemoved);
                 }
+            }
+
+            if (!_featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
+            {
+                var leaverAndJoinerColumns = new HashSet<string>
+                {
+                    "leaver_code",
+                    "leaver_reason",
+                    "leaver_date",
+                    "reporting_type",
+                    "joiner_date",
+                };
+
+                orderedHeaders.RemoveAll(header => leaverAndJoinerColumns.Contains(header.Name));
             }
 
             if (!header.SequenceEqual(orderedHeaders.Select(x => x.Name)))

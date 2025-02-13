@@ -70,4 +70,14 @@ public static class ErrorCodes
     public const string InvalidOrganisationSizeValue = "895";
     public const string SmallProducerTurnoverInvalid = "896";
     public const string LargeProducerTurnoverInvalid = "897";
+    public const string JoinerDateIsRequired = "898";
+    public const string InvalidJoinerDateFormat = "899";
+    public const string ReportingTypeIsRequired = "900";
+    public const string InvalidReportingType = "901";
+    public const string LeaverCodeMustBePresentWhenLeaverDatePresent = "902";
+    public const string LeaverDateMustBePresentWhenLeaverCodePresent = "903";
+    public const string InvalidLeaverDateFormat = "904";
+    public const string LeaverDateMustBeAfterJoinerDate = "905";
+    public const string LeaverReasonMustBePresentWhenLeaverCodePresent = "906";
+    public const string LeaverReasonExceedsTwoHundredCharacterLimit = "907";
 }

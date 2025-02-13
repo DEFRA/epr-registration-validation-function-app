@@ -9,4 +9,5 @@ public static class FeatureFlags
     public const string EnableCompanyDetailsValidation = "EnableCompanyDetailsValidation";
     public const string EnableSubsidiaryValidation = "EnableSubsidiaryValidation";
     public const string EnableOrganisationSizeFieldValidation = "EnableOrganisationSizeFieldValidation";
+    public const string EnableSubsidiaryJoinerAndLeaverColumns = "EnableSubsidiaryJoinerAndLeaverColumns";
 }

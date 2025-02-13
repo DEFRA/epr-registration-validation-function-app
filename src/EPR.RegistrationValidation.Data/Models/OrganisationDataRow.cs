@@ -305,4 +305,24 @@ public class OrganisationDataRow : ICsvDataRow
     [Column(73)]
     [Name("organisation_size")]
     public string OrganisationSize { get; set; }
+
+    [Column(74)]
+    [Name("leaver_code")]
+    public string LeaverCode { get; set; }
+
+    [Column(75)]
+    [Name("leaver_date")]
+    public string LeaverDate { get; set; }
+
+    [Column(76)]
+    [Name("leaver_reason")]
+    public string LeaverReason { get; set; }
+
+    [Column(77)]
+    [Name("reporting_type")]
+    public string ReportingType { get; set; }
+
+    [Column(78)]
+    [Name("joiner_date")]
+    public string JoinerDate { get; set; }
 }

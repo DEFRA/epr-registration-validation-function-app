@@ -1980,11 +1980,142 @@ public class ValidationServiceTests
             Times.Never());
     }
 
+    [TestMethod]
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryId_WithoutJoinerDate_WithoutReportingType()
+    {
+        // Arrange
+        var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { SubsidiaryId = "1" } };
+        var service = CreateService();
+
+        // Act
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+
+        // Assert
+        result.Should().NotBeEmpty();
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.JoinerDateIsRequired);
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.ReportingTypeIsRequired);
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryId_WithInvalidJoinerDateFormat_WithIvalidReportingType()
+    {
+        // Arrange
+        var organisations = new List<OrganisationDataRow>
+        {
+            new OrganisationDataRow
+            {
+                SubsidiaryId = "1",
+                JoinerDate = "01-01-2020",
+                ReportingType = "test",
+            },
+        };
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+
+        // Assert
+        result.Should().NotBeEmpty();
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.InvalidJoinerDateFormat);
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.InvalidReportingType);
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryId_WithValidJoinerDateFormat_WithValidReportingType()
+    {
+        // Arrange
+        var organisations = new List<OrganisationDataRow>
+        {
+            new OrganisationDataRow
+            {
+                SubsidiaryId = "1",
+                JoinerDate = "01/01/2020",
+                ReportingType = "self",
+            },
+        };
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+
+        // Assert
+        result.Should().NotBeEmpty();
+        result[0].ColumnErrors.Should().NotContain(x => x.ErrorCode == ErrorCodes.InvalidJoinerDateFormat);
+        result[0].ColumnErrors.Should().NotContain(x => x.ErrorCode == ErrorCodes.InvalidReportingType);
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdLeaverCode_WithoutLeaverDate()
+    {
+        // Arrange
+        var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "Any" } };
+        var service = CreateService();
+
+        // Act
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+
+        // Assert
+        result.Should().NotBeEmpty();
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverDateMustBePresentWhenLeaverCodePresent);
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdLeaverCode_WithLeaverReasonExceedingAllowedMaxLength()
+    {
+        // Arrange
+        var organisations = new List<OrganisationDataRow>
+        {
+            new OrganisationDataRow
+            {
+                SubsidiaryId = "1",
+                LeaverCode = "Any",
+                LeaverReason = new string('X', 201),
+            },
+        };
+        var service = CreateService();
+
+        // Act
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+
+        // Assert
+        result.Should().NotBeEmpty();
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverReasonExceedsTwoHundredCharacterLimit);
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdLeaverCode_WithLeaverReasonNotExceedingAllowedMaxLength()
+    {
+        // Arrange
+        var organisations = new List<OrganisationDataRow>
+        {
+            new OrganisationDataRow
+            {
+                SubsidiaryId = "1",
+                LeaverCode = "Any",
+                LeaverReason = new string('X', 200),
+                LeaverDate = "01/01/2022",
+            },
+        };
+        var service = CreateService();
+
+        // Act
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+
+        // Assert
+        result.SelectMany(x => x.ColumnErrors.Select(y => y.ErrorCode)).ToList()
+            .Should().NotContain(new[] { "909", "910", "911", "912", "913", "914" });
+    }
+
     private ValidationService CreateService(ValidationSettings? settings = null)
     {
         var featureManageMock = new Mock<IFeatureManager>();
         featureManageMock
             .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation))
+            .Returns(Task.FromResult(true));
+        featureManageMock
+            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns))
             .Returns(Task.FromResult(true));
 
         _companyDetailsApiClientMock = new Mock<ICompanyDetailsApiClient>();

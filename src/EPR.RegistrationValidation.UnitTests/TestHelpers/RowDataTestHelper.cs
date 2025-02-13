@@ -130,6 +130,8 @@ public static class RowDataTestHelper
                 PrincipalAddressPhoneNumber = "01237946",
                 OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
                 OrganisationSize = OrganisationSizeCodes.L.ToString(),
+                JoinerDate = "01/01/2000",
+                ReportingType = "self",
             };
             rows.Add(row);
             rows.Add(GenerateParentOrganisation(row.DefraId));
@@ -175,6 +177,8 @@ public static class RowDataTestHelper
                 PrincipalAddressPhoneNumber = "01237946",
                 OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
                 OrganisationSize = OrganisationSizeCodes.L.ToString(),
+                JoinerDate = "01/01/2000",
+                ReportingType = "self",
             };
             rows.Add(row);
         }
@@ -214,6 +218,8 @@ public static class RowDataTestHelper
                 PrincipalAddressPhoneNumber = "01237946",
                 OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
                 OrganisationSize = OrganisationSizeCodes.L.ToString(),
+                JoinerDate = "01/01/2000",
+                ReportingType = "self",
             };
             rows.Add(row);
             rows.Add(GenerateParentOrganisation(row.DefraId));

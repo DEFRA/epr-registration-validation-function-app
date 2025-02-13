@@ -28,6 +28,15 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
         Include(new CompanyHouseValidator());
         Include(new OrganisationTypeValidator());
 
+        if (featureManager != null && featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
+        {
+            Include(new LeaverCodeValidator());
+            Include(new JoinerDateValidator());
+            Include(new ReportingTypeValidator());
+            Include(new LeaverDateValidator());
+            Include(new LeaverReasonValidator());
+        }
+
         if (featureManager != null && featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result)
         {
             Include(new OrganisationSizeValidator());

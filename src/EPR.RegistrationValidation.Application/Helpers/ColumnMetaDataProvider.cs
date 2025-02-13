@@ -11,6 +11,11 @@ using Microsoft.FeatureManagement;
 public class ColumnMetaDataProvider
 {
     private const string OrganisationSizeColumnName = "OrganisationSize";
+    private const string LeaverCodeName = "LeaverCode";
+    private const string LeaverDateName = "LeaverDate";
+    private const string LeaverReasonName = "LeaverReason";
+    private const string ReportingTypeName = "ReportingType";
+    private const string JoinerDateName = "JoinerDate";
     private static IFeatureManager _featureManager;
 
     private readonly IDictionary<string, ColumnMetaData> _organisationMetaData;
@@ -58,6 +63,15 @@ public class ColumnMetaDataProvider
         if (typeof(T).Equals(typeof(OrganisationDataRow)) && _featureManager != null && !_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result)
         {
             returnDictionary.Remove(OrganisationSizeColumnName);
+        }
+
+        if (typeof(T).Equals(typeof(OrganisationDataRow)) && _featureManager != null && !_featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
+        {
+            returnDictionary.Remove(LeaverCodeName);
+            returnDictionary.Remove(LeaverDateName);
+            returnDictionary.Remove(LeaverReasonName);
+            returnDictionary.Remove(ReportingTypeName);
+            returnDictionary.Remove(JoinerDateName);
         }
 
         return returnDictionary;

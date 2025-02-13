@@ -23,6 +23,9 @@ public class CsvStreamParserTests
         featureManageMock
             .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation))
             .Returns(Task.FromResult(true));
+        featureManageMock
+            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns))
+            .Returns(Task.FromResult(true));
 
         _sut = new CsvStreamParser(new ColumnMetaDataProvider(null), featureManageMock.Object);
     }
@@ -248,7 +251,7 @@ error, error";
     [TestMethod]
     [DataRow(true, "ValidFileWithCorrectHeaders.csv", 2)]
     [DataRow(false, "InvalidFileTooFewHeaders.csv", 2)]
-    public async Task TestGetItemsFromCsvStream_FeatureFlag_EnableOrganisationSizeFieldValidation_True_WhenCsvFileContainsSizeColumn_ReturnValidList(bool featureFlag, string csvFile, int expectedResultCount)
+    public async Task TestGetItemsFromCsvStream_FeatureFlag_EnableOrganisationSizeFieldValidation_And_EnableSubsidiaryJoinerAndLeaverColumns_True_WhenCsvFileContainsSizeColumn_ReturnValidList(bool featureFlag, string csvFile, int expectedResultCount)
     {
         // Arrange
         var featureManageMock = CreateFeatureManagerMock(featureFlag);
@@ -268,6 +271,9 @@ error, error";
         var featureManageMock = new Mock<IFeatureManager>();
         featureManageMock
             .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation))
+            .Returns(Task.FromResult(featureFlag));
+        featureManageMock
+            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns))
             .Returns(Task.FromResult(featureFlag));
 
         return featureManageMock;
