@@ -74,10 +74,12 @@ public static class ErrorCodes
     public const string InvalidJoinerDateFormat = "899";
     public const string ReportingTypeIsRequired = "900";
     public const string InvalidReportingType = "901";
-    public const string LeaverCodeMustBePresentWhenLeaverDatePresent = "902";
-    public const string LeaverDateMustBePresentWhenLeaverCodePresent = "903";
+    public const string LeaverCodeMustBePresentWhenLeaverDateOrReasonPresent = "902";
+    public const string LeaverDateMustBePresentWhenLeaverCodeOrReasonPresent = "903";
     public const string InvalidLeaverDateFormat = "904";
     public const string LeaverDateMustBeAfterJoinerDate = "905";
     public const string LeaverReasonMustBePresentWhenLeaverCodePresent = "906";
     public const string LeaverReasonExceedsTwoHundredCharacterLimit = "907";
+    public const string JoinerDateDoesNotMatchJoinerDateInDatabase = "908";
+    public const string ReportingTypeDoesNotMatchReportingTypeInDatabase = "909";
 }

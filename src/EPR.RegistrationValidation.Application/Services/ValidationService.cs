@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
 using EPR.RegistrationValidation.Application.Clients;
 using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Application.Helpers;
@@ -20,6 +19,7 @@ using EPR.RegistrationValidation.Data.Models.OrganisationDataLookup;
 using EPR.RegistrationValidation.Data.Models.QueueMessages;
 using EPR.RegistrationValidation.Data.Models.Services;
 using EPR.RegistrationValidation.Data.Models.SubmissionApi;
+using EPR.RegistrationValidation.Data.Models.Subsidiary;
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
@@ -108,7 +108,7 @@ public class ValidationService : IValidationService
 
         if (await _featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryValidation))
         {
-            var subValidationResult = await ValidateSubsidiary(rows, rowValidationResult.TotalErrors);
+            var subValidationResult = await ValidateSubsidiary(rows, rowValidationResult.TotalErrors, validationErrors);
             validationErrors.AddRange(subValidationResult.ValidationErrors);
         }
 
@@ -349,32 +349,24 @@ public class ValidationService : IValidationService
         }
     }
 
-    public async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateSubsidiary(List<OrganisationDataRow> rows, int totalErrors)
+    public async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateSubsidiary(List<OrganisationDataRow> rows, int totalErrors, List<RegistrationValidationError> existingErrors)
     {
         List<RegistrationValidationError> validationErrors = new();
+
         try
         {
             var subsidiaryDetailsRequest = _subsidiaryDetailsRequestBuilder.CreateRequest(rows);
-            if (subsidiaryDetailsRequest == null || subsidiaryDetailsRequest.SubsidiaryOrganisationDetails == null || !subsidiaryDetailsRequest.SubsidiaryOrganisationDetails.Any())
+            if (subsidiaryDetailsRequest?.SubsidiaryOrganisationDetails == null || !subsidiaryDetailsRequest.SubsidiaryOrganisationDetails.Any())
             {
                 return (totalErrors, validationErrors);
             }
 
             var result = await _companyDetailsApiClient.GetSubsidiaryDetails(subsidiaryDetailsRequest);
+            var errorLimit = _validationSettings.ErrorLimit;
 
-            foreach (var row in rows.TakeWhile(_ => totalErrors < _validationSettings.ErrorLimit))
+            foreach (var row in rows.TakeWhile(_ => totalErrors < errorLimit))
             {
-                var matchingOrg = result.SubsidiaryOrganisationDetails
-                    .FirstOrDefault(org => org.OrganisationReference == row.DefraId);
-
-                if (matchingOrg == null)
-                {
-                    continue;
-                }
-
-                var matchingSub = matchingOrg.SubsidiaryDetails
-                    .FirstOrDefault(sub => sub.ReferenceNumber == row.SubsidiaryId);
-
+                var matchingSub = FindMatchingSubsidiary(result, row.DefraId, row.SubsidiaryId);
                 if (matchingSub == null)
                 {
                     continue;
@@ -382,40 +374,72 @@ public class ValidationService : IValidationService
 
                 if (!matchingSub.SubsidiaryExists)
                 {
-                    var error = CreateSubValidationError(row, ErrorCodes.SubsidiaryIdDoesNotExist);
-                    var errorMessage = $"Subsidiary ID does not exist";
-                    LogValidationWarning(row.LineNumber, errorMessage, ErrorCodes.SubsidiaryIdDoesNotExist);
-                    validationErrors.Add(error);
-                    totalErrors++;
+                    totalErrors = AddValidationError(row, ErrorCodes.SubsidiaryIdDoesNotExist, "Subsidiary ID does not exist", validationErrors, totalErrors, errorLimit);
                     continue;
                 }
 
                 if (matchingSub.SubsidiaryBelongsToAnyOtherOrganisation)
                 {
-                    var error = CreateSubValidationError(row, ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation);
-                    var errorMessage = $"Subsidiary ID is assigned to a different organisation";
-                    LogValidationWarning(row.LineNumber, errorMessage, ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation);
-                    validationErrors.Add(error);
-                    totalErrors++;
+                    totalErrors = AddValidationError(row, ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation, "Subsidiary ID is assigned to a different organisation", validationErrors, totalErrors, errorLimit);
                 }
 
                 if (matchingSub.SubsidiaryDoesNotBelongToAnyOrganisation)
                 {
-                    var error = CreateSubValidationError(row, ErrorCodes.SubsidiaryDoesNotBelongToAnyOrganisation);
-                    var errorMessage = $"Subsidiary ID does not belong to any organisation";
-                    LogValidationWarning(row.LineNumber, errorMessage, ErrorCodes.SubsidiaryDoesNotBelongToAnyOrganisation);
-                    validationErrors.Add(error);
-                    totalErrors++;
+                    totalErrors = AddValidationError(row, ErrorCodes.SubsidiaryDoesNotBelongToAnyOrganisation, "Subsidiary ID does not belong to any organisation", validationErrors, totalErrors, errorLimit);
                 }
 
                 if (!string.Equals(row.CompaniesHouseNumber, matchingSub.CompaniesHouseNumber))
                 {
-                    var columnName = nameof(OrganisationDataRow.CompaniesHouseNumber);
-                    var error = CreateColumnValidationError(row, ErrorCodes.SubsidiaryIdDoesNotMatchCompaniesHouseNumber, columnName);
-                    var errorMessage = "This companies house number does not match the subsidiary ID";
-                    LogValidationWarning(row.LineNumber, errorMessage, ErrorCodes.SubsidiaryIdDoesNotMatchCompaniesHouseNumber);
-                    validationErrors.Add(error);
-                    totalErrors++;
+                    totalErrors = AddValidationError(row, ErrorCodes.SubsidiaryIdDoesNotMatchCompaniesHouseNumber, "This companies house number does not match the subsidiary ID", validationErrors, totalErrors, errorLimit, nameof(OrganisationDataRow.CompaniesHouseNumber));
+                }
+
+                if (_featureManager != null && _featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
+                {
+                    if (matchingSub.SubsidiaryExists &&
+                        !matchingSub.SubsidiaryBelongsToAnyOtherOrganisation &&
+                        !matchingSub.SubsidiaryDoesNotBelongToAnyOrganisation)
+                    {
+                        bool rowJoinerDateIsBlank = string.IsNullOrWhiteSpace(row.JoinerDate);
+                        bool matchingSubJoinerDateExists = matchingSub.JoinerDate.HasValue;
+
+                        bool hasJoinerDateValidationErrors = existingErrors
+                            .Any(e => e.RowNumber == row.LineNumber && e.ColumnErrors
+                                .Any(ce => ce.ErrorCode == ErrorCodes.JoinerDateIsRequired || ce.ErrorCode == ErrorCodes.InvalidJoinerDateFormat));
+
+                        bool hasReportingTypeValidationErrors = existingErrors
+                            .Any(e => e.RowNumber == row.LineNumber && e.ColumnErrors
+                                .Any(ce => ce.ErrorCode == ErrorCodes.ReportingTypeIsRequired || ce.ErrorCode == ErrorCodes.InvalidReportingType));
+
+                        if (!hasJoinerDateValidationErrors &&
+                            ((rowJoinerDateIsBlank && matchingSubJoinerDateExists) ||
+                            (!rowJoinerDateIsBlank && !matchingSubJoinerDateExists) ||
+                            (DateTime.TryParseExact(row.JoinerDate, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime parsedJoinerDate) &&
+                            matchingSubJoinerDateExists && matchingSub.JoinerDate.Value.Date != parsedJoinerDate.Date)))
+                            {
+                                _logger.LogWarning("JoinerValidation: Entered Date Validation Error");
+                                totalErrors = AddValidationError(
+                                    row,
+                                    ErrorCodes.JoinerDateDoesNotMatchJoinerDateInDatabase,
+                                    "Joiner date does not match joiner date in database",
+                                    validationErrors,
+                                    totalErrors,
+                                    errorLimit,
+                                    nameof(OrganisationDataRow.JoinerDate));
+                            }
+
+                        if (!hasReportingTypeValidationErrors &&
+                            !string.Equals(row.ReportingType, matchingSub.ReportingType, StringComparison.OrdinalIgnoreCase))
+                            {
+                                totalErrors = AddValidationError(
+                                    row,
+                                    ErrorCodes.ReportingTypeDoesNotMatchReportingTypeInDatabase,
+                                    "Reporting type does not match reporting type in database",
+                                    validationErrors,
+                                    totalErrors,
+                                    errorLimit,
+                                    nameof(OrganisationDataRow.ReportingType));
+                            }
+                    }
                 }
             }
 
@@ -423,7 +447,7 @@ public class ValidationService : IValidationService
         }
         catch (HttpRequestException exception)
         {
-            _logger.LogError(exception, "Error Subsidiary validation");
+            _logger.LogError(exception, "Error during Subsidiary validation");
             return (totalErrors, validationErrors);
         }
     }
@@ -513,6 +537,38 @@ public class ValidationService : IValidationService
         }
 
         return true;
+    }
+
+    private SubsidiaryDetail FindMatchingSubsidiary(SubsidiaryDetailsResponse result, string defraId, string subsidiaryId)
+    {
+        return result.SubsidiaryOrganisationDetails
+            ?.FirstOrDefault(org => org.OrganisationReference == defraId)
+            ?.SubsidiaryDetails
+            ?.FirstOrDefault(sub => sub.ReferenceNumber == subsidiaryId);
+    }
+
+    private int AddValidationError(
+        OrganisationDataRow row,
+        string errorCode,
+        string errorMessage,
+        List<RegistrationValidationError> validationErrors,
+        int totalErrors,
+        int errorLimit,
+        string columnName = null)
+    {
+        if (totalErrors >= errorLimit)
+        {
+            return totalErrors;
+        }
+
+        var error = columnName == null
+            ? CreateSubValidationError(row, errorCode)
+            : CreateColumnValidationError(row, errorCode, columnName);
+
+        LogValidationWarning(row.LineNumber, errorMessage, errorCode);
+        validationErrors.Add(error);
+
+        return totalErrors + 1;
     }
 
     private async Task<List<string>> ValidateRows<T>(List<T> rows, OrganisationDataLookupTable organisationDataLookup)
