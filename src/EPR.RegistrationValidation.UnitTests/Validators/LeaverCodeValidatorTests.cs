@@ -11,11 +11,13 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class LeaverCodeValidatorTests
 {
     [TestMethod]
-    public async Task Validate_WithSubsidiaryIdPresentAndLeaverDatePresentEmptyLeaverCode_IsNotValid()
+    [DataRow("22/01/2025", "")]
+    [DataRow("", "test")]
+    public async Task Validate_WithSubsidiaryIdPresentAndLeaverDatePresentEmptyLeaverCode_IsNotValid(string leaverDate, string leaverReason)
     {
         // Arrange
         var validator = new LeaverCodeValidator();
-        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverDate = "22/01/2025" };
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverDate = leaverDate, LeaverReason = leaverReason };
 
         // Act
         var result = await validator.TestValidateAsync(orgDataRow);
@@ -24,6 +26,6 @@ public class LeaverCodeValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.LeaverCode);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.LeaverCodeMustBePresentWhenLeaverDatePresent);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.LeaverCodeMustBePresentWhenLeaverDateOrReasonPresent);
     }
 }

@@ -14,5 +14,9 @@
         public bool SubsidiaryBelongsToAnyOtherOrganisation { get; set; }
 
         public bool SubsidiaryDoesNotBelongToAnyOrganisation { get; set; }
+
+        public DateTime? JoinerDate { get; set; }
+
+        public string ReportingType { get; set; }
     }
 }

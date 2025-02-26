@@ -12,7 +12,7 @@ public class LeaverCodeValidator : AbstractValidator<OrganisationDataRow>
 
         RuleFor(r => r.LeaverCode)
             .NotEmpty()
-            .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && !string.IsNullOrEmpty(x.LeaverDate))
-            .WithErrorCode(ErrorCodes.LeaverCodeMustBePresentWhenLeaverDatePresent);
+            .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && (!string.IsNullOrEmpty(x.LeaverDate) || !string.IsNullOrEmpty(x.LeaverReason)))
+            .WithErrorCode(ErrorCodes.LeaverCodeMustBePresentWhenLeaverDateOrReasonPresent);
     }
 }

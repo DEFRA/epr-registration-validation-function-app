@@ -12,8 +12,8 @@ public class LeaverDateValidator : AbstractValidator<OrganisationDataRow>
 
         RuleFor(r => r.LeaverDate)
             .NotEmpty()
-            .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && !string.IsNullOrEmpty(x.LeaverCode))
-            .WithErrorCode(ErrorCodes.LeaverDateMustBePresentWhenLeaverCodePresent);
+            .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && (!string.IsNullOrEmpty(x.LeaverCode) || !string.IsNullOrEmpty(x.LeaverReason)))
+            .WithErrorCode(ErrorCodes.LeaverDateMustBePresentWhenLeaverCodeOrReasonPresent);
 
         RuleFor(r => r.LeaverDate)
             .Must(x => DateTime.TryParseExact(x, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out _))
