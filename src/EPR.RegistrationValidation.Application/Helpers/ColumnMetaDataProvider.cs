@@ -13,7 +13,7 @@ public class ColumnMetaDataProvider
     private const string OrganisationSizeColumnName = "OrganisationSize";
     private const string LeaverCodeName = "LeaverCode";
     private const string LeaverDateName = "LeaverDate";
-    private const string LeaverReasonName = "LeaverReason";
+    private const string OrganisationChangeReasonName = "OrganisationChangeReason";
     private const string ReportingTypeName = "ReportingType";
     private const string JoinerDateName = "JoinerDate";
     private static IFeatureManager _featureManager;
@@ -69,7 +69,7 @@ public class ColumnMetaDataProvider
         {
             returnDictionary.Remove(LeaverCodeName);
             returnDictionary.Remove(LeaverDateName);
-            returnDictionary.Remove(LeaverReasonName);
+            returnDictionary.Remove(OrganisationChangeReasonName);
             returnDictionary.Remove(ReportingTypeName);
             returnDictionary.Remove(JoinerDateName);
         }

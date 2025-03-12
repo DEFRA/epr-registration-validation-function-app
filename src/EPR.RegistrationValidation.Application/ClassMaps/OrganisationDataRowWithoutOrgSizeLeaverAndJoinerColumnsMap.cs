@@ -12,9 +12,8 @@ public sealed class OrganisationDataRowWithoutOrgSizeLeaverAndJoinerColumnsMap :
     {
         AutoMap(CultureInfo.InvariantCulture);
         Map(x => x.LeaverCode).Ignore();
-        Map(x => x.LeaverReason).Ignore();
+        Map(x => x.OrganisationChangeReason).Ignore();
         Map(x => x.LeaverDate).Ignore();
-        Map(x => x.ReportingType).Ignore();
         Map(x => x.JoinerDate).Ignore();
         Map(x => x.OrganisationSize).Ignore();
     }

@@ -139,6 +139,7 @@ public class ValidationServiceTests
                 OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
                 OrganisationSize = OrganisationSizeCodes.L.ToString(),
                 TotalTonnage = "50.1",
+                RegistrationTypeCode = RegistrationTypeCodes.Group,
             },
         };
         var blobQueueMessage = new BlobQueueMessage();
@@ -231,7 +232,7 @@ public class ValidationServiceTests
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
         // Act
-        var results = await service.ValidateRowsAsync(dataRows.ToList());
+        var results = await service.ValidateRowsAsync(dataRows.ToList(), false);
 
         // Assert
         results.TotalErrors.Should().Be(maxErrors);
@@ -1982,97 +1983,6 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
-    [DataRow("05/11/1999", 0, true, false, false, new string[] { })]
-    [DataRow("04/11/1999", 2, true, true, true, new string[] { ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation, ErrorCodes.SubsidiaryDoesNotBelongToAnyOrganisation })]
-    [DataRow("04/11/1999", 1, true, false, false, new string[] { ErrorCodes.JoinerDateDoesNotMatchJoinerDateInDatabase })]
-    [DataRow("04/11/1999", 1, true, true, false, new string[] { ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation })]
-    [DataRow("04/11/1999", 1, true, false, true, new string[] { ErrorCodes.SubsidiaryDoesNotBelongToAnyOrganisation })]
-    [DataRow("04/11/1999", 1, false, true, true, new string[] { ErrorCodes.SubsidiaryIdDoesNotExist })]
-    [DataRow("04/11/1999", 1, false, true, false, new string[] { ErrorCodes.SubsidiaryIdDoesNotExist })]
-    [DataRow("04/11/1999", 1, false, false, true, new string[] { ErrorCodes.SubsidiaryIdDoesNotExist })]
-    [DataRow("04/11/1999", 1, false, false, false, new string[] { ErrorCodes.SubsidiaryIdDoesNotExist })]
-    [DataRow("", 1, true, false, false, new string[] { ErrorCodes.JoinerDateDoesNotMatchJoinerDateInDatabase })]
-    [DataRow("Some value that is not convertible to a date", 0, true, false, false, new string[] { })]
-    [DataRow("04/11/1999", 1, true, false, false, new string[] { ErrorCodes.JoinerDateDoesNotMatchJoinerDateInDatabase }, true)]
-    [DataRow("", 0, true, false, false, new string[] { }, true)]
-    [DataRow("04/11/1999", 1, true, false, false, new string[] { ErrorCodes.JoinerDateDoesNotMatchJoinerDateInDatabase })]
-
-    public async Task ValidateSubsidiary_ShouldAddError_WhenJoinerDateDoesNotMatchJoinerDateInDatabase(
-        string joinerDate,
-        int errorCount,
-        bool subsidiaryExists,
-        bool subsidiaryBelongsToAnyOtherOrganisation,
-        bool subsidiaryDoesNotBelongToAnyOrganisation,
-        string[] expectedErrorCodes,
-        bool nullDateReturnedFromDB = false)
-    {
-        // Arrange
-        var rows = new List<OrganisationDataRow>
-        {
-            new() { DefraId = "ORG1", SubsidiaryId = "SUB1", LineNumber = 1, JoinerDate = joinerDate },
-        };
-
-        var subsidiaryDetailsRequest = new SubsidiaryDetailsRequest
-        {
-            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
-            {
-                new SubsidiaryOrganisationDetail
-                {
-                    OrganisationReference = "ORG1",
-                    SubsidiaryDetails = new List<SubsidiaryDetail>
-                    {
-                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true, JoinerDate = new DateTime(1999, 11, 5) },
-                    },
-                },
-            },
-        };
-
-        var subsidiaryDetailsResponse = new SubsidiaryDetailsResponse
-        {
-            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
-            {
-                new SubsidiaryOrganisationDetail
-                {
-                    OrganisationReference = "ORG1",
-                    SubsidiaryDetails = new List<SubsidiaryDetail>
-                    {
-                        new()
-                        {
-                            ReferenceNumber = "SUB1",
-                            SubsidiaryExists = subsidiaryExists,
-                            JoinerDate = nullDateReturnedFromDB ? null : new DateTime(1999, 11, 5),
-                            SubsidiaryBelongsToAnyOtherOrganisation = subsidiaryBelongsToAnyOtherOrganisation,
-                            SubsidiaryDoesNotBelongToAnyOrganisation = subsidiaryDoesNotBelongToAnyOrganisation,
-                        },
-                    },
-                },
-            },
-        };
-
-        _subsidiaryDetailsRequestBuilderMock
-            .Setup(x => x.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
-            .Returns(subsidiaryDetailsRequest);
-
-        var service = CreateService(new ValidationSettings { ErrorLimit = 50 });
-
-        _featureManagerMock
-            .Setup(fm => fm.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns))
-            .ReturnsAsync(true);
-
-        _companyDetailsApiClientMock
-            .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
-            .ReturnsAsync(subsidiaryDetailsResponse);
-
-        // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
-
-        // Assert
-        Assert.AreEqual(errorCount, totalErrors);
-        Assert.AreEqual(errorCount, validationErrors.Count);
-        CollectionAssert.AreEquivalent(expectedErrorCodes, validationErrors.SelectMany(x => x.ColumnErrors).Select(x => x.ErrorCode).ToArray());
-    }
-
-    [TestMethod]
 
     public async Task ValidateSubsidiary_ShouldNotAddError_WhenJoinerDateDoesNotMatchJoinerDateInDatabaseButThereIsAlreadyAJoinerDateError()
     {
@@ -2083,10 +1993,7 @@ public class ValidationServiceTests
             new RegistrationValidationError()
             {
                 RowNumber = 1,
-                ColumnErrors = new List<ColumnValidationError>
-                {
-                    new() { ErrorCode = ErrorCodes.JoinerDateIsRequired },
-                },
+                ColumnErrors = new List<ColumnValidationError>(),
             },
         };
 
@@ -2104,7 +2011,7 @@ public class ValidationServiceTests
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
                     {
-                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true, JoinerDate = new DateTime(1999, 11, 5) },
+                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true, },
                     },
                 },
             },
@@ -2123,7 +2030,6 @@ public class ValidationServiceTests
                         {
                             ReferenceNumber = "SUB1",
                             SubsidiaryExists = true,
-                            JoinerDate = new DateTime(1999, 11, 5),
                             SubsidiaryBelongsToAnyOtherOrganisation = false,
                             SubsidiaryDoesNotBelongToAnyOrganisation = false,
                         },
@@ -2185,7 +2091,7 @@ public class ValidationServiceTests
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
                     {
-                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true, JoinerDate = new DateTime(1999, 11, 5) },
+                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true },
                     },
                 },
             },
@@ -2204,260 +2110,6 @@ public class ValidationServiceTests
                         {
                             ReferenceNumber = "SUB1",
                             SubsidiaryExists = subsidiaryExists,
-                            JoinerDate = nullDateReturnedFromDB ? null : new DateTime(1999, 11, 5),
-                            SubsidiaryBelongsToAnyOtherOrganisation = subsidiaryBelongsToAnyOtherOrganisation,
-                            SubsidiaryDoesNotBelongToAnyOrganisation = subsidiaryDoesNotBelongToAnyOrganisation,
-                        },
-                    },
-                },
-            },
-        };
-
-        _subsidiaryDetailsRequestBuilderMock
-            .Setup(x => x.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
-            .Returns(subsidiaryDetailsRequest);
-
-        var service = CreateService(new ValidationSettings { ErrorLimit = 50 });
-
-        _featureManagerMock
-            .Setup(fm => fm.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns))
-            .ReturnsAsync(false);
-
-        _companyDetailsApiClientMock
-            .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
-            .ReturnsAsync(subsidiaryDetailsResponse);
-
-        // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
-
-        // Assert
-        Assert.AreEqual(errorCount, totalErrors);
-        Assert.AreEqual(errorCount, validationErrors.Count);
-        CollectionAssert.AreEquivalent(expectedErrorCodes, validationErrors.SelectMany(x => x.ColumnErrors).Select(x => x.ErrorCode).ToArray());
-    }
-
-    [TestMethod]
-    [DataRow("Self", 2, true, true, true, "Group", new string[] { ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation, ErrorCodes.SubsidiaryDoesNotBelongToAnyOrganisation })]
-    [DataRow("Self", 1, true, true, false, "Group", new string[] { ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation })]
-    [DataRow("Self", 1, true, false, true, "Group", new string[] { ErrorCodes.SubsidiaryDoesNotBelongToAnyOrganisation })]
-    [DataRow("Self", 1, true, false, false, "Group", new string[] { ErrorCodes.ReportingTypeDoesNotMatchReportingTypeInDatabase })]
-    [DataRow("Self", 1, false, true, true, "Group", new string[] { ErrorCodes.SubsidiaryIdDoesNotExist })]
-    [DataRow("Self", 1, false, true, false, "Group", new string[] { ErrorCodes.SubsidiaryIdDoesNotExist })]
-    [DataRow("Self", 1, false, false, true, "Group", new string[] { ErrorCodes.SubsidiaryIdDoesNotExist })]
-    [DataRow("Self", 1, false, false, false, "Group", new string[] { ErrorCodes.SubsidiaryIdDoesNotExist })]
-    [DataRow("Group", 2, true, true, true, "Self", new string[] { ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation, ErrorCodes.SubsidiaryDoesNotBelongToAnyOrganisation })]
-    [DataRow("Group", 1, true, true, false, "Self", new string[] { ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation })]
-    [DataRow("Group", 1, true, false, true, "Self", new string[] { ErrorCodes.SubsidiaryDoesNotBelongToAnyOrganisation })]
-    [DataRow("GroUp", 1, true, false, false, "Self", new string[] { ErrorCodes.ReportingTypeDoesNotMatchReportingTypeInDatabase })]
-    [DataRow("Group", 1, false, true, true, "Self", new string[] { ErrorCodes.SubsidiaryIdDoesNotExist })]
-    [DataRow("Group", 1, false, true, false, "Self", new string[] { ErrorCodes.SubsidiaryIdDoesNotExist })]
-    [DataRow("Group", 1, false, false, true, "Self", new string[] { ErrorCodes.SubsidiaryIdDoesNotExist })]
-    [DataRow("Group", 1, false, false, false, "Self", new string[] { ErrorCodes.SubsidiaryIdDoesNotExist })]
-    public async Task ValidateSubsidiary_ShouldAddError_WhenReportingTypeDoesNotMatchReportingTypeInDatabase(
-        string reportingType,
-        int errorCount,
-        bool subsidiaryExists,
-        bool subsidiaryBelongsToAnyOtherOrganisation,
-        bool subsidiaryDoesNotBelongToAnyOrganisation,
-        string databaseReportingType,
-        string[] expectedErrorCodes)
-    {
-        // Arrange
-        var rows = new List<OrganisationDataRow>
-        {
-            new() { DefraId = "ORG1", SubsidiaryId = "SUB1", LineNumber = 1, ReportingType = reportingType },
-        };
-
-        var subsidiaryDetailsRequest = new SubsidiaryDetailsRequest
-        {
-            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
-            {
-                new SubsidiaryOrganisationDetail
-                {
-                    OrganisationReference = "ORG1",
-                    SubsidiaryDetails = new List<SubsidiaryDetail>
-                    {
-                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true, JoinerDate = new DateTime(1999, 11, 5) },
-                    },
-                },
-            },
-        };
-
-        var subsidiaryDetailsResponse = new SubsidiaryDetailsResponse
-        {
-            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
-            {
-                new SubsidiaryOrganisationDetail
-                {
-                    OrganisationReference = "ORG1",
-                    SubsidiaryDetails = new List<SubsidiaryDetail>
-                    {
-                        new()
-                        {
-                            ReferenceNumber = "SUB1",
-                            SubsidiaryExists = subsidiaryExists,
-                            ReportingType = databaseReportingType,
-                            SubsidiaryBelongsToAnyOtherOrganisation = subsidiaryBelongsToAnyOtherOrganisation,
-                            SubsidiaryDoesNotBelongToAnyOrganisation = subsidiaryDoesNotBelongToAnyOrganisation,
-                        },
-                    },
-                },
-            },
-        };
-
-        _subsidiaryDetailsRequestBuilderMock
-            .Setup(x => x.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
-            .Returns(subsidiaryDetailsRequest);
-
-        var service = CreateService(new ValidationSettings { ErrorLimit = 50 });
-
-        _featureManagerMock
-            .Setup(fm => fm.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns))
-            .ReturnsAsync(true);
-
-        _companyDetailsApiClientMock
-            .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
-            .ReturnsAsync(subsidiaryDetailsResponse);
-
-        // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
-
-        // Assert
-        Assert.AreEqual(errorCount, totalErrors);
-        Assert.AreEqual(errorCount, validationErrors.Count);
-        CollectionAssert.AreEquivalent(expectedErrorCodes, validationErrors.SelectMany(x => x.ColumnErrors).Select(x => x.ErrorCode).ToArray());
-    }
-
-    [TestMethod]
-    public async Task ValidateSubsidiary_ShouldNotAddError_WhenReportingTypeDoesNotMatchReportingTypeInDatabaseButThereIsAlreadyAReportingTypeError()
-    {
-        // Arrange
-        string[] expectedErrorCodes = new string[] { };
-
-        var existingErrors = new List<Data.Models.SubmissionApi.RegistrationValidationError>()
-        {
-            new RegistrationValidationError()
-            {
-                RowNumber = 1,
-                ColumnErrors = new List<ColumnValidationError>
-                {
-                    new() { ErrorCode = ErrorCodes.ReportingTypeIsRequired },
-                },
-            },
-        };
-
-        var rows = new List<OrganisationDataRow>
-        {
-            new() { DefraId = "ORG1", SubsidiaryId = "SUB1", LineNumber = 1, ReportingType = "GroUp" },
-        };
-
-        var subsidiaryDetailsRequest = new SubsidiaryDetailsRequest
-        {
-            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
-            {
-                new SubsidiaryOrganisationDetail
-                {
-                    OrganisationReference = "ORG1",
-                    SubsidiaryDetails = new List<SubsidiaryDetail>
-                    {
-                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true, JoinerDate = new DateTime(1999, 11, 5) },
-                    },
-                },
-            },
-        };
-
-        var subsidiaryDetailsResponse = new SubsidiaryDetailsResponse
-        {
-            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
-            {
-                new SubsidiaryOrganisationDetail
-                {
-                    OrganisationReference = "ORG1",
-                    SubsidiaryDetails = new List<SubsidiaryDetail>
-                    {
-                        new()
-                        {
-                            ReferenceNumber = "SUB1",
-                            SubsidiaryExists = true,
-                            ReportingType = "Self",
-                            SubsidiaryBelongsToAnyOtherOrganisation = false,
-                            SubsidiaryDoesNotBelongToAnyOrganisation = false,
-                        },
-                    },
-                },
-            },
-        };
-
-        _subsidiaryDetailsRequestBuilderMock
-            .Setup(x => x.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
-            .Returns(subsidiaryDetailsRequest);
-
-        var service = CreateService(new ValidationSettings { ErrorLimit = 50 });
-
-        _featureManagerMock
-            .Setup(fm => fm.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns))
-            .ReturnsAsync(true);
-
-        _companyDetailsApiClientMock
-            .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
-            .ReturnsAsync(subsidiaryDetailsResponse);
-
-        // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, existingErrors);
-
-        // Assert
-        Assert.AreEqual(0, totalErrors);
-        Assert.AreEqual(0, validationErrors.Count);
-        CollectionAssert.AreEquivalent(expectedErrorCodes, validationErrors.SelectMany(x => x.ColumnErrors).Select(x => x.ErrorCode).ToArray());
-    }
-
-    [TestMethod]
-    [DataRow("Self", 0, true, false, false, "Group", new string[] { })]
-    [DataRow("GroUp", 0, true, false, false, "Self", new string[] { })]
-    public async Task ValidateSubsidiary_ShouldNotAddError_WhenReportingTypeDoesNotMatchReportingTypeInDatabaseButFeatureIsTurnedOff(
-        string reportingType,
-        int errorCount,
-        bool subsidiaryExists,
-        bool subsidiaryBelongsToAnyOtherOrganisation,
-        bool subsidiaryDoesNotBelongToAnyOrganisation,
-        string databaseReportingType,
-        string[] expectedErrorCodes)
-    {
-        // Arrange
-        var rows = new List<OrganisationDataRow>
-        {
-            new() { DefraId = "ORG1", SubsidiaryId = "SUB1", LineNumber = 1, ReportingType = reportingType },
-        };
-
-        var subsidiaryDetailsRequest = new SubsidiaryDetailsRequest
-        {
-            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
-            {
-                new SubsidiaryOrganisationDetail
-                {
-                    OrganisationReference = "ORG1",
-                    SubsidiaryDetails = new List<SubsidiaryDetail>
-                    {
-                        new() { ReferenceNumber = "SUB1", SubsidiaryExists = true, JoinerDate = new DateTime(1999, 11, 5) },
-                    },
-                },
-            },
-        };
-
-        var subsidiaryDetailsResponse = new SubsidiaryDetailsResponse
-        {
-            SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
-            {
-                new SubsidiaryOrganisationDetail
-                {
-                    OrganisationReference = "ORG1",
-                    SubsidiaryDetails = new List<SubsidiaryDetail>
-                    {
-                        new()
-                        {
-                            ReferenceNumber = "SUB1",
-                            SubsidiaryExists = subsidiaryExists,
-                            ReportingType = databaseReportingType,
                             SubsidiaryBelongsToAnyOtherOrganisation = subsidiaryBelongsToAnyOtherOrganisation,
                             SubsidiaryDoesNotBelongToAnyOrganisation = subsidiaryDoesNotBelongToAnyOrganisation,
                         },
@@ -2500,7 +2152,7 @@ public class ValidationServiceTests
 
         var existingErrors = new List<RegistrationValidationError>
         {
-            new() { RowNumber = 1, ColumnErrors = new List<ColumnValidationError> { new() { ErrorCode = ErrorCodes.JoinerDateIsRequired } } },
+            new() { RowNumber = 1, ColumnErrors = new List<ColumnValidationError>() },
         };
 
         _featureManagerMock.Setup(fm => fm.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns))
@@ -2516,38 +2168,12 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
-    public async Task ValidateSubsidiary_ShouldNotAddReportingTypeMismatchError_WhenReportingTypeRequiredErrorExists()
-    {
-        // Arrange
-        var rows = new List<OrganisationDataRow>
-        {
-            new() { DefraId = "ORG1", SubsidiaryId = "SUB1", LineNumber = 1, ReportingType = "TypeA" },
-        };
-
-        var existingErrors = new List<RegistrationValidationError>
-        {
-            new() { RowNumber = 1, ColumnErrors = new List<ColumnValidationError> { new() { ErrorCode = ErrorCodes.ReportingTypeIsRequired } } },
-        };
-
-        _featureManagerMock.Setup(fm => fm.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns))
-            .ReturnsAsync(true);
-
-        var service = CreateService();
-
-        // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, existingErrors);
-
-        // Assert
-        Assert.IsFalse(validationErrors.Any(e => e.ColumnErrors.Any(ce => ce.ErrorCode == ErrorCodes.ReportingTypeDoesNotMatchReportingTypeInDatabase)));
-    }
-
-    [TestMethod]
     public async Task ValidateSubsidiary_ShouldSkipValidation_WhenFeatureFlagIsDisabled()
     {
         // Arrange
         var rows = new List<OrganisationDataRow>
         {
-            new() { DefraId = "ORG1", SubsidiaryId = "SUB1", LineNumber = 1, JoinerDate = "01/01/2023", ReportingType = "TypeC" },
+            new() { DefraId = "ORG1", SubsidiaryId = "SUB1", LineNumber = 1, JoinerDate = "01/01/2023", },
         };
 
         var existingErrors = new List<RegistrationValidationError>();
@@ -2565,48 +2191,7 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
-    public async Task ValidateOrganisationsAsync_WithSubsidiaryId_WithoutJoinerDate_WithoutReportingType()
-    {
-        // Arrange
-        var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { SubsidiaryId = "1" } };
-        var service = CreateService();
-
-        // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
-
-        // Assert
-        result.Should().NotBeEmpty();
-        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.JoinerDateIsRequired);
-        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.ReportingTypeIsRequired);
-    }
-
-    [TestMethod]
-    public async Task ValidateOrganisationsAsync_WithSubsidiaryId_WithInvalidJoinerDateFormat_WithIvalidReportingType()
-    {
-        // Arrange
-        var organisations = new List<OrganisationDataRow>
-        {
-            new OrganisationDataRow
-            {
-                SubsidiaryId = "1",
-                JoinerDate = "01-01-2020",
-                ReportingType = "test",
-            },
-        };
-
-        var service = CreateService();
-
-        // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
-
-        // Assert
-        result.Should().NotBeEmpty();
-        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.InvalidJoinerDateFormat);
-        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.InvalidReportingType);
-    }
-
-    [TestMethod]
-    public async Task ValidateOrganisationsAsync_WithSubsidiaryId_WithValidJoinerDateFormat_WithValidReportingType()
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryId_WithValidJoinerDateFormat()
     {
         // Arrange
         var organisations = new List<OrganisationDataRow>
@@ -2615,7 +2200,6 @@ public class ValidationServiceTests
             {
                 SubsidiaryId = "1",
                 JoinerDate = "01/01/2020",
-                ReportingType = "self",
             },
         };
 
@@ -2627,29 +2211,25 @@ public class ValidationServiceTests
         // Assert
         result.Should().NotBeEmpty();
         result[0].ColumnErrors.Should().NotContain(x => x.ErrorCode == ErrorCodes.InvalidJoinerDateFormat);
-        result[0].ColumnErrors.Should().NotContain(x => x.ErrorCode == ErrorCodes.InvalidReportingType);
     }
 
     [TestMethod]
-    [DataRow("", "", "", "01/01/2000", "self", 0)]
-    [DataRow("A", "01/01/2001", "test", "01/01/2000", "self", 0)]
-    [DataRow("A", "01/01/2001", "", "01/01/2000", "self", 0)]
+    [DataRow("", "", "", "01/01/2000")]
+    [DataRow("A", "01/01/2001", "test", "01/01/2000")]
+    [DataRow("A", "01/01/2001", "", "")]
     public async Task ValidateOrganisationsAsync_WithValidJoinerLeaverDetailsCombination(
         string leaverCode,
         string leaverDate,
-        string leaverReason,
-        string joinerDate,
-        string reportingType,
-        int expectedErrorCount)
+        string organisationChangeReason,
+        string joinerDate)
     {
         // Arrange
         var organisations = RowDataTestHelper.GenerateOrgIdSubId(1).ToList();
 
         organisations[0].LeaverCode = leaverCode;
         organisations[0].LeaverDate = leaverDate;
-        organisations[0].LeaverReason = leaverReason;
+        organisations[0].OrganisationChangeReason = organisationChangeReason;
         organisations[0].JoinerDate = joinerDate;
-        organisations[0].ReportingType = reportingType;
 
         var service = CreateService();
 
@@ -2661,19 +2241,13 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
-    [DataRow("A", "", "", "", "", 3)]
-    [DataRow("", "01/01/2001", "", "", "", 3)]
-    [DataRow("A", "01/01/2001", "", "", "", 2)]
-    [DataRow("A", "01/01/2001", "", "01/01/2000", "", 1)]
-    [DataRow("A", "01/01/2001", "", "", "self", 1)]
-    [DataRow("A", "01/01/2001", "", "", "", 2)]
-    [DataRow("", "", "test", "", "", 4)]
+    [DataRow("A", "", "", "", 1)]
+    [DataRow("", "01/01/2001", "", "", 1)]
     public async Task ValidateOrganisationsAsync_WithInvalidJoinerLeaverDetailsCombination(
         string leaverCode,
         string leaverDate,
-        string leaverReason,
+        string organisationChangeReason,
         string joinerDate,
-        string reportingType,
         int expectedErrorCount)
     {
         // Arrange
@@ -2681,9 +2255,8 @@ public class ValidationServiceTests
 
         organisations[0].LeaverCode = leaverCode;
         organisations[0].LeaverDate = leaverDate;
-        organisations[0].LeaverReason = leaverReason;
+        organisations[0].OrganisationChangeReason = organisationChangeReason;
         organisations[0].JoinerDate = joinerDate;
-        organisations[0].ReportingType = reportingType;
 
         var service = CreateService();
 
@@ -2707,11 +2280,11 @@ public class ValidationServiceTests
 
         // Assert
         result.Should().NotBeEmpty();
-        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverDateMustBePresentWhenLeaverCodeOrReasonPresent);
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverDateMustBePresentWhenLeaverCodePresent);
     }
 
     [TestMethod]
-    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdLeaverCode_WithLeaverReasonExceedingAllowedMaxLength()
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdLeaverCode_WithInvalidLeaverDate()
     {
         // Arrange
         var organisations = new List<OrganisationDataRow>
@@ -2720,7 +2293,31 @@ public class ValidationServiceTests
             {
                 SubsidiaryId = "1",
                 LeaverCode = "Any",
-                LeaverReason = new string('X', 201),
+                LeaverDate = DateTime.Now.AddDays(2).ToString("dd/MM/yyyy"),
+            },
+        };
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+
+        // Assert
+        result.Should().NotBeEmpty();
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverDateCannotBeInTheFuture);
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdLeaverCode_WithOrganisationChangeReasonExceedingAllowedMaxLength()
+    {
+        // Arrange
+        var organisations = new List<OrganisationDataRow>
+        {
+            new OrganisationDataRow
+            {
+                SubsidiaryId = "1",
+                LeaverCode = "Any",
+                OrganisationChangeReason = new string('X', 201),
             },
         };
         var service = CreateService();
@@ -2730,11 +2327,26 @@ public class ValidationServiceTests
 
         // Assert
         result.Should().NotBeEmpty();
-        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverReasonExceedsTwoHundredCharacterLimit);
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.OrganisationChangeReasonCannotBeLongerThan200Characters);
     }
 
     [TestMethod]
-    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdLeaverCode_WithLeaverReasonNotExceedingAllowedMaxLength()
+    public async Task ValidateOrganisationsAsync_WithEmptyRegistrationTypeCode_OnCSUpload()
+    {
+        // Arrange
+        var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { RegistrationTypeCode = string.Empty } };
+        var service = CreateService();
+
+        // Act
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage { ComplianceSchemeId = "1" }, false);
+
+        // Assert
+        result.Should().NotBeEmpty();
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.RegistrationTypeCodeIsMandatoryCS);
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdLeaverCode_WithOrganisationChangeReasonNotExceedingAllowedMaxLength()
     {
         // Arrange
         var organisations = new List<OrganisationDataRow>
@@ -2743,7 +2355,7 @@ public class ValidationServiceTests
             {
                 SubsidiaryId = "1",
                 LeaverCode = "Any",
-                LeaverReason = new string('X', 200),
+                OrganisationChangeReason = new string('X', 200),
                 LeaverDate = "01/01/2022",
             },
         };
@@ -2754,7 +2366,7 @@ public class ValidationServiceTests
 
         // Assert
         result.SelectMany(x => x.ColumnErrors.Select(y => y.ErrorCode)).ToList()
-            .Should().NotContain(new[] { ErrorCodes.LeaverReasonExceedsTwoHundredCharacterLimit });
+            .Should().NotContain(new[] { ErrorCodes.OrganisationChangeReasonCannotBeLongerThan200Characters });
     }
 
     private ValidationService CreateService(ValidationSettings? settings = null)

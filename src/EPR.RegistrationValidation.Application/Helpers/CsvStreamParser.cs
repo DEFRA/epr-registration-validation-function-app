@@ -83,9 +83,8 @@ public class CsvStreamParser : ICsvStreamParser
                 var leaverAndJoinerColumns = new HashSet<string>
                 {
                     "leaver_code",
-                    "leaver_reason",
+                    "organisation_change_reason",
                     "leaver_date",
-                    "reporting_type",
                     "joiner_date",
                 };
 

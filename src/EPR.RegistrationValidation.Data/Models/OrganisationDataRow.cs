@@ -315,14 +315,10 @@ public class OrganisationDataRow : ICsvDataRow
     public string LeaverDate { get; set; }
 
     [Column(76)]
-    [Name("leaver_reason")]
-    public string LeaverReason { get; set; }
+    [Name("organisation_change_reason")]
+    public string OrganisationChangeReason { get; set; }
 
     [Column(77)]
-    [Name("reporting_type")]
-    public string ReportingType { get; set; }
-
-    [Column(78)]
     [Name("joiner_date")]
     public string JoinerDate { get; set; }
 }

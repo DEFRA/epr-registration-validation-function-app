@@ -12,13 +12,11 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class LeaverDateValidatorTests
 {
     [TestMethod]
-    [DataRow("A", "")]
-    [DataRow("", "test")]
-    public async Task Validate_WithSubsidiaryIdAndLeaverCodeNotEmptyAndEmptyLeaverDate_IsNotValid(string leaverCode, string leaverReason)
+    public async Task Validate_WithSubsidiaryIdAndLeaverCodeNotEmptyAndEmptyLeaverDate_IsNotValid()
     {
         // Arrange
-        var validator = new LeaverDateValidator();
-        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = leaverCode, LeaverReason = leaverReason };
+        var validator = new LeaverDateValidator(false);
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "A" };
 
         // Act
         var result = await validator.TestValidateAsync(orgDataRow);
@@ -27,7 +25,24 @@ public class LeaverDateValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.LeaverDate);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.LeaverDateMustBePresentWhenLeaverCodeOrReasonPresent);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.LeaverDateMustBePresentWhenLeaverCodePresent);
+    }
+
+    [TestMethod]
+    public async Task Validate_WithUploadedByCSAndLeaverCodeNotEmptyAndEmptyLeaverDate_IsNotValid()
+    {
+        // Arrange
+        var validator = new LeaverDateValidator(true);
+        var orgDataRow = new OrganisationDataRow { LeaverCode = "A" };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
+        result.ShouldHaveValidationErrorFor(x => x.LeaverDate);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.LeaverDateMustBePresentWhenLeaverCodePresentCS);
     }
 
     [TestMethod]
@@ -39,7 +54,7 @@ public class LeaverDateValidatorTests
     public async Task Validate_WithSubsidiaryIdAndLeaverCodeNotEmptyAndInvalidLeaverDateFormat_IsNotValid(string date)
     {
         // Arrange
-        var validator = new LeaverDateValidator();
+        var validator = new LeaverDateValidator(false);
         var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "Any", LeaverDate = date };
 
         // Act
@@ -56,7 +71,7 @@ public class LeaverDateValidatorTests
     public async Task Validate_WithSubsidiaryIdAndLeaverDateBeforeJoinerDate_IsInvalid()
     {
         // Arrange
-        var validator = new LeaverDateValidator();
+        var validator = new LeaverDateValidator(false);
         var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "Any", JoinerDate = "02/01/2000", LeaverDate = "01/01/2000" };
 
         // Act
@@ -70,6 +85,46 @@ public class LeaverDateValidatorTests
     }
 
     [TestMethod]
+    public async Task Validate_WithSubsidiaryIdAndCSUploadAndLeaverDateBeforeJoinerDate_IsInvalid()
+    {
+        // Arrange
+        var validator = new LeaverDateValidator(true);
+        var orgDataRow = new OrganisationDataRow { LeaverCode = "Any", JoinerDate = "02/01/2000", LeaverDate = "01/01/2000" };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
+        result.ShouldHaveValidationErrorFor(x => x.LeaverDate);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.LeaverDateMustBeAfterJoinerDateCS);
+    }
+
+    [TestMethod]
+    public async Task Validate_WithSubsidiaryIdAndLeaverDateInTheFuture_IsInvalid()
+    {
+        // Arrange
+        var validator = new LeaverDateValidator(false);
+        var orgDataRow = new OrganisationDataRow
+        {
+            SubsidiaryId = "1",
+            LeaverCode = "A",
+            JoinerDate = "02/01/2000",
+            LeaverDate = DateTime.Now.AddDays(2).ToString("dd/MM/yyyy"),
+        };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
+        result.ShouldHaveValidationErrorFor(x => x.LeaverDate);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.LeaverDateCannotBeInTheFuture);
+    }
+
+    [TestMethod]
     [DataRow(null)]
     [DataRow("")]
     [DataRow("2000/01/01")]
@@ -80,7 +135,7 @@ public class LeaverDateValidatorTests
     public async Task Validate_WithSubsidiaryIdAndInvalidJoinerDateAndValidLeaverDate_IsValid(string date)
     {
         // Arrange
-        var validator = new LeaverDateValidator();
+        var validator = new LeaverDateValidator(false);
         var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", JoinerDate = date, LeaverDate = "01/01/2000" };
 
         // Act
@@ -95,7 +150,7 @@ public class LeaverDateValidatorTests
     public async Task Validate_WithSubsidiaryIdAndLeaverCodeNotEmptyAndValidLeaverDateFormat_IsValid()
     {
         // Arrange
-        var validator = new LeaverDateValidator();
+        var validator = new LeaverDateValidator(false);
         var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "Any", JoinerDate = "01/01/2000", LeaverDate = "02/01/2000" };
 
         // Act

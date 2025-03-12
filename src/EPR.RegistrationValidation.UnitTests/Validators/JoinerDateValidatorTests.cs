@@ -11,23 +11,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class JoinerDateValidatorTests
 {
     [TestMethod]
-    public async Task Validate_WithSubsidiaryIdAndEmptyJoinerDate_IsNotValid()
-    {
-        // Arrange
-        var validator = new JoinerDateValidator();
-        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1" };
-
-        // Act
-        var result = await validator.TestValidateAsync(orgDataRow);
-
-        // Assert
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().NotBeEmpty();
-        result.ShouldHaveValidationErrorFor(x => x.JoinerDate);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.JoinerDateIsRequired);
-    }
-
-    [TestMethod]
     [DataRow("2000/01/01")]
     [DataRow("2000/20/01")]
     [DataRow("2000/1/1")]
@@ -47,6 +30,26 @@ public class JoinerDateValidatorTests
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.JoinerDate);
         result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.InvalidJoinerDateFormat);
+    }
+
+    [TestMethod]
+    public async Task Validate_WithFutureJoinerDate_IsInvalid()
+    {
+        // Arrange
+        var validator = new JoinerDateValidator();
+        var orgDataRow = new OrganisationDataRow
+        {
+            JoinerDate = DateTime.Now.AddDays(2).ToString("dd/MM/yyyy"),
+        };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
+        result.ShouldHaveValidationErrorFor(x => x.JoinerDate);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.JoinerDateCannotBeInTheFuture);
     }
 
     [TestMethod]

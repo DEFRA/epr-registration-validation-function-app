@@ -75,7 +75,7 @@ public class ValidationService : IValidationService
     {
         List<RegistrationValidationError> validationErrors = new();
 
-        var rowValidationResult = await ValidateRowsAsync(rows);
+        var rowValidationResult = await ValidateRowsAsync(rows, !string.IsNullOrEmpty(blobQueueMessage.ComplianceSchemeId));
         validationErrors.AddRange(rowValidationResult.ValidationErrors);
 
         var organisationSubsidiaryRelationshipsResult = ValidateOrganisationSubsidiaryRelationships(rows, rowValidationResult.TotalErrors);
@@ -115,8 +115,10 @@ public class ValidationService : IValidationService
         return validationErrors;
     }
 
-    public async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateRowsAsync(IList<OrganisationDataRow> rows)
+    public async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateRowsAsync(IList<OrganisationDataRow> rows, bool uploadedByComplianceScheme)
     {
+        _organisationDataRowValidator.RegisterValidators(uploadedByComplianceScheme);
+
         List<RegistrationValidationError> validationErrors = new();
         int totalErrors = 0;
         foreach (var row in rows.TakeWhile(_ => totalErrors < _validationSettings.ErrorLimit))
@@ -391,55 +393,6 @@ public class ValidationService : IValidationService
                 if (!string.Equals(row.CompaniesHouseNumber, matchingSub.CompaniesHouseNumber))
                 {
                     totalErrors = AddValidationError(row, ErrorCodes.SubsidiaryIdDoesNotMatchCompaniesHouseNumber, "This companies house number does not match the subsidiary ID", validationErrors, totalErrors, errorLimit, nameof(OrganisationDataRow.CompaniesHouseNumber));
-                }
-
-                if (_featureManager != null && _featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
-                {
-                    if (matchingSub.SubsidiaryExists &&
-                        !matchingSub.SubsidiaryBelongsToAnyOtherOrganisation &&
-                        !matchingSub.SubsidiaryDoesNotBelongToAnyOrganisation)
-                    {
-                        bool rowJoinerDateIsBlank = string.IsNullOrWhiteSpace(row.JoinerDate);
-                        bool matchingSubJoinerDateExists = matchingSub.JoinerDate.HasValue;
-
-                        bool hasJoinerDateValidationErrors = existingErrors
-                            .Any(e => e.RowNumber == row.LineNumber && e.ColumnErrors
-                                .Any(ce => ce.ErrorCode == ErrorCodes.JoinerDateIsRequired || ce.ErrorCode == ErrorCodes.InvalidJoinerDateFormat));
-
-                        bool hasReportingTypeValidationErrors = existingErrors
-                            .Any(e => e.RowNumber == row.LineNumber && e.ColumnErrors
-                                .Any(ce => ce.ErrorCode == ErrorCodes.ReportingTypeIsRequired || ce.ErrorCode == ErrorCodes.InvalidReportingType));
-
-                        if (!hasJoinerDateValidationErrors &&
-                            ((rowJoinerDateIsBlank && matchingSubJoinerDateExists) ||
-                            (!rowJoinerDateIsBlank && !matchingSubJoinerDateExists) ||
-                            (DateTime.TryParseExact(row.JoinerDate, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime parsedJoinerDate) &&
-                            matchingSubJoinerDateExists && matchingSub.JoinerDate.Value.Date != parsedJoinerDate.Date)))
-                            {
-                                _logger.LogWarning("JoinerValidation: Entered Date Validation Error");
-                                totalErrors = AddValidationError(
-                                    row,
-                                    ErrorCodes.JoinerDateDoesNotMatchJoinerDateInDatabase,
-                                    "Joiner date does not match joiner date in database",
-                                    validationErrors,
-                                    totalErrors,
-                                    errorLimit,
-                                    nameof(OrganisationDataRow.JoinerDate));
-                            }
-
-                        if (!hasReportingTypeValidationErrors &&
-                            !string.Equals(row.ReportingType, matchingSub.ReportingType, StringComparison.OrdinalIgnoreCase))
-                            {
-                                totalErrors = AddValidationError(
-                                    row,
-                                    ErrorCodes.ReportingTypeDoesNotMatchReportingTypeInDatabase,
-                                    "Reporting type does not match reporting type in database",
-                                    validationErrors,
-                                    totalErrors,
-                                    errorLimit,
-                                    nameof(OrganisationDataRow.ReportingType));
-                            }
-                    }
                 }
             }
 

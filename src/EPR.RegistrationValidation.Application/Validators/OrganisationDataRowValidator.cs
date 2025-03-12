@@ -9,8 +9,22 @@ using Microsoft.FeatureManagement;
 [ExcludeFromCodeCoverage]
 public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRow>
 {
+    private readonly IFeatureManager _featureManager;
+    private bool _validatorsRegistred;
+
     public OrganisationDataRowValidator(IFeatureManager featureManager)
     {
+        _featureManager = featureManager;
+        _validatorsRegistred = false;
+    }
+
+    public void RegisterValidators(bool uploadedByComplianceScheme)
+    {
+        if (_validatorsRegistred)
+        {
+            return;
+        }
+
         Include(new OrganisationIdValidator());
         Include(new OrganisationNameValidator());
         Include(new OrganisationTradingNameValidator());
@@ -28,19 +42,21 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
         Include(new CompanyHouseValidator());
         Include(new OrganisationTypeValidator());
 
-        if (featureManager != null && featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
+        if (_featureManager != null && _featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
         {
-            Include(new LeaverCodeValidator());
+            Include(new LeaverCodeValidator(uploadedByComplianceScheme));
             Include(new JoinerDateValidator());
-            Include(new ReportingTypeValidator());
-            Include(new LeaverDateValidator());
-            Include(new LeaverReasonValidator());
+            Include(new LeaverDateValidator(uploadedByComplianceScheme));
+            Include(new OrganisationChangeReasonValidator());
+            Include(new RegistrationTypeCodeValidator(uploadedByComplianceScheme));
         }
 
-        if (featureManager != null && featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result)
+        if (_featureManager != null && _featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result)
         {
             Include(new OrganisationSizeValidator());
             Include(new OrganisationSizeTurnoverValidator());
         }
+
+        _validatorsRegistred = true;
     }
 }
