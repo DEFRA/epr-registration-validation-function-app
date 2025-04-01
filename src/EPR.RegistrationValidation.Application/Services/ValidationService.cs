@@ -84,15 +84,12 @@ public class ValidationService : IValidationService
         var duplicateValidationResult = ValidateDuplicates(rows, rowValidationResult.TotalErrors);
         validationErrors.AddRange(duplicateValidationResult.ValidationErrors);
 
-        var organisationSubTypeValidationResult = ValidateOrganisationSubType(rows, duplicateValidationResult.TotalErrors);
-        validationErrors.AddRange(organisationSubTypeValidationResult.ValidationErrors);
-
         if (validateCompanyDetailsData)
         {
             var companyDetailsValidationResult = await ValidateCompanyDetails(new ValidateCompanyDetailsModel
             {
                 OrganisationDataRows = rows,
-                TotalErrors = organisationSubTypeValidationResult.TotalErrors,
+                TotalErrors = duplicateValidationResult.TotalErrors,
                 ComplianceSchemeId = blobQueueMessage.ComplianceSchemeId,
                 UserId = blobQueueMessage.UserId,
                 ProducerOrganisationId = blobQueueMessage.OrganisationId,
@@ -103,7 +100,7 @@ public class ValidationService : IValidationService
         }
         else
         {
-            _logger.LogInformation("Total validation errors {Count}", organisationSubTypeValidationResult.TotalErrors);
+            _logger.LogInformation("Total validation errors {Count}", duplicateValidationResult.TotalErrors);
         }
 
         if (await _featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryValidation))
@@ -243,63 +240,6 @@ public class ValidationService : IValidationService
                         .Where(e => !errors.Contains(e)));
 
         return errors;
-    }
-
-    public (int TotalErrors, List<RegistrationValidationError> ValidationErrors) ValidateOrganisationSubType(IList<OrganisationDataRow> rows, int totalErrors)
-    {
-        List<RegistrationValidationError> validationErrors = new();
-
-        var headOrgTypeCodes = new List<string>()
-        {
-            OrganisationSubTypeCodes.Licensor,
-            OrganisationSubTypeCodes.PubOperator,
-            OrganisationSubTypeCodes.Franchisor,
-        };
-
-        var subOrgTypeCodes = new List<string>()
-        {
-            OrganisationSubTypeCodes.Franchisee,
-            OrganisationSubTypeCodes.Tenant,
-            OrganisationSubTypeCodes.Others,
-        };
-
-        var orgSubTypeCode =
-            _metaDataProvider.GetOrganisationColumnMetaData(nameof(OrganisationDataRow.OrganisationSubTypeCode));
-
-        var headOrgs = rows
-                .Where(row => headOrgTypeCodes.Contains(row.OrganisationSubTypeCode));
-
-        var childOrgsIds = rows
-                .Where(row => subOrgTypeCodes.Contains(row.OrganisationSubTypeCode) && !string.IsNullOrEmpty(row.SubsidiaryId))
-                .Select(x => x.DefraId).ToHashSet();
-
-        foreach (var invalidHeadOrg in headOrgs
-            .Where(x => !childOrgsIds.Contains(x.DefraId))
-            .TakeWhile(_ => totalErrors < _validationSettings.ErrorLimit))
-        {
-            var orgSubTypeCodeValidationError = new ColumnValidationError
-            {
-                ErrorCode = ErrorCodes.HeadOrganisationMissingSubOrganisation,
-                ColumnIndex = orgSubTypeCode?.Index,
-                ColumnName = orgSubTypeCode?.Name,
-            };
-
-            var error = new RegistrationValidationError
-            {
-                RowNumber = invalidHeadOrg.LineNumber,
-                OrganisationId = invalidHeadOrg.DefraId,
-                SubsidiaryId = invalidHeadOrg.SubsidiaryId,
-            };
-            error.ColumnErrors.Add(orgSubTypeCodeValidationError);
-
-            var errorMessage = $"Head organisation of type {invalidHeadOrg.OrganisationSubTypeCode} must have sub type underneath it";
-
-            LogValidationWarning(invalidHeadOrg.LineNumber, errorMessage, ErrorCodes.HeadOrganisationMissingSubOrganisation);
-            validationErrors.Add(error);
-            totalErrors++;
-        }
-
-        return (totalErrors, validationErrors);
     }
 
     public async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateCompanyDetails(ValidateCompanyDetailsModel validateCompanyDetailsModel)

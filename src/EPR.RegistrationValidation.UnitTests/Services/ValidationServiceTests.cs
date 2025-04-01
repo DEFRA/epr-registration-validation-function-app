@@ -283,66 +283,6 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
-    public async Task ValidateOrganisationSubType_WithNoSubOrganisationType_ReturnsRowError()
-    {
-        // Arrange
-        const int rowCount = 20;
-        const int maxErrors = 10;
-        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
-        dataRows[0].OrganisationSubTypeCode = OrganisationSubTypeCodes.Licensor;
-        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
-
-        // Act
-        var results = service.ValidateOrganisationSubType(dataRows.ToList(), 0);
-
-        // Assert
-        var validationError = results.ValidationErrors.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.HeadOrganisationMissingSubOrganisation));
-        validationError.Should().NotBeNull();
-    }
-
-    [TestMethod]
-    public async Task ValidateOrganisationSubType_WithSubOrganisationTypeAndEmptySubsidiaryID_ReturnsRowError()
-    {
-        // Arrange
-        const int rowCount = 20;
-        const int maxErrors = 10;
-        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
-        dataRows[0].OrganisationSubTypeCode = OrganisationSubTypeCodes.Licensor;
-        dataRows[1].DefraId = dataRows[0].DefraId;
-        dataRows[1].OrganisationSubTypeCode = OrganisationSubTypeCodes.Tenant;
-        dataRows[1].SubsidiaryId = string.Empty;
-        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
-
-        // Act
-        var results = service.ValidateOrganisationSubType(dataRows.ToList(), 0);
-
-        // Assert
-        var validationError = results.ValidationErrors.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.HeadOrganisationMissingSubOrganisation));
-        validationError.Should().NotBeNull();
-    }
-
-    [TestMethod]
-    public async Task ValidateOrganisationSubType_WithSubOrganisationType_ExpectNoValidationErrors()
-    {
-        // Arrange
-        const int rowCount = 20;
-        const int maxErrors = 10;
-        var dataRows = RowDataTestHelper.GenerateOrgs(rowCount).ToArray();
-        dataRows[0].OrganisationSubTypeCode = OrganisationSubTypeCodes.Licensor;
-        dataRows[1].DefraId = dataRows[0].DefraId;
-        dataRows[1].OrganisationSubTypeCode = OrganisationSubTypeCodes.Tenant;
-        dataRows[1].SubsidiaryId = "54321";
-        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
-
-        // Act
-        var results = service.ValidateOrganisationSubType(dataRows.ToList(), 0);
-
-        // Assert
-        var validationError = results.ValidationErrors.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.HeadOrganisationMissingSubOrganisation));
-        validationError.Should().BeNull();
-    }
-
-    [TestMethod]
     public async Task OrganisationMainActivitySicValidation_WhenMainActivitySicInvalid_ThenError()
     {
         // Arrange

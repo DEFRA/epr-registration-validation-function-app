@@ -44,7 +44,6 @@ public static class ErrorCodes
     public const string MissingServiceOfNoticeAddressLine1 = "845";
     public const string MissingServiceOfNoticePostcode = "846";
     public const string MissingServiceOfNoticePhoneNumber = "847";
-    public const string HeadOrganisationMissingSubOrganisation = "848";
     public const string TurnoverHasComma = "855";
     public const string InvalidTurnoverDecimalValues = "856";
     public const string TurnoverHasZeroOrNegativeValue = "857";
