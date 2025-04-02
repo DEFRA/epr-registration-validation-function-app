@@ -95,6 +95,16 @@ public class RegistrationService : IRegistrationService
                 _options.BlobContainerName,
                 ErrorCodes.CsvFileInvalidHeaderErrorCode);
         }
+        catch (CompanyDetailsApiClientException ex)
+        {
+            _logger.LogCritical(ex, ex.Message);
+
+            validationEvent = CreateValidationEvent(
+                GetEventType(blobQueueMessage.SubmissionSubType),
+                blobQueueMessage.BlobName,
+                _options.BlobContainerName,
+                ErrorCodes.UncaughtExceptionErrorCode);
+        }
         catch (Exception ex)
         {
             _logger.LogCritical(ex, "An unexpected error has occurred when processing the service bus message");
@@ -153,6 +163,8 @@ public class RegistrationService : IRegistrationService
         int? organisationMemberCount = null;
 
         var validationErrors = new List<RegistrationValidationError>();
+        var validationWarnings = new List<RegistrationValidationWarning>();
+
         if (await IsOrgDataValidationEnabledAsync(blobQueueMessage))
         {
             if (_validationService.IsColumnLengthExceeded(csvRows))
@@ -168,6 +180,8 @@ public class RegistrationService : IRegistrationService
                 csvRows,
                 blobQueueMessage,
                 await IsCompanyDetailsDataValidationEnabledAsync(blobQueueMessage));
+
+            validationWarnings = await _validationService.ValidateOrganisationWarningsAsync(csvRows);
         }
 
         if (validationErrors.Count == 0)
@@ -178,6 +192,7 @@ public class RegistrationService : IRegistrationService
         return CreateValidationEvent(
             csvRows,
             validationErrors,
+            validationWarnings,
             blobQueueMessage.BlobName,
             _options.BlobContainerName,
             _validationSettings.ErrorLimit,

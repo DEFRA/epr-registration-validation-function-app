@@ -3,6 +3,7 @@
 using System.Globalization;
 using Data.Constants;
 using Data.Models;
+using EPR.RegistrationValidation.Application.Services.HelperFunctions;
 using FluentValidation;
 
 public class TotalTonnageValidator : AbstractValidator<OrganisationDataRow>
@@ -14,7 +15,7 @@ public class TotalTonnageValidator : AbstractValidator<OrganisationDataRow>
             .Must(NotContainComma).WithErrorCode(ErrorCodes.TotalTonnageIncludesComma)
             .Must(BeNumeric).WithErrorCode(ErrorCodes.TotalTonnageIsNotNumber)
             .Must(BeGreaterThanZero).WithErrorCode(ErrorCodes.TotalTonnageMustBeGreaterThanZero)
-            .When(orgRow => !string.IsNullOrEmpty(orgRow.TotalTonnage));
+            .When(orgRow => !string.IsNullOrEmpty(orgRow.TotalTonnage) && !HelperFunctions.HasMetZeroReturnYesNoCondition(orgRow));
     }
 
     private static bool BeNumeric(string number)

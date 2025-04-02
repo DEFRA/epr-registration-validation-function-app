@@ -26,8 +26,10 @@ public static class ServiceCollectionExtensions
         services.AddTransient<CompanyDetailsApiAuthorisationHandler>();
         services.AddScoped<IValidationService, ValidationService>();
         services.AddScoped<OrganisationDataRowValidator>();
+        services.AddScoped<OrganisationDataRowWarningValidator>();
         services.AddScoped<BrandDataRowValidator>();
         services.AddScoped<PartnerDataRowValidator>();
+        services.AddScoped<RowValidators>();
         services.AddScoped<ISubsidiaryDetailsRequestBuilder, SubsidiaryDetailsRequestBuilder>();
 
         return services;

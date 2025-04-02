@@ -38,6 +38,7 @@ public class ValidationService : IValidationService
     };
 
     private readonly OrganisationDataRowValidator _organisationDataRowValidator;
+    private readonly OrganisationDataRowWarningValidator _organisationDataRowWarningValidator;
     private readonly BrandDataRowValidator _brandDataRowValidator;
     private readonly PartnerDataRowValidator _partnerDataRowValidator;
     private readonly ColumnMetaDataProvider _metaDataProvider;
@@ -50,9 +51,7 @@ public class ValidationService : IValidationService
     private Dictionary<string, CompanyDetailsDataResult> _complianceSchemeMembersLookup;
 
     public ValidationService(
-        OrganisationDataRowValidator organisationDataRowValidator,
-        BrandDataRowValidator brandDataRowValidator,
-        PartnerDataRowValidator partnerDataRowValidator,
+        RowValidators rowValidators,
         ColumnMetaDataProvider metaDataProvider,
         IOptions<ValidationSettings> validationSettings,
         ICompanyDetailsApiClient companyDetailsApiClient,
@@ -60,9 +59,10 @@ public class ValidationService : IValidationService
         IFeatureManager featureManager,
         ISubsidiaryDetailsRequestBuilder subsidiaryDetailsRequestBuilder)
     {
-        _organisationDataRowValidator = organisationDataRowValidator;
-        _brandDataRowValidator = brandDataRowValidator;
-        _partnerDataRowValidator = partnerDataRowValidator;
+        _organisationDataRowValidator = rowValidators.OrganisationDataRowValidator;
+        _organisationDataRowWarningValidator = rowValidators.OrganisationDataRowWarningValidator;
+        _brandDataRowValidator = rowValidators.BrandDataRowValidator;
+        _partnerDataRowValidator = rowValidators.PartnerDataRowValidator;
         _metaDataProvider = metaDataProvider;
         _companyDetailsApiClient = companyDetailsApiClient;
         _logger = logger;
@@ -110,6 +110,47 @@ public class ValidationService : IValidationService
         }
 
         return validationErrors;
+    }
+
+    public async Task<List<RegistrationValidationWarning>> ValidateOrganisationWarningsAsync(List<OrganisationDataRow> rows)
+    {
+        List<RegistrationValidationWarning> validationWarnings = new();
+        int totalWarnings = 0;
+
+        foreach (var row in rows.TakeWhile(_ => totalWarnings < _validationSettings.ErrorLimit))
+        {
+            var result = await _organisationDataRowWarningValidator.ValidateAsync(row);
+
+            if (result.IsValid)
+            {
+                continue;
+            }
+
+            var warning = new RegistrationValidationWarning
+            {
+                RowNumber = row.LineNumber,
+                OrganisationId = row.DefraId,
+                SubsidiaryId = row.SubsidiaryId,
+            };
+
+            foreach (var validationWarning in result.Errors.TakeWhile(_ => totalWarnings < _validationSettings.ErrorLimit))
+            {
+                var columnMeta = _metaDataProvider.GetOrganisationColumnMetaData(validationWarning.PropertyName);
+                warning.ColumnErrors.Add(new ColumnValidationError
+                {
+                    ErrorCode = validationWarning.ErrorCode,
+                    ColumnIndex = columnMeta?.Index,
+                    ColumnName = columnMeta?.Name,
+                });
+
+                LogValidationWarning(row.LineNumber, validationWarning);
+                totalWarnings++;
+            }
+
+            validationWarnings.Add(warning);
+        }
+
+        return validationWarnings;
     }
 
     public async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateRowsAsync(IList<OrganisationDataRow> rows, bool uploadedByComplianceScheme)
@@ -432,12 +473,23 @@ public class ValidationService : IValidationService
         return true;
     }
 
-    private SubsidiaryDetail FindMatchingSubsidiary(SubsidiaryDetailsResponse result, string defraId, string subsidiaryId)
+    private static SubsidiaryDetail FindMatchingSubsidiary(SubsidiaryDetailsResponse result, string defraId, string subsidiaryId)
     {
         return result.SubsidiaryOrganisationDetails
             ?.FirstOrDefault(org => org.OrganisationReference == defraId)
             ?.SubsidiaryDetails
             ?.FirstOrDefault(sub => sub.ReferenceNumber == subsidiaryId);
+    }
+
+    private static ValidationContext<T> CreateValidationContextWithLookupData<T>(T row, OrganisationDataLookupTable organisationDataLookup)
+    {
+        var context = new ValidationContext<T>(row);
+        if (organisationDataLookup?.Data is not null && organisationDataLookup.Data.Count > 0)
+        {
+            context.RootContextData[nameof(OrganisationDataLookupTable)] = organisationDataLookup;
+        }
+
+        return context;
     }
 
     private int AddValidationError(
@@ -537,17 +589,6 @@ public class ValidationService : IValidationService
         }
 
         return errors;
-    }
-
-    private ValidationContext<T> CreateValidationContextWithLookupData<T>(T row, OrganisationDataLookupTable organisationDataLookup)
-    {
-        var context = new ValidationContext<T>(row);
-        if (organisationDataLookup?.Data is not null && organisationDataLookup.Data.Count > 0)
-        {
-            context.RootContextData[nameof(OrganisationDataLookupTable)] = organisationDataLookup;
-        }
-
-        return context;
     }
 
     private void LogMissingIdentifierErrors(IEnumerable<OrganisationIdentifiers> missingIdentifiers, string errorCode)

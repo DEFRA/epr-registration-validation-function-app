@@ -87,4 +87,7 @@ public static class ErrorCodes
     public const string LeaverCodeMustBePresentWhenLeaverDatePresentCS = "913";
     public const string LeaverDateMustBePresentWhenLeaverCodePresentCS = "914";
     public const string LeaverDateMustBeAfterJoinerDateCS = "915";
+
+    /* Issue codes for warnings */
+    public const string WarningZeroTurnover = "73";
 }

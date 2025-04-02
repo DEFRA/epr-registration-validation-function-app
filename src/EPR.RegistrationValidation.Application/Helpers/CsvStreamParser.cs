@@ -59,7 +59,7 @@ public class CsvStreamParser : ICsvStreamParser
                 csv.Context.RegisterClassMap<MinimalOrganisationDataRowMap>();
             }
 
-            csv.Read();
+            await csv.ReadAsync();
             csv.ReadHeader();
 
             var header = csv.HeaderRecord;

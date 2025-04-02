@@ -410,3 +410,4 @@ FodyWeavers.xsd
 **/appsettings.Development.json
 **/local.settings.json
 **/serviceDependencies.local.json
+/src/EPR.RegistrationValidation.Functions/local.settings.json

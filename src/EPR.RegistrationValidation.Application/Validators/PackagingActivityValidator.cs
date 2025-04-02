@@ -2,6 +2,7 @@
 
 using Data.Models;
 using EPR.RegistrationValidation.Application.Constants;
+using EPR.RegistrationValidation.Application.Services.HelperFunctions;
 using EPR.RegistrationValidation.Data.Constants;
 using FluentValidation;
 
@@ -11,7 +12,7 @@ public class PackagingActivityValidator : AbstractValidator<OrganisationDataRow>
     {
         Include(new BasicPackagingActivityValidator());
 
-        When(row => PrimaryPackagingActivityCount(row) > 1, () =>
+        When(row => PrimaryPackagingActivityCount(row) > 1 && !HelperFunctions.HasMetZeroReturnNoPackagingActivity(row), () =>
         {
             RuleFor(x => x.PackagingActivitySO)
                 .Must(IsNotPrimaryActivity)
@@ -36,7 +37,7 @@ public class PackagingActivityValidator : AbstractValidator<OrganisationDataRow>
                 .WithErrorCode(ErrorCodes.MultiplePrimaryActivity);
         });
 
-        When(row => PrimaryPackagingActivityCount(row) == 0, () =>
+        When(row => PrimaryPackagingActivityCount(row) == 0 && !HelperFunctions.HasMetZeroReturnNoPackagingActivity(row), () =>
         {
             RuleFor(x => x.PackagingActivitySO)
                 .Must(IsPrimaryActivity)
@@ -77,12 +78,12 @@ public class PackagingActivityValidator : AbstractValidator<OrganisationDataRow>
         return packagingActivities.Count(activity => activity?.Equals(PackagingActivities.Primary, StringComparison.OrdinalIgnoreCase) ?? false);
     }
 
-    private bool IsPrimaryActivity(string? packagingActivity)
+    private static bool IsPrimaryActivity(string? packagingActivity)
     {
         return packagingActivity?.Equals(PackagingActivities.Primary, StringComparison.OrdinalIgnoreCase) ?? false;
     }
 
-    private bool IsNotPrimaryActivity(string? packagingActivity)
+    private static bool IsNotPrimaryActivity(string? packagingActivity)
     {
         return !IsPrimaryActivity(packagingActivity);
     }

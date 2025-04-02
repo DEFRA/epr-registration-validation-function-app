@@ -241,6 +241,46 @@ public class RegistrationServiceTests
     }
 
     [TestMethod]
+    public void ProcessServiceBusMessage_Throws_CompanyDetailsApiClientException_ValidationErrorEventIsCreated()
+    {
+        // Arrange
+        var blobName = "test";
+        _blobQueueMessage = new BlobQueueMessage
+        {
+            UserId = Guid.NewGuid().ToString(),
+            OrganisationId = Guid.NewGuid().ToString(),
+            SubmissionId = Guid.NewGuid().ToString(),
+            SubmissionSubType = SubmissionSubType.CompanyDetails.ToString(),
+            BlobName = blobName,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .Throws<CompanyDetailsApiClientException>();
+
+        // Act
+        _sut.ProcessServiceBusMessage(JsonConvert.SerializeObject(_blobQueueMessage));
+
+        // Assert
+        _submissionApiClientMock.Verify(
+            m =>
+                m.SendEventRegistrationMessage(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.Is<ValidationEvent>(
+                        x =>
+                        x.BlobContainerName == ContainerName
+                        && x.BlobName == blobName
+                        && x.Errors.Count == 1 && x.Errors[0] == ErrorCodes.UncaughtExceptionErrorCode
+                        && !x.IsValid)),
+            Times.Once);
+    }
+
+    [TestMethod]
     public void ProcessServiceBusMessage_WhenCsvFileIsEmpty_AddsErrorAndLogs()
     {
         // Arrange

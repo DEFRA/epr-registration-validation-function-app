@@ -9,6 +9,8 @@ public interface IValidationService
 {
     Task<List<RegistrationValidationError>> ValidateOrganisationsAsync(List<OrganisationDataRow> rows, BlobQueueMessage blobQueueMessage, bool validateCompanyDetailsData);
 
+    Task<List<RegistrationValidationWarning>> ValidateOrganisationWarningsAsync(List<OrganisationDataRow> rows);
+
     bool IsColumnLengthExceeded(List<OrganisationDataRow> rows);
 
     Task<List<string>> ValidateAppendedFileAsync<T>(List<T> rows, OrganisationDataLookupTable organisationLookup)

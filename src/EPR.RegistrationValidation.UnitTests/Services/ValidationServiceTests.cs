@@ -239,6 +239,87 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
+    public async Task ValidateOrganisationWarningsAsync_Validates_Return_NoWarnings()
+    {
+        // Arrange
+        const int rowCount = 20;
+        const int maxErrors = 10;
+        var dataRows = RowDataTestHelper.GenerateInvalidOrgs(rowCount);
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        // Act
+        var results = await service.ValidateOrganisationWarningsAsync(dataRows.ToList());
+
+        // Assert
+        results.Count.Should().Be(0);
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisationWarningsAsync_Validates_With_Warning()
+    {
+        // Arrange
+        var i = 123;
+        const int maxErrors = 1;
+
+        List<OrganisationDataRow> orgDataRowList = new()
+        {
+            new OrganisationDataRow
+            {
+                DefraId = "12345" + i,
+                SubsidiaryId = "678",
+                OrganisationName = $"{i} ltd",
+                HomeNationCode = "EN",
+                PrimaryContactPersonFirstName = $"{i}FName",
+                PrimaryContactPersonLastName = $"{i}LName",
+                PrimaryContactPersonEmail = $"email{i}@test.com",
+                PrimaryContactPersonPhoneNumber = $"07895462{i}",
+                PackagingActivitySO = "No",
+                PackagingActivityHl = "No",
+                PackagingActivityPf = "No",
+                PackagingActivitySl = "No",
+                PackagingActivityIm = "No",
+                PackagingActivityOm = "No",
+                PackagingActivitySe = "No",
+                ProduceBlankPackagingFlag = "No",
+                LiableForDisposalCostsFlag = "Yes",
+                MeetReportingRequirementsFlag = "Yes",
+                Turnover = "0",
+                ServiceOfNoticeAddressLine1 = "9 Surrey",
+                ServiceOfNoticeAddressPostcode = "KT5 8JU",
+                ServiceOfNoticeAddressPhoneNumber = "0123456789",
+                AuditAddressLine1 = "10 Southcote",
+                AuditAddressCountry = AuditingCountryCodes.England.ToLower(),
+                AuditAddressPostcode = "KT5 9UW",
+                TotalTonnage = "25",
+                PrincipalAddressLine1 = "Principal Address Line 1",
+                PrincipalAddressPostcode = "Principal Address Postcode",
+                PrincipalAddressPhoneNumber = "01237946",
+                OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
+                OrganisationSize = OrganisationSizeCodes.L.ToString(),
+                JoinerDate = "01/01/2000",
+                RegistrationTypeCode = RegistrationTypeCodes.Individual,
+            },
+        };
+
+        var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
+
+        // Act
+        var results = await service.ValidateOrganisationWarningsAsync(orgDataRowList);
+
+        // Assert
+        results.Count.Should().Be(1);
+        results[0].ColumnErrors
+            .Should()
+            .HaveCount(1);
+
+        results[0].ColumnErrors.Select(x => x.ErrorCode)
+            .Should()
+            .HaveCount(1)
+            .And.BeEquivalentTo("73");
+    }
+
+    [TestMethod]
     public async Task ValidateDuplicates_WithDuplicateRows_AndRowCountGreaterThanErrorLimit_ReturnsLimitedErrors()
     {
         // Arrange
@@ -2321,10 +2402,14 @@ public class ValidationServiceTests
 
         _companyDetailsApiClientMock = new Mock<ICompanyDetailsApiClient>();
 
-        return new ValidationService(
+        var rowValidators = new RowValidators(
             new OrganisationDataRowValidator(featureManageMock.Object),
+            new OrganisationDataRowWarningValidator(),
             new BrandDataRowValidator(),
-            new PartnerDataRowValidator(),
+            new PartnerDataRowValidator());
+
+        return new ValidationService(
+            rowValidators,
             new ColumnMetaDataProvider(featureManageMock.Object),
             Options.Create(settings ?? new ValidationSettings()),
             _companyDetailsApiClientMock.Object,
@@ -2342,10 +2427,14 @@ public class ValidationServiceTests
 
         _companyDetailsApiClientMock = new Mock<ICompanyDetailsApiClient>();
 
-        return new ValidationService(
+        var rowValidators = new RowValidators(
             new OrganisationDataRowValidator(featureManageMock.Object),
+            new OrganisationDataRowWarningValidator(),
             new BrandDataRowValidator(),
-            new PartnerDataRowValidator(),
+            new PartnerDataRowValidator());
+
+        return new ValidationService(
+            rowValidators,
             new ColumnMetaDataProvider(featureManageMock.Object),
             Options.Create(settings ?? new ValidationSettings()),
             _companyDetailsApiClientMock.Object,

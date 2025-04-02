@@ -1,6 +1,7 @@
 ﻿namespace EPR.RegistrationValidation.Application.Validators;
 
 using System.Globalization;
+using EPR.RegistrationValidation.Application.Services.HelperFunctions;
 using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
 using FluentValidation;
@@ -14,6 +15,7 @@ public class TurnoverValueValidator : AbstractValidator<OrganisationDataRow>
             .Must(NotContainComma).WithErrorCode(ErrorCodes.TurnoverHasComma)
             .Must(BeNumeric).WithErrorCode(ErrorCodes.InvalidTurnoverDigits)
             .Must(BeGreaterThanZero).WithErrorCode(ErrorCodes.TurnoverHasZeroOrNegativeValue)
+            .When(row => !HelperFunctions.HasMetZeroReturnYesNoCondition(row))
             .Must(BeMaxTwoDecimalPlaces).WithErrorCode(ErrorCodes.InvalidTurnoverDecimalValues)
             .When(orgRow => !string.IsNullOrEmpty(orgRow.Turnover));
     }

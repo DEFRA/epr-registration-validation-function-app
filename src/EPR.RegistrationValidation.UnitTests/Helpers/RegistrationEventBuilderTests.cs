@@ -30,6 +30,7 @@ public class RegistrationEventBuilderTests
     {
         // Arrange
         var validationErrors = new List<RegistrationValidationError>();
+        var validationWarnings = new List<RegistrationValidationWarning>();
         var csvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(organisationTypeCode.ToString(), packagingActivity.ToString());
         var csvDataRows = new List<OrganisationDataRow>
         {
@@ -37,7 +38,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit, 1);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, validationWarnings, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, true, true, BlobName);
@@ -50,6 +51,7 @@ public class RegistrationEventBuilderTests
     {
         // Arrange
         var validationErrors = new List<RegistrationValidationError>();
+        var validationWarnings = new List<RegistrationValidationWarning>();
         var csvDataRow =
             CSVRowTestHelper.GenerateOrgCsvDataRow(IncorrectPackagingActivity, brands.ToString());
         var csvDataRows = new List<OrganisationDataRow>
@@ -58,7 +60,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit, 1);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, validationWarnings, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, true, false, BlobName);
@@ -72,6 +74,7 @@ public class RegistrationEventBuilderTests
     {
         // Arrange
         var validationErrors = new List<RegistrationValidationError>();
+        var validationWarnings = new List<RegistrationValidationWarning>();
         var csvDataRow =
             CSVRowTestHelper.GenerateOrgCsvDataRow(partners.ToString(), IncorrectOrganisationTypeCode);
         var csvDataRows = new List<OrganisationDataRow>
@@ -80,7 +83,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit, 1);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, validationWarnings, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, false, true, BlobName);
@@ -91,6 +94,7 @@ public class RegistrationEventBuilderTests
     {
         // Arrange
         var validationErrors = new List<RegistrationValidationError>();
+        var validationWarnings = new List<RegistrationValidationWarning>();
         var csvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(IncorrectOrganisationTypeCode, IncorrectPackagingActivity);
 
         var csvDataRows = new List<OrganisationDataRow>
@@ -99,7 +103,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit, 1);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, validationWarnings, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, false, false, BlobName);
@@ -110,6 +114,7 @@ public class RegistrationEventBuilderTests
     {
         // Arrange
         var validationErrors = new List<RegistrationValidationError>();
+        var validationWarnings = new List<RegistrationValidationWarning>();
         var csvDataRow =
             CSVRowTestHelper.GenerateOrgCsvDataRow(IncorrectOrganisationTypeCode, RequiredPackagingActivityForBrands.Primary.ToString());
         var csvDataRow2 =
@@ -121,7 +126,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit, 1);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, validationWarnings, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, true, true, BlobName);
@@ -132,6 +137,7 @@ public class RegistrationEventBuilderTests
     {
         // Arrange
         var validationErrors = new List<RegistrationValidationError>();
+        var validationWarnings = new List<RegistrationValidationWarning>();
 
         var numberBelowErrorLimit = ErrorLimit / 2;
         for (int i = 0; i < numberBelowErrorLimit; i++)
@@ -151,7 +157,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit, 1);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, validationWarnings, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         regEvent.Should().BeOfType<RegistrationValidationEvent>();
@@ -164,6 +170,7 @@ public class RegistrationEventBuilderTests
     {
         // Arrange
         var validationErrors = new List<RegistrationValidationError>();
+        var validationWarnings = new List<RegistrationValidationWarning>();
 
         for (int i = 0; i < ErrorLimit; i++)
         {
@@ -182,7 +189,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit, 1);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, validationWarnings, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         regEvent.Should().BeOfType<RegistrationValidationEvent>();
@@ -195,6 +202,7 @@ public class RegistrationEventBuilderTests
     {
         // Arrange
         var emptyValidationErrors = new List<RegistrationValidationError>();
+        var validationWarnings = new List<RegistrationValidationWarning>();
         var csvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(IncorrectOrganisationTypeCode, IncorrectPackagingActivity);
 
         var csvDataRows = new List<OrganisationDataRow>
@@ -203,7 +211,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, emptyValidationErrors, BlobName, ContainerName, ErrorLimit, 1);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, emptyValidationErrors, validationWarnings, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         regEvent.Should().BeOfType<RegistrationValidationEvent>();
@@ -221,7 +229,7 @@ public class RegistrationEventBuilderTests
         };
 
         // Act
-        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows,  validationErrors: null, BlobName, ContainerName, ErrorLimit, 1);
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows,  validationErrors: null, validationWarnings: null, BlobName, ContainerName, ErrorLimit, 1);
 
         // Assert
         regEvent.Should().BeOfType<RegistrationValidationEvent>();

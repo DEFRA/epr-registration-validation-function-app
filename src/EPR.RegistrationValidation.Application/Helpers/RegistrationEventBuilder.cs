@@ -25,17 +25,19 @@ public static class RegistrationEventBuilder
     public static ValidationEvent CreateValidationEvent(
         List<OrganisationDataRow> csvItems,
         List<RegistrationValidationError>? validationErrors,
+        List<RegistrationValidationWarning>? validationWarnings,
         string blobName,
         string blobContainerName,
         int errorLimit,
         int? organisationMemberCount)
     {
-        return BuildRegistrationValidationEvent(csvItems, validationErrors: validationErrors, blobName, blobContainerName, errorLimit, organisationMemberCount);
+        return BuildRegistrationValidationEvent(csvItems, validationErrors: validationErrors, validationWarnings: validationWarnings,  blobName, blobContainerName, errorLimit, organisationMemberCount);
     }
 
     private static RegistrationValidationEvent BuildRegistrationValidationEvent(
         List<OrganisationDataRow> csvItems,
         List<RegistrationValidationError>? validationErrors,
+        List<RegistrationValidationWarning>? validationWarnings,
         string blobName,
         string blobContainerName,
         int errorLimit,
@@ -48,6 +50,7 @@ public static class RegistrationEventBuilder
         {
             Type = EventType.Registration,
             ValidationErrors = validationErrors,
+            ValidationWarnings = validationWarnings,
             RequiresBrandsFile = requiresBrandsFile,
             RequiresPartnershipsFile = requiresPartnershipsFile,
             IsValid = validationErrors?.Count == 0,
@@ -57,6 +60,7 @@ public static class RegistrationEventBuilder
         };
 
         validationEvent.HasMaxRowErrors = validationEvent.RowErrorCount == errorLimit;
+        validationEvent.HasMaxRowWarnings = validationEvent.RowWarningCount == errorLimit;
         return validationEvent;
     }
 }

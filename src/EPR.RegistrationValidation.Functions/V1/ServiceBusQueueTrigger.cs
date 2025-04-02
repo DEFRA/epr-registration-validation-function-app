@@ -15,14 +15,14 @@ public class ServiceBusQueueTrigger
 
     [FunctionName("ServiceBusQueueTrigger")]
     public async Task RunAsync(
-        [ServiceBusTrigger(
-            "%ServiceBus:UploadQueueName%",
-            Connection = "ServiceBus:ConnectionString")]
+        [ServiceBusTrigger("%ServiceBus:UploadQueueName%", Connection = "ServiceBus:ConnectionString")]
         string message,
         ILogger logger)
     {
         logger.LogInformation("Entering function");
+
         await _registrationService.ProcessServiceBusMessage(message);
+
         logger.LogInformation("Exiting function");
     }
 }
