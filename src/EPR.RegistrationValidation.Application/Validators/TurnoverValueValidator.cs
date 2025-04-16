@@ -10,6 +10,10 @@ public class TurnoverValueValidator : AbstractValidator<OrganisationDataRow>
 {
     public TurnoverValueValidator()
     {
+        RuleFor(x => x.Turnover)
+           .NotEmpty()
+           .WithErrorCode(ErrorCodes.TurnoverMustBeProvided);
+
         RuleFor(turnoverValue => turnoverValue.Turnover)
             .Cascade(CascadeMode.StopOnFirstFailure)
             .Must(NotContainComma).WithErrorCode(ErrorCodes.TurnoverHasComma)

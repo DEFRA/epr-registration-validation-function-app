@@ -11,6 +11,10 @@ public class TotalTonnageValidator : AbstractValidator<OrganisationDataRow>
     public TotalTonnageValidator()
     {
         RuleFor(x => x.TotalTonnage)
+            .NotEmpty()
+            .WithErrorCode(ErrorCodes.TotalTonnageMustBeProvided);
+
+        RuleFor(x => x.TotalTonnage)
             .Cascade(CascadeMode.StopOnFirstFailure)
             .Must(NotContainComma).WithErrorCode(ErrorCodes.TotalTonnageIncludesComma)
             .Must(BeNumeric).WithErrorCode(ErrorCodes.TotalTonnageIsNotNumber)

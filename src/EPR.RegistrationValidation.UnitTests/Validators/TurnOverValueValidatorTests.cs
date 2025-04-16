@@ -132,4 +132,23 @@ public class TurnOverValueValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.Turnover);
         result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.InvalidTurnoverDecimalValues);
     }
+
+    [TestMethod]
+    public async Task WhenTurnoverNotProvided_ThenError()
+    {
+        // Arrange
+        var validator = new TurnoverValueValidator();
+        var orgDataRow = new OrganisationDataRow
+        {
+            Turnover = string.Empty,
+        };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.ShouldHaveValidationErrorFor(x => x.Turnover);
+        result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.TurnoverMustBeProvided);
+    }
 }

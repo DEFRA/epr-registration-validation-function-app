@@ -44,6 +44,7 @@ public static class ErrorCodes
     public const string MissingServiceOfNoticeAddressLine1 = "845";
     public const string MissingServiceOfNoticePostcode = "846";
     public const string MissingServiceOfNoticePhoneNumber = "847";
+    public const string TurnoverMustBeProvided = "854";
     public const string TurnoverHasComma = "855";
     public const string InvalidTurnoverDecimalValues = "856";
     public const string TurnoverHasZeroOrNegativeValue = "857";
@@ -54,6 +55,7 @@ public static class ErrorCodes
     public const string TotalTonnageMustBeGreaterThanZero = "865";
     public const string TotalTonnageIncludesComma = "867";
     public const string TotalTonnageIsNotNumber = "868";
+    public const string TotalTonnageMustBeProvided = "869";
     public const string MissingOrganisationTypeCode = "880";
     public const string InvalidOrganisationTypeCode = "881";
     public const string CheckOrganisationId = "882";

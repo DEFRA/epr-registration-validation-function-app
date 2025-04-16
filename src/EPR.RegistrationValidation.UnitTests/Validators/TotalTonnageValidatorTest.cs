@@ -130,4 +130,23 @@ public class TotalTonnageValidatorTest
         result.ShouldHaveValidationErrorFor(x => x.TotalTonnage);
         result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.TotalTonnageIsNotNumber);
     }
+
+    [TestMethod]
+    public async Task WhenTotalTonnageNotProvided_ThenError()
+    {
+        // Arrange
+        var validator = new TotalTonnageValidator();
+        var orgDataRow = new OrganisationDataRow
+        {
+            TotalTonnage = string.Empty,
+        };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.ShouldHaveValidationErrorFor(x => x.TotalTonnage);
+        result.Errors.Should().OnlyContain(err => err.ErrorCode == ErrorCodes.TotalTonnageMustBeProvided);
+    }
 }
