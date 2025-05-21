@@ -307,8 +307,8 @@ public class OrganisationDataRow : ICsvDataRow
     public string OrganisationSize { get; set; }
 
     [Column(74)]
-    [Name("leaver_code")]
-    public string LeaverCode { get; set; }
+    [Name("status_code")]
+    public string StatusCode { get; set; }
 
     [Column(75)]
     [Name("leaver_date")]

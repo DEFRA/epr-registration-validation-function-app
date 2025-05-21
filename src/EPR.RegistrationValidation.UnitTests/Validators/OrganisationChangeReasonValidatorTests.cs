@@ -11,11 +11,11 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class OrganisationChangeReasonValidatorTests
 {
     [TestMethod]
-    public async Task Validate_WithSubsidiaryIdAndLeaverCodeNotEmptyAndOrganisationChangeReasonGreaterThan200InLength_IsNotValid()
+    public async Task Validate_WithSubsidiaryIdAndStatusCodeNotEmptyAndOrganisationChangeReasonGreaterThan200InLength_IsNotValid()
     {
         // Arrange
         var validator = new OrganisationChangeReasonValidator();
-        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "Any", OrganisationChangeReason = new string('X', 201) };
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", StatusCode = "Any", OrganisationChangeReason = new string('X', 201) };
 
         // Act
         var result = await validator.TestValidateAsync(orgDataRow);
@@ -28,11 +28,11 @@ public class OrganisationChangeReasonValidatorTests
     }
 
     [TestMethod]
-    public async Task Validate_WithSubsidiaryIdAndLeaverCodeNotEmptyAndOrganisationChangeReasonNotGreaterThan200InLength_IsValid()
+    public async Task Validate_WithSubsidiaryIdAndStatusCodeNotEmptyAndOrganisationChangeReasonNotGreaterThan200InLength_IsValid()
     {
         // Arrange
         var validator = new OrganisationChangeReasonValidator();
-        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "Any", OrganisationChangeReason = new string('X', 200) };
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", StatusCode = "Any", OrganisationChangeReason = new string('X', 200) };
 
         // Act
         var result = await validator.TestValidateAsync(orgDataRow);
@@ -47,7 +47,7 @@ public class OrganisationChangeReasonValidatorTests
     {
         // Arrange
         var validator = new OrganisationChangeReasonValidator();
-        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "Any", OrganisationChangeReason = "Invalid@Reason!" };
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", StatusCode = "Any", OrganisationChangeReason = "Invalid@Reason!" };
 
         // Act
         var result = await validator.TestValidateAsync(orgDataRow);
@@ -64,7 +64,7 @@ public class OrganisationChangeReasonValidatorTests
     {
         // Arrange
         var validator = new OrganisationChangeReasonValidator();
-        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "Any", OrganisationChangeReason = "Valid Reason123" };
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", StatusCode = "Any", OrganisationChangeReason = "Valid Reason123" };
 
         // Act
         var result = await validator.TestValidateAsync(orgDataRow);

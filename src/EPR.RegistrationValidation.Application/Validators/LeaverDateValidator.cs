@@ -15,13 +15,13 @@ public class LeaverDateValidator : AbstractValidator<OrganisationDataRow>
 
         RuleFor(r => r.LeaverDate)
             .NotEmpty()
-            .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && !string.IsNullOrEmpty(x.LeaverCode))
-            .WithErrorCode(ErrorCodes.LeaverDateMustBePresentWhenLeaverCodePresent);
+            .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && !string.IsNullOrEmpty(x.StatusCode))
+            .WithErrorCode(ErrorCodes.LeaverDateMustBePresentWhenStatusCodePresent);
 
         RuleFor(r => r.LeaverDate)
             .NotEmpty()
-            .When(x => string.IsNullOrEmpty(x.SubsidiaryId) && uploadedByComplianceScheme && !string.IsNullOrEmpty(x.LeaverCode))
-            .WithErrorCode(ErrorCodes.LeaverDateMustBePresentWhenLeaverCodePresentCS);
+            .When(x => string.IsNullOrEmpty(x.SubsidiaryId) && uploadedByComplianceScheme && !string.IsNullOrEmpty(x.StatusCode))
+            .WithErrorCode(ErrorCodes.LeaverDateMustBePresentWhenStatusCodePresentCS);
 
         RuleFor(r => r.LeaverDate)
             .Must(x => DateFormatIsValid(x))

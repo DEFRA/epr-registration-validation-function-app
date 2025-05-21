@@ -72,22 +72,22 @@ public static class ErrorCodes
     public const string SmallProducerTurnoverInvalid = "896";
     public const string LargeProducerTurnoverInvalid = "897";
     public const string InvalidJoinerDateFormat = "898";
-    public const string LeaverCodeMustBePresentWhenLeaverDatePresent = "899";
-    public const string LeaverDateMustBePresentWhenLeaverCodePresent = "900";
+    public const string StatusCodeMustBePresentWhenLeaverDatePresent = "899";
+    public const string LeaverDateMustBePresentWhenStatusCodePresent = "900";
     public const string InvalidLeaverDateFormat = "901";
     public const string LeaverDateMustBeAfterJoinerDate = "902";
-    public const string OrganisationChangeReasonMustBePresentWhenLeaverCodePresent = "903";
+    public const string OrganisationChangeReasonMustBePresentWhenStatusCodePresent = "903";
     public const string OrganisationChangeReasonCannotBeLongerThan200Characters = "904";
     public const string JoinerDateDoesNotMatchJoinerDateInDatabase = "905";
     public const string OrganisationChangeReasonCannotIncludeSpecialCharacters = "906";
-    public const string InvalidLeaverCode = "907";
+    public const string InvalidStatusCode = "907";
     public const string LeaverDateCannotBeInTheFuture = "908";
     public const string JoinerDateCannotBeInTheFuture = "909";
     public const string RegistrationTypeCodeIsMandatory = "910";
     public const string RegistrationTypeCodeInvalidValue = "911";
     public const string RegistrationTypeCodeIsMandatoryCS = "912";
-    public const string LeaverCodeMustBePresentWhenLeaverDatePresentCS = "913";
-    public const string LeaverDateMustBePresentWhenLeaverCodePresentCS = "914";
+    public const string StatusCodeMustBePresentWhenLeaverDatePresentCS = "913";
+    public const string LeaverDateMustBePresentWhenStatusCodePresentCS = "914";
     public const string LeaverDateMustBeAfterJoinerDateCS = "915";
 
     /* Issue codes for warnings */

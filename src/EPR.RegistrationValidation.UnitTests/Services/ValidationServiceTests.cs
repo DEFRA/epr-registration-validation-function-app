@@ -2239,7 +2239,7 @@ public class ValidationServiceTests
     [DataRow("A", "01/01/2001", "test", "01/01/2000")]
     [DataRow("A", "01/01/2001", "", "")]
     public async Task ValidateOrganisationsAsync_WithValidJoinerLeaverDetailsCombination(
-        string leaverCode,
+        string statusCode,
         string leaverDate,
         string organisationChangeReason,
         string joinerDate)
@@ -2247,7 +2247,7 @@ public class ValidationServiceTests
         // Arrange
         var organisations = RowDataTestHelper.GenerateOrgIdSubId(1).ToList();
 
-        organisations[0].LeaverCode = leaverCode;
+        organisations[0].StatusCode = statusCode;
         organisations[0].LeaverDate = leaverDate;
         organisations[0].OrganisationChangeReason = organisationChangeReason;
         organisations[0].JoinerDate = joinerDate;
@@ -2265,7 +2265,7 @@ public class ValidationServiceTests
     [DataRow("A", "", "", "", 1)]
     [DataRow("", "01/01/2001", "", "", 1)]
     public async Task ValidateOrganisationsAsync_WithInvalidJoinerLeaverDetailsCombination(
-        string leaverCode,
+        string statusCode,
         string leaverDate,
         string organisationChangeReason,
         string joinerDate,
@@ -2274,7 +2274,7 @@ public class ValidationServiceTests
         // Arrange
         var organisations = RowDataTestHelper.GenerateOrgIdSubId(1).ToList();
 
-        organisations[0].LeaverCode = leaverCode;
+        organisations[0].StatusCode = statusCode;
         organisations[0].LeaverDate = leaverDate;
         organisations[0].OrganisationChangeReason = organisationChangeReason;
         organisations[0].JoinerDate = joinerDate;
@@ -2290,10 +2290,10 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
-    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdLeaverCode_WithoutLeaverDate()
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdStatusCode_WithoutLeaverDate()
     {
         // Arrange
-        var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "Any" } };
+        var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { SubsidiaryId = "1", StatusCode = "Any" } };
         var service = CreateService();
 
         // Act
@@ -2301,11 +2301,11 @@ public class ValidationServiceTests
 
         // Assert
         result.Should().NotBeEmpty();
-        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverDateMustBePresentWhenLeaverCodePresent);
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverDateMustBePresentWhenStatusCodePresent);
     }
 
     [TestMethod]
-    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdLeaverCode_WithInvalidLeaverDate()
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdStatusCode_WithInvalidLeaverDate()
     {
         // Arrange
         var organisations = new List<OrganisationDataRow>
@@ -2313,7 +2313,7 @@ public class ValidationServiceTests
             new OrganisationDataRow
             {
                 SubsidiaryId = "1",
-                LeaverCode = "Any",
+                StatusCode = "Any",
                 LeaverDate = DateTime.Now.AddDays(2).ToString("dd/MM/yyyy"),
             },
         };
@@ -2329,7 +2329,7 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
-    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdLeaverCode_WithOrganisationChangeReasonExceedingAllowedMaxLength()
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdStatusCode_WithOrganisationChangeReasonExceedingAllowedMaxLength()
     {
         // Arrange
         var organisations = new List<OrganisationDataRow>
@@ -2337,7 +2337,7 @@ public class ValidationServiceTests
             new OrganisationDataRow
             {
                 SubsidiaryId = "1",
-                LeaverCode = "Any",
+                StatusCode = "Any",
                 OrganisationChangeReason = new string('X', 201),
             },
         };
@@ -2367,7 +2367,7 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
-    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdLeaverCode_WithOrganisationChangeReasonNotExceedingAllowedMaxLength()
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdStatusCode_WithOrganisationChangeReasonNotExceedingAllowedMaxLength()
     {
         // Arrange
         var organisations = new List<OrganisationDataRow>
@@ -2375,7 +2375,7 @@ public class ValidationServiceTests
             new OrganisationDataRow
             {
                 SubsidiaryId = "1",
-                LeaverCode = "Any",
+                StatusCode = "Any",
                 OrganisationChangeReason = new string('X', 200),
                 LeaverDate = "01/01/2022",
             },
