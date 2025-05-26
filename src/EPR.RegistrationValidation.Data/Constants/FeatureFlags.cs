@@ -10,4 +10,5 @@ public static class FeatureFlags
     public const string EnableSubsidiaryValidation = "EnableSubsidiaryValidation";
     public const string EnableOrganisationSizeFieldValidation = "EnableOrganisationSizeFieldValidation";
     public const string EnableSubsidiaryJoinerAndLeaverColumns = "EnableSubsidiaryJoinerAndLeaverColumns";
+    public const string EnableStatusCodeColumn = "EnableStatusCodeColumn";
 }

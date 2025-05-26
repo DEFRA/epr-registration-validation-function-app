@@ -82,7 +82,7 @@ public class CsvStreamParser : ICsvStreamParser
             {
                 var leaverAndJoinerColumns = new HashSet<string>
                 {
-                    "status_code",
+                    _featureManager.IsEnabledAsync(FeatureFlags.EnableStatusCodeColumn).Result ? "status_code" : "leaver_code",
                     "organisation_change_reason",
                     "leaver_date",
                     "joiner_date",

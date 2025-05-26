@@ -1,5 +1,6 @@
 ﻿namespace EPR.RegistrationValidation.Application.Helpers;
 
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using CsvHelper.Configuration.Attributes;
@@ -52,10 +53,21 @@ public class ColumnMetaDataProvider
     {
         var columnValues = typeof(T).GetProperties()
             .Where(x => x.GetCustomAttribute<ColumnAttribute>() != null)
-            .Select(x => (
+            .Select(x =>
+            {
+                var nameAttributes = x.GetCustomAttribute<NameAttribute>().Names;
+                string name = nameAttributes[0];
+
+                if (name == "status_code" && !_featureManager.IsEnabledAsync(FeatureFlags.EnableStatusCodeColumn).Result)
+                {
+                    name = nameAttributes[1];
+                }
+
+                return (
                 Key: x.Name,
                 Index: x.GetCustomAttribute<ColumnAttribute>().Index,
-                Name: x.GetCustomAttribute<NameAttribute>()?.Names.Single()))
+                Name: name);
+            })
             .ToList();
 
         var returnDictionary = columnValues.Count > 0 ? columnValues.ToDictionary(x => x.Key, x => new ColumnMetaData(x.Name, x.Index)) : new Dictionary<string, ColumnMetaData>();

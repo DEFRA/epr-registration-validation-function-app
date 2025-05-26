@@ -26,8 +26,11 @@ public class CsvStreamParserTests
         featureManageMock
             .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns))
             .Returns(Task.FromResult(true));
+        featureManageMock
+           .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableStatusCodeColumn))
+           .Returns(Task.FromResult(true));
 
-        _sut = new CsvStreamParser(new ColumnMetaDataProvider(null), featureManageMock.Object);
+        _sut = new CsvStreamParser(new ColumnMetaDataProvider(featureManageMock.Object), featureManageMock.Object);
     }
 
     [TestMethod]
@@ -238,7 +241,12 @@ error, error";
     {
         // Arrange
         var featureManageMock = CreateFeatureManagerMock(featureFlag);
-        var sutLocal = new CsvStreamParser(new ColumnMetaDataProvider(null), featureManageMock.Object);
+
+        featureManageMock
+           .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableStatusCodeColumn))
+           .Returns(Task.FromResult(true));
+
+        var sutLocal = new CsvStreamParser(new ColumnMetaDataProvider(featureManageMock.Object), featureManageMock.Object);
         var memoryStream = CsvFileReader.ReadFile(csvFile);
 
         // Act
@@ -249,13 +257,20 @@ error, error";
     }
 
     [TestMethod]
-    [DataRow(true, "ValidFileWithCorrectHeaders.csv", 2)]
-    [DataRow(false, "InvalidFileTooFewHeaders.csv", 2)]
-    public async Task TestGetItemsFromCsvStream_FeatureFlag_EnableOrganisationSizeFieldValidation_And_EnableSubsidiaryJoinerAndLeaverColumns_True_WhenCsvFileContainsSizeColumn_ReturnValidList(bool featureFlag, string csvFile, int expectedResultCount)
+    [DataRow(true, true,  "ValidFileWithCorrectHeaders.csv", 2)]
+    [DataRow(true, false, "ValidFileWithCorrectHeadersWithOldLeaverCodeColumnName.csv", 2)]
+    [DataRow(false, true, "InvalidFileTooFewHeaders.csv", 2)]
+    [DataRow(false, false, "InvalidFileTooFewHeaders.csv", 2)]
+    public async Task TestGetItemsFromCsvStream_FeatureFlag_EnableOrganisationSizeFieldValidation_And_EnableSubsidiaryJoinerAndLeaverColumns_True_WhenCsvFileContainsSizeColumn_ReturnValidList(bool joinerLeaverFeatureFlag, bool columnNameFeatureFlag, string csvFile, int expectedResultCount)
     {
         // Arrange
-        var featureManageMock = CreateFeatureManagerMock(featureFlag);
-        var sutLocal = new CsvStreamParser(new ColumnMetaDataProvider(null), featureManageMock.Object);
+        var featureManageMock = CreateFeatureManagerMock(joinerLeaverFeatureFlag);
+
+        featureManageMock
+           .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableStatusCodeColumn))
+           .Returns(Task.FromResult(columnNameFeatureFlag));
+
+        var sutLocal = new CsvStreamParser(new ColumnMetaDataProvider(featureManageMock.Object), featureManageMock.Object);
         var memoryStream = CsvFileReader.ReadFile(csvFile);
 
         // Act
@@ -263,7 +278,30 @@ error, error";
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(expectedResultCount, result.Count());
+        Assert.AreEqual(expectedResultCount, result.Count);
+    }
+
+    [TestMethod]
+    [DataRow(true, "ValidFileWithCorrectHeaders.csv", 2)]
+    [DataRow(false, "InvalidFileTooFewHeaders.csv", 2)]
+    public async Task TestGetItemsFromCsvStream_FeatureFlag_EnableStatusCodeColumn_And_EnableOrganisationSizeFieldValidation_And_EnableSubsidiaryJoinerAndLeaverColumns_True_WhenCsvFileContainsSizeColumn_ReturnValidList(bool featureFlag, string csvFile, int expectedResultCount)
+    {
+        // Arrange
+        var featureManageMock = CreateFeatureManagerMock(featureFlag);
+
+        featureManageMock
+           .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableStatusCodeColumn))
+           .Returns(Task.FromResult(true));
+
+        var sutLocal = new CsvStreamParser(new ColumnMetaDataProvider(featureManageMock.Object), featureManageMock.Object);
+        var memoryStream = CsvFileReader.ReadFile(csvFile);
+
+        // Act
+        var result = sutLocal.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream).Result;
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual(expectedResultCount, result.Count);
     }
 
     private Mock<IFeatureManager> CreateFeatureManagerMock(bool featureFlag)
