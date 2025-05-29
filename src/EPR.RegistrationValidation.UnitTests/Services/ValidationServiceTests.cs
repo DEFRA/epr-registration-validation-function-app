@@ -148,7 +148,13 @@ public class ValidationServiceTests
         var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage, false);
 
         // Assert
-        results.Should().BeEmpty();
+        results.Should().NotBeEmpty();
+        results.Count.Should().Be(1);
+        results
+            .SelectMany(x => x.ColumnErrors)
+            .Select(x => x.ColumnName)
+            .Should()
+            .AllBeEquivalentTo("joiner_date");
     }
 
     [TestMethod]
@@ -165,7 +171,13 @@ public class ValidationServiceTests
         var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
 
         // Assert
-        results.Should().BeEmpty();
+        results.Should().NotBeEmpty();
+        results.Count.Should().Be(10);
+        results
+            .SelectMany(x => x.ColumnErrors)
+            .Select(x => x.ColumnName)
+            .Should()
+            .AllBeEquivalentTo("joiner_date");
     }
 
     [TestMethod]
@@ -182,7 +194,13 @@ public class ValidationServiceTests
         var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
 
         // Assert
-        results.Should().BeEmpty();
+        results.Should().NotBeEmpty();
+        results.Count.Should().Be(6);
+        results
+            .SelectMany(x => x.ColumnErrors)
+            .Select(x => x.ColumnName)
+            .Should()
+            .AllBeEquivalentTo("joiner_date");
     }
 
     [TestMethod]
@@ -377,10 +395,12 @@ public class ValidationServiceTests
         var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow }, blobQueueMessage, false);
 
         // Assert
-        var columnError = errors.Single().ColumnErrors.Single();
+        var columnErrors = errors.Single().ColumnErrors.ToList();
 
-        columnError.ColumnName.Should().Be("main_activity_sic");
-        columnError.ErrorCode.Should().Be(ErrorCodes.MainActivitySicNotFiveDigitsInteger);
+        columnErrors[0].ColumnName.Should().Be("main_activity_sic");
+        columnErrors[0].ErrorCode.Should().Be(ErrorCodes.MainActivitySicNotFiveDigitsInteger);
+        columnErrors[1].ColumnName.Should().Be("joiner_date");
+        columnErrors[1].ErrorCode.Should().Be(ErrorCodes.JoinerDateIsMandatoryDP);
     }
 
     [TestMethod]
@@ -397,10 +417,12 @@ public class ValidationServiceTests
         var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow }, blobQueueMessage, false);
 
         // Assert
-        var columnError = errors.Single().ColumnErrors.Single();
+        var columnErrors = errors.Single().ColumnErrors.ToList();
 
-        columnError.ColumnName.Should().Be("trading_name");
-        columnError.ErrorCode.Should().Be(ErrorCodes.TradingNameSameAsOrganisationName);
+        columnErrors[0].ColumnName.Should().Be("trading_name");
+        columnErrors[0].ErrorCode.Should().Be(ErrorCodes.TradingNameSameAsOrganisationName);
+        columnErrors[1].ColumnName.Should().Be("joiner_date");
+        columnErrors[1].ErrorCode.Should().Be(ErrorCodes.JoinerDateIsMandatoryDP);
     }
 
     [TestMethod]
@@ -720,7 +742,13 @@ public class ValidationServiceTests
         var errors = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
 
         // Assert
-        errors.Should().BeEmpty();
+        errors.Should().NotBeEmpty();
+        errors.Count.Should().Be(4);
+        errors
+            .SelectMany(x => x.ColumnErrors)
+            .Select(x => x.ColumnName)
+            .Should()
+            .AllBeEquivalentTo("joiner_date");
 
         _companyDetailsApiClientMock.Verify(
             m => m.GetCompanyDetailsByProducer(It.IsAny<string>()),
@@ -2235,14 +2263,15 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
-    [DataRow("", "", "", "01/01/2000")]
-    [DataRow("A", "01/01/2001", "test", "01/01/2000")]
-    [DataRow("A", "01/01/2001", "", "")]
+    [DataRow("", "", "", "01/01/2000", 1)]
+    [DataRow("A", "01/01/2001", "test", "01/01/2000", 1)]
+    [DataRow("A", "01/01/2001", "", "", 2)]
     public async Task ValidateOrganisationsAsync_WithValidJoinerLeaverDetailsCombination(
         string statusCode,
         string leaverDate,
         string organisationChangeReason,
-        string joinerDate)
+        string joinerDate,
+        int expectedErrorCount)
     {
         // Arrange
         var organisations = RowDataTestHelper.GenerateOrgIdSubId(1).ToList();
@@ -2258,12 +2287,18 @@ public class ValidationServiceTests
         var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
 
         // Assert
-        result.Should().BeEmpty();
+        result.Should().NotBeEmpty();
+        result.Count.Should().Be(expectedErrorCount);
+        result
+           .SelectMany(x => x.ColumnErrors)
+           .Select(x => x.ColumnName)
+           .Should()
+           .AllBeEquivalentTo("joiner_date");
     }
 
     [TestMethod]
-    [DataRow("A", "", "", "", 1)]
-    [DataRow("", "01/01/2001", "", "", 1)]
+    [DataRow("A", "", "", "", 2)]
+    [DataRow("", "01/01/2001", "", "", 2)]
     public async Task ValidateOrganisationsAsync_WithInvalidJoinerLeaverDetailsCombination(
         string statusCode,
         string leaverDate,
@@ -2286,6 +2321,7 @@ public class ValidationServiceTests
 
         // Assert
         result.Should().NotBeEmpty();
+        result.Count.Should().Be(2);
         result[0].ColumnErrors.Count.Should().Be(expectedErrorCount);
     }
 

@@ -44,8 +44,8 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
 
         if (_featureManager != null && _featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
         {
+            Include(new JoinerDateValidator(uploadedByComplianceScheme));
             Include(new StatusCodeValidator(uploadedByComplianceScheme));
-            Include(new JoinerDateValidator());
             Include(new LeaverDateValidator(uploadedByComplianceScheme));
             Include(new OrganisationChangeReasonValidator());
             Include(new RegistrationTypeCodeValidator(uploadedByComplianceScheme));
