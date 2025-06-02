@@ -6,13 +6,9 @@ using FluentValidation;
 
 public class JoinerDateValidator : AbstractValidator<OrganisationDataRow>
 {
-    public JoinerDateValidator(bool uploadedByComplianceScheme)
+    public JoinerDateValidator()
     {
         RuleLevelCascadeMode = CascadeMode.Stop;
-
-        RuleFor(r => r.JoinerDate)
-            .NotEmpty()
-            .WithErrorCode(uploadedByComplianceScheme ? ErrorCodes.JoinerDateIsMandatoryCS : ErrorCodes.JoinerDateIsMandatoryDP);
 
         RuleFor(r => r.JoinerDate)
             .Must(x => DateTime.TryParseExact(x, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out _))

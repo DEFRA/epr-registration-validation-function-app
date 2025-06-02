@@ -19,7 +19,7 @@ public class JoinerDateValidatorTests
     public async Task Validate_WithIncorrectJoinerDateFormat_IsNotValid(string date)
     {
         // Arrange
-        var validator = new JoinerDateValidator(false);
+        var validator = new JoinerDateValidator();
         var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", JoinerDate = date };
 
         // Act
@@ -36,7 +36,7 @@ public class JoinerDateValidatorTests
     public async Task Validate_WithFutureJoinerDate_IsInvalid()
     {
         // Arrange
-        var validator = new JoinerDateValidator(false);
+        var validator = new JoinerDateValidator();
         var orgDataRow = new OrganisationDataRow
         {
             JoinerDate = DateTime.Now.AddDays(2).ToString("dd/MM/yyyy"),
@@ -56,7 +56,7 @@ public class JoinerDateValidatorTests
     public async Task Validate_WithSubsidiaryIdAndCorrectJoinerDateFormat_IsValid()
     {
         // Arrange
-        var validator = new JoinerDateValidator(false);
+        var validator = new JoinerDateValidator();
         var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", JoinerDate = "01/01/2000" };
 
         // Act
@@ -65,28 +65,5 @@ public class JoinerDateValidatorTests
         // Assert
         result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
-    }
-
-    [TestMethod]
-    [DataRow(false)]
-    [DataRow(true)]
-
-    public async Task Validate_WithAbsentJoinerDate_IsInvalid(bool uploadedByComplianceScheme)
-    {
-        // Arrange
-        var validator = new JoinerDateValidator(uploadedByComplianceScheme);
-        var orgDataRow = new OrganisationDataRow
-        {
-            JoinerDate = string.Empty,
-        };
-
-        // Act
-        var result = await validator.TestValidateAsync(orgDataRow);
-
-        // Assert
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().NotBeEmpty();
-        result.ShouldHaveValidationErrorFor(x => x.JoinerDate);
-        result.Errors.Should().Contain(err => err.ErrorCode == (uploadedByComplianceScheme ? ErrorCodes.JoinerDateIsMandatoryCS : ErrorCodes.JoinerDateIsMandatoryDP));
     }
 }
