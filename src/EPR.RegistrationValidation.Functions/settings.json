@@ -18,6 +18,7 @@
     "FeatureManagement:EnableBrandPartnerDataRowValidation": false,
     "FeatureManagement:EnableBrandPartnerCrossFileValidation": false,
     "FeatureManagement:EnableCompanyDetailsValidation": false,
-    "FeatureManagement:EnableOrganisationSizeFieldValidation": false
+    "FeatureManagement:EnableOrganisationSizeFieldValidation": false,
+    "EnableAdditionalValidationForJoinerLeaverColumns":  false
   }
 }

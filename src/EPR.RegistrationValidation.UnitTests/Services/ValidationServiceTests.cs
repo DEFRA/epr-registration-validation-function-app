@@ -2263,6 +2263,8 @@ public class ValidationServiceTests
 
     [TestMethod]
     [DataRow("A", "", "", "", 1)]
+    [DataRow("B", "", "", "", 2)]
+    [DataRow("C", "", "", "", 2)]
     [DataRow("", "01/01/2001", "", "", 1)]
     public async Task ValidateOrganisationsAsync_WithInvalidJoinerLeaverDetailsCombination(
         string statusCode,
@@ -2398,6 +2400,9 @@ public class ValidationServiceTests
             .Returns(Task.FromResult(true));
         featureManageMock
             .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns))
+            .Returns(Task.FromResult(true));
+        featureManageMock
+            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableAdditionalValidationForJoinerLeaverColumns))
             .Returns(Task.FromResult(true));
 
         _companyDetailsApiClientMock = new Mock<ICompanyDetailsApiClient>();

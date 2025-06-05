@@ -29,20 +29,22 @@ public class StatusCodeValidator : AbstractValidator<OrganisationDataRow>
 
     private bool StatusCodeIsValid(string statusCode)
     {
-        return statusCode == StatusCode.BusinessIsNowSmallProducer ||
-            statusCode == StatusCode.Liquidation ||
-            statusCode == StatusCode.ConfirmedMemberAwaitingPayment ||
-            statusCode == StatusCode.ConfirmedMemberAwaitingPackagingData ||
-            statusCode == StatusCode.ConfirmedMemberAwaitingRegFile ||
-            statusCode == StatusCode.ProducerNoLongerObligatedBelowTurnover ||
-            statusCode == StatusCode.ProducerNoLongerObligatedBelowPackagingThreshold ||
-            statusCode == StatusCode.ProducerNoLongerObligatedNoLongerProducer ||
-            statusCode == StatusCode.SmallProducerJoinedGroupButStillReportsForItself ||
-            statusCode == StatusCode.SmallProducerJoinedGroupAndParentReportsOnItsBehalf ||
-            statusCode == StatusCode.SmallProducerLeavesGroupReportedForItself ||
-            statusCode == StatusCode.SmallProducerLeavesGroupParentReportedForIt ||
-            statusCode == StatusCode.LargeProducerLeftGroupButStartsToReportForItself ||
-            statusCode == StatusCode.LargeProducerLeftGroupThatReportedForIt ||
-            statusCode == StatusCode.LargeProducerJoinedGroupAndParentReportsOnItsBehalf;
+        return statusCode == StatusCode.A ||
+            statusCode == StatusCode.B ||
+            statusCode == StatusCode.C ||
+            statusCode == StatusCode.D ||
+            statusCode == StatusCode.E ||
+            statusCode == StatusCode.F ||
+            statusCode == StatusCode.G ||
+            statusCode == StatusCode.H ||
+            statusCode == StatusCode.I ||
+            statusCode == StatusCode.J ||
+            statusCode == StatusCode.K ||
+            statusCode == StatusCode.L ||
+            statusCode == StatusCode.M ||
+            statusCode == StatusCode.N ||
+            statusCode == StatusCode.O ||
+            statusCode == StatusCode.P ||
+            statusCode == StatusCode.Q;
     }
 }
