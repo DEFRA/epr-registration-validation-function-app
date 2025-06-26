@@ -88,7 +88,7 @@ public class CompanyHouseValidatorTests
 
     [DataTestMethod]
     [DynamicData(nameof(TestCases))]
-    public async Task Validate_WithValidCompanyHouseNumberForOrganisationType_IsNotValid(string organisationTypeCode)
+    public async Task Validate_WithValidCompanyHouseNumberForOrganisationTypeOptional_IsValid(string organisationTypeCode)
     {
         // Arrange
         var validator = new CompanyHouseValidator();
@@ -102,9 +102,27 @@ public class CompanyHouseValidatorTests
         var result = await validator.TestValidateAsync(orgDataRow);
 
         // Assert
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().NotBeEmpty();
-        result.ShouldHaveValidationErrorFor(x => x.CompaniesHouseNumber);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.CompanyHouseNumberMustBeEmpty);
+        result.IsValid.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+    }
+
+    [DataTestMethod]
+    [DynamicData(nameof(TestCases))]
+    public async Task Validate_WithValidCompanyHouseNumberForOrganisationType_IsValid(string organisationTypeCode)
+    {
+        // Arrange
+        var validator = new CompanyHouseValidator();
+        var orgDataRow = new OrganisationDataRow
+        {
+            CompaniesHouseNumber = string.Empty,
+            OrganisationTypeCode = organisationTypeCode,
+        };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
     }
 }

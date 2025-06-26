@@ -13,7 +13,7 @@ public class RegisteredAddressValidator : AbstractValidator<OrganisationDataRow>
         IncorporationTypeCodes.LimitedLiabilityPartnership,
         IncorporationTypeCodes.LimitedCompany,
         IncorporationTypeCodes.PublicLimitedCompany,
-        IncorporationTypeCodes.CommunityInterestCompany,
+        HybridCorporationType.CommunityInterestCompany,
     };
 
     public RegisteredAddressValidator()

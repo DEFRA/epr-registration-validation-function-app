@@ -19,9 +19,8 @@ public class CompanyHouseValidator : AbstractValidator<OrganisationDataRow>
     public CompanyHouseValidator()
     {
         RuleFor(row => row.CompaniesHouseNumber)
-            .Empty().When(code => _codes.Contains(code.OrganisationTypeCode, StringComparer.OrdinalIgnoreCase))
-            .WithErrorCode(ErrorCodes.CompanyHouseNumberMustBeEmpty)
             .Must(ValidNumber)
+            .When(row => !string.IsNullOrEmpty(row.CompaniesHouseNumber))
             .WithErrorCode(ErrorCodes.InvalidCompanyHouseNumber);
     }
 

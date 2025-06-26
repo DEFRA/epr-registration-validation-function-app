@@ -19,7 +19,7 @@ public class OrganisationTypeValidator : AbstractValidator<OrganisationDataRow>
         IncorporationTypeCodes.LimitedLiabilityPartnership,
         IncorporationTypeCodes.LimitedPartnership,
         IncorporationTypeCodes.PublicLimitedCompany,
-        IncorporationTypeCodes.CommunityInterestCompany,
+        HybridCorporationType.CommunityInterestCompany,
     };
 
     public OrganisationTypeValidator()

@@ -35,6 +35,7 @@ public class ValidationService : IValidationService
         UnIncorporationTypeCodes.Partnership,
         UnIncorporationTypeCodes.Others,
         UnIncorporationTypeCodes.OutsideUk,
+        HybridCorporationType.CommunityInterestCompany,
     };
 
     private readonly OrganisationDataRowValidator _organisationDataRowValidator;
