@@ -23,7 +23,6 @@ using EPR.RegistrationValidation.Data.Models.Subsidiary;
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.FeatureManagement;
 
 public class ValidationService : IValidationService
@@ -44,9 +43,11 @@ public class ValidationService : IValidationService
     private readonly PartnerDataRowValidator _partnerDataRowValidator;
     private readonly ColumnMetaDataProvider _metaDataProvider;
     private readonly ValidationSettings _validationSettings;
+    private readonly RegistrationSettings _registrationSettings;
     private readonly ILogger<ValidationService> _logger;
     private readonly IFeatureManager _featureManager;
     private readonly ICompanyDetailsApiClient _companyDetailsApiClient;
+    private readonly ISubmissionApiClient _submissionApiClient;
     private readonly ISubsidiaryDetailsRequestBuilder _subsidiaryDetailsRequestBuilder;
     private Dictionary<string, CompanyDetailsDataResult> _companyDetailsLookup;
     private Dictionary<string, CompanyDetailsDataResult> _complianceSchemeMembersLookup;
@@ -54,8 +55,8 @@ public class ValidationService : IValidationService
     public ValidationService(
         RowValidators rowValidators,
         ColumnMetaDataProvider metaDataProvider,
-        IOptions<ValidationSettings> validationSettings,
-        ICompanyDetailsApiClient companyDetailsApiClient,
+        ValidationConfig config,
+        ApiClients apiClients,
         ILogger<ValidationService> logger,
         IFeatureManager featureManager,
         ISubsidiaryDetailsRequestBuilder subsidiaryDetailsRequestBuilder)
@@ -65,10 +66,12 @@ public class ValidationService : IValidationService
         _brandDataRowValidator = rowValidators.BrandDataRowValidator;
         _partnerDataRowValidator = rowValidators.PartnerDataRowValidator;
         _metaDataProvider = metaDataProvider;
-        _companyDetailsApiClient = companyDetailsApiClient;
+        _companyDetailsApiClient = apiClients.CompanyDetailsApiClient;
+        _submissionApiClient = apiClients.SubmissionApiClient;
         _logger = logger;
         _featureManager = featureManager;
-        _validationSettings = validationSettings.Value;
+        _validationSettings = config.ValidationSettings.Value;
+        _registrationSettings = config.RegistrationSettings.Value;
         _subsidiaryDetailsRequestBuilder = subsidiaryDetailsRequestBuilder;
     }
 
@@ -76,7 +79,9 @@ public class ValidationService : IValidationService
     {
         List<RegistrationValidationError> validationErrors = new();
 
-        var rowValidationResult = await ValidateRowsAsync(rows, !string.IsNullOrEmpty(blobQueueMessage.ComplianceSchemeId));
+        var organisationFileDetails = await _submissionApiClient.GetOrganisationFileDetails(blobQueueMessage.SubmissionId, blobQueueMessage.BlobName);
+
+        var rowValidationResult = await ValidateRowsAsync(rows, !string.IsNullOrEmpty(blobQueueMessage.ComplianceSchemeId), organisationFileDetails.SubmissionPeriod);
         validationErrors.AddRange(rowValidationResult.ValidationErrors);
 
         var organisationSubsidiaryRelationshipsResult = ValidateOrganisationSubsidiaryRelationships(rows, rowValidationResult.TotalErrors);
@@ -154,9 +159,10 @@ public class ValidationService : IValidationService
         return validationWarnings;
     }
 
-    public async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateRowsAsync(IList<OrganisationDataRow> rows, bool uploadedByComplianceScheme)
+    public async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateRowsAsync(IList<OrganisationDataRow> rows, bool uploadedByComplianceScheme, string submissionPeriod)
     {
-        _organisationDataRowValidator.RegisterValidators(uploadedByComplianceScheme);
+        bool isSubmissionPeriod2026 = string.Equals(submissionPeriod, _registrationSettings.SubmissionPeriod2026, StringComparison.OrdinalIgnoreCase);
+        _organisationDataRowValidator.RegisterValidators(uploadedByComplianceScheme, isSubmissionPeriod2026, _registrationSettings.SmallProducersRegStartTime2026, _registrationSettings.SmallProducersRegEndTime2026);
 
         List<RegistrationValidationError> validationErrors = new();
         int totalErrors = 0;
@@ -477,9 +483,9 @@ public class ValidationService : IValidationService
     private static SubsidiaryDetail FindMatchingSubsidiary(SubsidiaryDetailsResponse result, string defraId, string subsidiaryId)
     {
         return result.SubsidiaryOrganisationDetails
-            ?.FirstOrDefault(org => org.OrganisationReference == defraId)
+            ?.Find(org => org.OrganisationReference == defraId)
             ?.SubsidiaryDetails
-            ?.FirstOrDefault(sub => sub.ReferenceNumber == subsidiaryId);
+            ?.Find(sub => sub.ReferenceNumber == subsidiaryId);
     }
 
     private static ValidationContext<T> CreateValidationContextWithLookupData<T>(T row, OrganisationDataLookupTable organisationDataLookup)
@@ -649,7 +655,7 @@ public class ValidationService : IValidationService
                 return (totalErrors, validationErrors);
             }
 
-            if (_codes.Any(typeCode => string.Equals(typeCode, row.OrganisationTypeCode, StringComparison.OrdinalIgnoreCase)))
+            if (Array.Exists(_codes, typeCode => string.Equals(typeCode, row.OrganisationTypeCode, StringComparison.OrdinalIgnoreCase)))
             {
                 return (totalErrors, validationErrors);
             }

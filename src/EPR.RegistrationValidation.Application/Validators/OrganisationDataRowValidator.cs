@@ -18,7 +18,7 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
         _validatorsRegistred = false;
     }
 
-    public void RegisterValidators(bool uploadedByComplianceScheme)
+    public void RegisterValidators(bool uploadedByComplianceScheme, bool isSubmissionPeriod2026, DateTime smallProducersRegStartTime2026, DateTime smallProducersRegEndTime2026)
     {
         if (_validatorsRegistred)
         {
@@ -55,7 +55,7 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
 
         if (_featureManager != null && _featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result)
         {
-            Include(new OrganisationSizeValidator());
+            Include(new OrganisationSizeValidator(uploadedByComplianceScheme, isSubmissionPeriod2026, smallProducersRegStartTime2026, smallProducersRegEndTime2026));
             Include(new OrganisationSizeTurnoverValidator());
         }
 

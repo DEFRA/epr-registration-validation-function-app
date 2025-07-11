@@ -1,5 +1,6 @@
 ﻿namespace EPR.RegistrationValidation.Application.Validators;
 
+using System.Globalization;
 using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
@@ -25,14 +26,14 @@ public class JoinerDateValidator : AbstractValidator<OrganisationDataRow>
         }
 
         RuleFor(r => r.JoinerDate)
-            .Must(x => DateTime.TryParseExact(x, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out _))
+            .Must(x => DateTime.TryParseExact(x, "dd/MM/yyyy", CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
             .When(x => !string.IsNullOrEmpty(x.JoinerDate))
             .WithErrorCode(ErrorCodes.InvalidJoinerDateFormat);
 
         RuleFor(r => r.JoinerDate)
-            .Must(x => DateTime.TryParseExact(x, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var joinerDate) &&
+            .Must(x => DateTime.TryParseExact(x, "dd/MM/yyyy", CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var joinerDate) &&
                 joinerDate.Date <= DateTime.Now.Date)
-            .When(x => !string.IsNullOrEmpty(x.JoinerDate) && DateTime.TryParseExact(x.JoinerDate, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out _))
+            .When(x => !string.IsNullOrEmpty(x.JoinerDate) && DateTime.TryParseExact(x.JoinerDate, "dd/MM/yyyy", CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
             .WithErrorCode(ErrorCodes.JoinerDateCannotBeInTheFuture);
     }
 }

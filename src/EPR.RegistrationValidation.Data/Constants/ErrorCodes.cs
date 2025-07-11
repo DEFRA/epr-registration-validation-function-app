@@ -91,6 +91,8 @@ public static class ErrorCodes
     public const string LeaverDateMustBeAfterJoinerDateCS = "915";
     public const string JoinerDateIsMandatoryDP = "916";
     public const string JoinerDateIsMandatoryCS = "917";
+    public const string InvalidRegistrationWindowForSmallProducers2026DP = "918";
+    public const string InvalidRegistrationWindowForSmallProducers2026CS = "919";
 
     /* Issue codes for warnings */
     public const string WarningZeroTurnover = "73";

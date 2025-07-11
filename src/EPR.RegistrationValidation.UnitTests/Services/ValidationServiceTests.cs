@@ -26,9 +26,13 @@ using Moq;
 public class ValidationServiceTests
 {
     private Mock<ICompanyDetailsApiClient> _companyDetailsApiClientMock;
+    private Mock<ISubmissionApiClient> _submissionApiClientMock;
     private Mock<ILogger<ValidationService>> _loggerMock;
     private Mock<ISubsidiaryDetailsRequestBuilder> _subsidiaryDetailsRequestBuilderMock;
     private Mock<IFeatureManager> _featureManagerMock;
+
+    private ApiClients _apiClients;
+    private ValidationConfig _config;
 
     [TestInitialize]
     public void Setup()
@@ -48,6 +52,10 @@ public class ValidationServiceTests
         var service = CreateService();
         var dataRows = new List<OrganisationDataRow> { new() };
         var blobQueueMessage = new BlobQueueMessage();
+
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Act
         var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage, false);
@@ -94,6 +102,10 @@ public class ValidationServiceTests
         _companyDetailsApiClientMock
             .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
             .ReturnsAsync(subsidiaryDetailsResponse);
+
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Act
         var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage, false);
@@ -144,6 +156,10 @@ public class ValidationServiceTests
         };
         var blobQueueMessage = new BlobQueueMessage();
 
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
         // Act
         var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage, false);
 
@@ -161,6 +177,10 @@ public class ValidationServiceTests
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
         var blobQueueMessage = new BlobQueueMessage();
 
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
         // Act
         var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
 
@@ -177,6 +197,10 @@ public class ValidationServiceTests
         var dataRows = RowDataTestHelper.GenerateOrgIdSubId(rowCount);
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
         var blobQueueMessage = new BlobQueueMessage();
+
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Act
         var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
@@ -196,6 +220,10 @@ public class ValidationServiceTests
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
         var blobQueueMessage = new BlobQueueMessage();
 
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
         // Act
         var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
 
@@ -213,6 +241,10 @@ public class ValidationServiceTests
         var dataRows = RowDataTestHelper.GenerateDuplicateOrgIdSubId(rowCount);
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
         var blobQueueMessage = new BlobQueueMessage();
+
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Act
         var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
@@ -232,7 +264,7 @@ public class ValidationServiceTests
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
         // Act
-        var results = await service.ValidateRowsAsync(dataRows.ToList(), false);
+        var results = await service.ValidateRowsAsync(dataRows.ToList(), false, "July to December 2025");
 
         // Assert
         results.TotalErrors.Should().Be(maxErrors);
@@ -373,6 +405,10 @@ public class ValidationServiceTests
         dataRow.MainActivitySic = "123456";
         var blobQueueMessage = new BlobQueueMessage();
 
+        _submissionApiClientMock
+            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
         // Act
         var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow }, blobQueueMessage, false);
 
@@ -392,6 +428,10 @@ public class ValidationServiceTests
 
         dataRow.TradingName = dataRow.OrganisationName;
         var blobQueueMessage = new BlobQueueMessage();
+
+        _submissionApiClientMock
+            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Act
         var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow }, blobQueueMessage, false);
@@ -714,6 +754,10 @@ public class ValidationServiceTests
             .Setup(f => f.GetCompanyDetailsByProducer(It.IsAny<string>()))
             .ReturnsAsync(companyDetailsDataResult);
 
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
         var blobQueueMessage = new BlobQueueMessage();
 
         // Act
@@ -750,6 +794,10 @@ public class ValidationServiceTests
         _companyDetailsApiClientMock
             .Setup(f => f.GetCompanyDetailsByProducer(It.IsAny<string>()))
             .ReturnsAsync(companyDetailsDataResult);
+
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         var blobQueueMessage = new BlobQueueMessage();
 
@@ -1472,7 +1520,7 @@ public class ValidationServiceTests
         // Assert
         Assert.AreEqual(1, totalErrors);
         Assert.AreEqual(1, validationErrors.Count);
-        Assert.AreEqual(ErrorCodes.SubsidiaryIdDoesNotExist, validationErrors.First().ColumnErrors.First().ErrorCode);
+        Assert.AreEqual(ErrorCodes.SubsidiaryIdDoesNotExist, validationErrors[0].ColumnErrors.First().ErrorCode);
     }
 
     [TestMethod]
@@ -1530,7 +1578,7 @@ public class ValidationServiceTests
         // Assert
         Assert.AreEqual(1, totalErrors);
         Assert.AreEqual(1, validationErrors.Count);
-        Assert.AreEqual(ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation, validationErrors.First().ColumnErrors.First().ErrorCode);
+        Assert.AreEqual(ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation, validationErrors[0].ColumnErrors.First().ErrorCode);
     }
 
     [TestMethod]
@@ -1588,7 +1636,7 @@ public class ValidationServiceTests
         // Assert
         Assert.AreEqual(1, totalErrors);
         Assert.AreEqual(1, validationErrors.Count);
-        Assert.AreEqual(ErrorCodes.SubsidiaryDoesNotBelongToAnyOrganisation, validationErrors.First().ColumnErrors.First().ErrorCode);
+        Assert.AreEqual(ErrorCodes.SubsidiaryDoesNotBelongToAnyOrganisation, validationErrors[0].ColumnErrors.First().ErrorCode);
     }
 
     [TestMethod]
@@ -1931,6 +1979,7 @@ public class ValidationServiceTests
         // Arrange
         const int rowCount = 4;
         const int maxErrors = 10;
+
         var organisationSizeFlag = true;
         var dataRows = RowDataTestHelper.GenerateOrgs_WithoutOrganisationSizeField(rowCount).ToArray();
         var service = CreateServiceWithOrganisationSizeFieldValidationToggle(organisationSizeFlag, new ValidationSettings { ErrorLimit = maxErrors });
@@ -1949,6 +1998,10 @@ public class ValidationServiceTests
         _companyDetailsApiClientMock
             .Setup(f => f.GetCompanyDetailsByProducer(It.IsAny<string>()))
             .ReturnsAsync(companyDetailsDataResult);
+
+        _submissionApiClientMock
+            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         var blobQueueMessage = new BlobQueueMessage();
 
@@ -1989,6 +2042,10 @@ public class ValidationServiceTests
         _companyDetailsApiClientMock
             .Setup(f => f.GetCompanyDetailsByProducer(It.IsAny<string>()))
             .ReturnsAsync(companyDetailsDataResult);
+
+        _submissionApiClientMock
+            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         var blobQueueMessage = new BlobQueueMessage();
 
@@ -2185,7 +2242,7 @@ public class ValidationServiceTests
         var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, existingErrors);
 
         // Assert
-        Assert.IsFalse(validationErrors.Any(e => e.ColumnErrors.Any(ce => ce.ErrorCode == ErrorCodes.JoinerDateDoesNotMatchJoinerDateInDatabase)));
+        Assert.IsFalse(validationErrors.Exists(e => e.ColumnErrors.Any(ce => ce.ErrorCode == ErrorCodes.JoinerDateDoesNotMatchJoinerDateInDatabase)));
     }
 
     [TestMethod]
@@ -2226,6 +2283,10 @@ public class ValidationServiceTests
 
         var service = CreateService();
 
+        _submissionApiClientMock
+            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
         // Act
         var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
 
@@ -2253,6 +2314,10 @@ public class ValidationServiceTests
         organisations[0].JoinerDate = joinerDate;
 
         var service = CreateService();
+
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Act
         var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
@@ -2283,6 +2348,10 @@ public class ValidationServiceTests
 
         var service = CreateService();
 
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
         // Act
         var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
 
@@ -2297,6 +2366,10 @@ public class ValidationServiceTests
         // Arrange
         var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { SubsidiaryId = "1", StatusCode = "Any" } };
         var service = CreateService();
+
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Act
         var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
@@ -2322,6 +2395,10 @@ public class ValidationServiceTests
 
         var service = CreateService();
 
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
         // Act
         var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
 
@@ -2345,6 +2422,10 @@ public class ValidationServiceTests
         };
         var service = CreateService();
 
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
         // Act
         var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
 
@@ -2359,6 +2440,10 @@ public class ValidationServiceTests
         // Arrange
         var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { RegistrationTypeCode = string.Empty } };
         var service = CreateService();
+
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Act
         var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage { ComplianceSchemeId = "1" }, false);
@@ -2384,6 +2469,10 @@ public class ValidationServiceTests
         };
         var service = CreateService();
 
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
         // Act
         var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
 
@@ -2392,7 +2481,7 @@ public class ValidationServiceTests
             .Should().NotContain(new[] { ErrorCodes.OrganisationChangeReasonCannotBeLongerThan200Characters });
     }
 
-    private ValidationService CreateService(ValidationSettings? settings = null)
+    private ValidationService CreateService(ValidationSettings? validationSettings = null, RegistrationSettings? registrationSettings = null)
     {
         var featureManageMock = new Mock<IFeatureManager>();
         featureManageMock
@@ -2406,6 +2495,22 @@ public class ValidationServiceTests
             .Returns(Task.FromResult(true));
 
         _companyDetailsApiClientMock = new Mock<ICompanyDetailsApiClient>();
+        _submissionApiClientMock = new Mock<ISubmissionApiClient>();
+
+        _apiClients = new ApiClients
+        {
+            CompanyDetailsApiClient = _companyDetailsApiClientMock.Object,
+            SubmissionApiClient = _submissionApiClientMock.Object,
+        };
+
+        var validationSettingsOptions = Options.Create(validationSettings ?? new ValidationSettings());
+        var registrationSettingsOptions = Options.Create(registrationSettings ?? new RegistrationSettings());
+
+        _config = new ValidationConfig
+        {
+            ValidationSettings = validationSettingsOptions,
+            RegistrationSettings = registrationSettingsOptions,
+        };
 
         var rowValidators = new RowValidators(
             new OrganisationDataRowValidator(featureManageMock.Object),
@@ -2416,14 +2521,14 @@ public class ValidationServiceTests
         return new ValidationService(
             rowValidators,
             new ColumnMetaDataProvider(featureManageMock.Object),
-            Options.Create(settings ?? new ValidationSettings()),
-            _companyDetailsApiClientMock.Object,
+            _config,
+            _apiClients,
             _loggerMock.Object,
             _featureManagerMock.Object,
             _subsidiaryDetailsRequestBuilderMock.Object);
     }
 
-    private ValidationService CreateServiceWithOrganisationSizeFieldValidationToggle(bool enableOrgSizeFieldValidation, ValidationSettings? settings = null)
+    private ValidationService CreateServiceWithOrganisationSizeFieldValidationToggle(bool enableOrgSizeFieldValidation, ValidationSettings? validationSettings = null, RegistrationSettings? registrationSettings = null)
     {
         var featureManageMock = new Mock<IFeatureManager>();
         featureManageMock
@@ -2431,6 +2536,22 @@ public class ValidationServiceTests
             .Returns(Task.FromResult(enableOrgSizeFieldValidation));
 
         _companyDetailsApiClientMock = new Mock<ICompanyDetailsApiClient>();
+        _submissionApiClientMock = new Mock<ISubmissionApiClient>();
+
+        _apiClients = new ApiClients
+        {
+            CompanyDetailsApiClient = _companyDetailsApiClientMock.Object,
+            SubmissionApiClient = _submissionApiClientMock.Object,
+        };
+
+        var validationSettingsOptions = Options.Create(validationSettings ?? new ValidationSettings());
+        var registrationSettingsOptions = Options.Create(registrationSettings ?? new RegistrationSettings());
+
+        _config = new ValidationConfig
+        {
+            ValidationSettings = validationSettingsOptions,
+            RegistrationSettings = registrationSettingsOptions,
+        };
 
         var rowValidators = new RowValidators(
             new OrganisationDataRowValidator(featureManageMock.Object),
@@ -2441,8 +2562,8 @@ public class ValidationServiceTests
         return new ValidationService(
             rowValidators,
             new ColumnMetaDataProvider(featureManageMock.Object),
-            Options.Create(settings ?? new ValidationSettings()),
-            _companyDetailsApiClientMock.Object,
+            _config,
+            _apiClients,
             _loggerMock.Object,
             _featureManagerMock.Object,
             _subsidiaryDetailsRequestBuilderMock.Object);

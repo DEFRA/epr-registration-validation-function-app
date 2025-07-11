@@ -11,6 +11,7 @@ namespace EPR.RegistrationValidation.Functions
     using Application.Extensions;
     using Application.Handlers;
     using Data.Config;
+    using EPR.RegistrationValidation.Application.Services;
     using Extensions;
     using Microsoft.Azure.Functions.Extensions.DependencyInjection;
     using Microsoft.Extensions.DependencyInjection;
@@ -44,6 +45,12 @@ namespace EPR.RegistrationValidation.Functions
                 c.Timeout = TimeSpan.FromSeconds(companyDetailsApiConfig.Timeout);
             })
             .AddHttpMessageHandler<CompanyDetailsApiAuthorisationHandler>();
+
+            services.AddScoped<ApiClients>(sp => new ApiClients
+            {
+                CompanyDetailsApiClient = sp.GetRequiredService<ICompanyDetailsApiClient>(),
+                SubmissionApiClient = sp.GetRequiredService<ISubmissionApiClient>(),
+            });
         }
     }
 }

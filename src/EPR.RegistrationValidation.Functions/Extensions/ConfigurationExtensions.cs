@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using Application.Extensions;
 using Azure.Storage.Blobs;
 using Data.Config;
+using EPR.RegistrationValidation.Application.Services;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -18,7 +19,13 @@ public static class ConfigurationExtensions
         services.ConfigureSection<StorageAccountConfig>(StorageAccountConfig.Section);
         services.ConfigureSection<SubmissionApiConfig>(SubmissionApiConfig.Section);
         services.ConfigureSection<ValidationSettings>(ValidationSettings.Section);
+        services.ConfigureSection<RegistrationSettings>(RegistrationSettings.Section);
 
+        services.AddSingleton<ValidationConfig>(sp => new ValidationConfig
+        {
+            ValidationSettings = sp.GetRequiredService<IOptions<ValidationSettings>>(),
+            RegistrationSettings = sp.GetRequiredService<IOptions<RegistrationSettings>>(),
+        });
         return services;
     }
 
