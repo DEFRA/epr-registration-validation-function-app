@@ -2,20 +2,10 @@
 
 using Data.Constants;
 using Data.Models;
-using EPR.RegistrationValidation.Application.Constants;
 using FluentValidation;
 
 public class CompanyHouseValidator : AbstractValidator<OrganisationDataRow>
 {
-    private static readonly string[] _codes =
-    {
-        UnIncorporationTypeCodes.CoOperative,
-        UnIncorporationTypeCodes.SoleTrader,
-        UnIncorporationTypeCodes.Partnership,
-        UnIncorporationTypeCodes.Others,
-        UnIncorporationTypeCodes.OutsideUk,
-    };
-
     public CompanyHouseValidator()
     {
         RuleFor(row => row.CompaniesHouseNumber)

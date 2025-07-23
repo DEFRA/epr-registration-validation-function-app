@@ -44,13 +44,25 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
 
         if (_featureManager != null && _featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
         {
-            Include(new JoinerDateValidator(
-                uploadedByComplianceScheme,
-                _featureManager.IsEnabledAsync(FeatureFlags.EnableAdditionalValidationForJoinerLeaverColumns).Result));
-            Include(new StatusCodeValidator(uploadedByComplianceScheme));
-            Include(new LeaverDateValidator(uploadedByComplianceScheme));
-            Include(new OrganisationChangeReasonValidator());
-            Include(new RegistrationTypeCodeValidator(uploadedByComplianceScheme));
+            var enableAdditionalValidationForJoinerLeaverColumns = _featureManager.IsEnabledAsync(FeatureFlags.EnableAdditionalValidationForJoinerLeaverColumns).Result;
+            var enableLeaverCodeValidation = _featureManager.IsEnabledAsync(FeatureFlags.EnableLeaverCodeValidation).Result;
+
+            if (!enableLeaverCodeValidation)
+            {
+                Include(new JoinerDateValidator(uploadedByComplianceScheme, enableAdditionalValidationForJoinerLeaverColumns, enableLeaverCodeValidation));
+                Include(new StatusCodeValidator(uploadedByComplianceScheme, enableLeaverCodeValidation));
+                Include(new LeaverDateValidator(uploadedByComplianceScheme, enableLeaverCodeValidation));
+                Include(new OrganisationChangeReasonValidator());
+                Include(new RegistrationTypeCodeValidator(uploadedByComplianceScheme));
+            }
+            else
+            {
+                Include(new JoinerDateValidator(uploadedByComplianceScheme, enableAdditionalValidationForJoinerLeaverColumns, enableLeaverCodeValidation));
+                Include(new LeaverDateValidator(uploadedByComplianceScheme, enableLeaverCodeValidation));
+                Include(new LeaverCodeValidator(uploadedByComplianceScheme, enableLeaverCodeValidation));
+                Include(new OrganisationChangeReasonValidator());
+                Include(new RegistrationTypeCodeValidator(uploadedByComplianceScheme));
+            }
         }
 
         if (_featureManager != null && _featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result)

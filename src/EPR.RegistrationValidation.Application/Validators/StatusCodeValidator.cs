@@ -2,29 +2,22 @@
 
 using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Data.Constants;
-using EPR.RegistrationValidation.Data.Models;
 using FluentValidation;
 
-public class StatusCodeValidator : AbstractValidator<OrganisationDataRow>
+public class StatusCodeValidator : AbstractCodeValidator
 {
-    public StatusCodeValidator(bool uploadedByComplianceScheme)
+    public StatusCodeValidator(bool uploadedByComplianceScheme, bool enableLeaverCodeValidation)
+        : base(uploadedByComplianceScheme, enableLeaverCodeValidation)
     {
         RuleLevelCascadeMode = CascadeMode.Stop;
 
-        RuleFor(r => r.StatusCode)
-            .NotEmpty()
-            .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && !string.IsNullOrEmpty(x.LeaverDate))
-            .WithErrorCode(ErrorCodes.StatusCodeMustBePresentWhenLeaverDatePresent);
-
-        RuleFor(r => r.StatusCode)
-            .NotEmpty()
-            .When(x => string.IsNullOrEmpty(x.SubsidiaryId) && uploadedByComplianceScheme && !string.IsNullOrEmpty(x.LeaverDate))
-            .WithErrorCode(ErrorCodes.StatusCodeMustBePresentWhenLeaverDatePresentCS);
-
-        RuleFor(r => r.StatusCode)
-            .Must(x => StatusCodeIsValid(x))
-            .When(r => !string.IsNullOrEmpty(r.StatusCode))
-            .WithErrorCode(ErrorCodes.InvalidStatusCode);
+        if (!enableLeaverCodeValidation)
+        {
+            RuleFor(r => r.LeaverCode)
+                .Must(x => StatusCodeIsValid(x))
+                .When(r => !string.IsNullOrEmpty(r.LeaverCode))
+                .WithErrorCode(ErrorCodes.InvalidStatusCode);
+        }
     }
 
     private bool StatusCodeIsValid(string statusCode)

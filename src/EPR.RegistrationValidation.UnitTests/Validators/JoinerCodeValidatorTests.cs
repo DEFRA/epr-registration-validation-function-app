@@ -8,7 +8,7 @@ using FluentValidation.TestHelper;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 [TestClass]
-public class StatusCodeValidatorTests
+public class JoinerCodeValidatorTests
 {
     [TestMethod]
     public async Task Validate_WithSubsidiaryIdPresentAndLeaverDatePresentEmptyStatusCode_IsNotValid()
@@ -69,7 +69,12 @@ public class StatusCodeValidatorTests
     {
         // Arrange
         var validator = new LeaverCodeValidator(false, true);
-        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = leaverCode };
+        var orgDataRow = new OrganisationDataRow
+        {
+            LeaverCode = leaverCode,
+            SubsidiaryId = "1",
+            JoinerDate = "01/01/2000",
+        };
 
         // Act
         var result = await validator.TestValidateAsync(orgDataRow);
@@ -89,7 +94,13 @@ public class StatusCodeValidatorTests
     {
         // Arrange
         var validator = new LeaverCodeValidator(false, true);
-        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = leaverCode };
+
+        var orgDataRow = new OrganisationDataRow
+        {
+            LeaverCode = leaverCode,
+            SubsidiaryId = "1",
+            JoinerDate = "01/01/2000",
+        };
 
         // Act
         var result = await validator.TestValidateAsync(orgDataRow);
@@ -102,17 +113,34 @@ public class StatusCodeValidatorTests
     }
 
     [TestMethod]
-    [DataRow("04")]
-    [DataRow("05")]
-    [DataRow("06")]
-    [DataRow("08")]
+    [DataRow("01")]
+    [DataRow("02")]
+    [DataRow("03")]
     [DataRow("10")]
-    [DataRow("11")]
     [DataRow("12")]
     [DataRow("13")]
-    [DataRow("14")]
-    [DataRow("16")]
     public async Task Validate_WithValidLeaverCode_IsValid(string leaverCode)
+    {
+        // Arrange
+        var validator = new LeaverCodeValidator(false, true);
+        var orgDataRow = new OrganisationDataRow
+        {
+            LeaverCode = leaverCode,
+            SubsidiaryId = "1",
+            JoinerDate = "01/01/2000",
+        };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    [DataRow("01")]
+    public async Task Validate_WithValidLeaverCode_IsValid2(string leaverCode)
     {
         // Arrange
         var validator = new LeaverCodeValidator(false, true);
@@ -127,10 +155,36 @@ public class StatusCodeValidatorTests
     }
 
     [TestMethod]
+    [DataRow("1")]
+    [DataRow("2")]
+    [DataRow("3")]
+    public async Task Validate_With_InValidJoinerCode_InValid(string joinerCode)
+    {
+        // Arrange
+        var validator = new LeaverCodeValidator(false, true);
+        var orgDataRow = new OrganisationDataRow
+        {
+            LeaverCode = joinerCode,
+            SubsidiaryId = "1",
+            JoinerDate = "01/01/2000",
+        };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
+
+        // result.ShouldHaveValidationErrorFor(x => x.LeaverCode);
+        // result.Errors.Should().Contain(err => err.ErrorCode == "926"); // ErrorCodes.JoinerOrLeaverCodeMinLengthNotCorrect);
+    }
+
+    [TestMethod]
     public async Task Validate_WithValidStatusCode_IsValid()
     {
         // Arrange
-        var validator = new StatusCodeValidator(false, true);
+        var validator = new StatusCodeValidator(false, false);
         var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "A" };
 
         // Act

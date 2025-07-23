@@ -40,6 +40,7 @@ public class ValidationServiceTests
         _loggerMock = new Mock<ILogger<ValidationService>>();
         _subsidiaryDetailsRequestBuilderMock = new Mock<ISubsidiaryDetailsRequestBuilder>();
         _featureManagerMock = new Mock<IFeatureManager>();
+        _submissionApiClientMock = new Mock<ISubmissionApiClient>();
     }
 
     [TestMethod]
@@ -2300,19 +2301,132 @@ public class ValidationServiceTests
     [DataRow("A", "01/01/2001", "test", "01/01/2000")]
     [DataRow("A", "01/01/2001", "", "")]
     public async Task ValidateOrganisationsAsync_WithValidJoinerLeaverDetailsCombination(
+    string statusCode,
+    string leaverDate,
+    string organisationChangeReason,
+    string joinerDate)
+    {
+        // Arrange
+        var organisations = RowDataTestHelper.GenerateOrgIdSubId(1).ToList();
+
+        organisations[0].LeaverCode = statusCode;
+        organisations[0].LeaverDate = leaverDate;
+        organisations[0].OrganisationChangeReason = organisationChangeReason;
+        organisations[0].JoinerDate = joinerDate;
+
+        var service = CreateService(enableLeaverCodeValidation: false);
+
+        _submissionApiClientMock
+            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
+        // Act
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+
+        // Assert
+        result.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    [DataRow("01", "", "", "01/01/2000")]
+    [DataRow("02", "", "test", "01/01/2000")]
+    public async Task ValidateOrganisationsAsync_WithValid_JoinerDetails_With_NewColumn(
+      string statusCode,
+      string leaverDate,
+      string organisationChangeReason,
+      string joinerDate)
+    {
+        // Arrange  [DataRow("05", "01/01/2001", "", "")]
+        var organisations = RowDataTestHelper.GenerateOrgIdSubId(1).ToList();
+        organisations[0].LeaverCode = statusCode;
+        organisations[0].LeaverDate = leaverDate;
+        organisations[0].OrganisationChangeReason = organisationChangeReason;
+        organisations[0].JoinerDate = joinerDate;
+        var service = CreateService();
+
+        _submissionApiClientMock
+            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
+        // Act
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+
+        // Assert
+        result.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    [DataRow("01", "", "", "01/01/2000")]
+    [DataRow("02", "", "test", "01/01/2000")]
+    public async Task ValidateOrganisationsAsync_WithValidJoinerDetails_WithInvalidDateCombination_With_NewColumn(
         string statusCode,
         string leaverDate,
         string organisationChangeReason,
         string joinerDate)
     {
-        // Arrange
+        // Arrange  [DataRow("05", "01/01/2001", "", "")]
         var organisations = RowDataTestHelper.GenerateOrgIdSubId(1).ToList();
-
-        organisations[0].StatusCode = statusCode;
+        organisations[0].LeaverCode = statusCode;
         organisations[0].LeaverDate = leaverDate;
         organisations[0].OrganisationChangeReason = organisationChangeReason;
         organisations[0].JoinerDate = joinerDate;
+        var service = CreateService();
 
+        _submissionApiClientMock
+            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
+        // Act
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+
+        // Assert
+        result.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    [DataRow("01", "01/01/2001", "", "01/01/2000")]
+    [DataRow("02", "01/01/2001", "test", "01/01/2000")]
+    public async Task ValidateOrganisationsAsync_WithValidLeaverDetailsCombination_With_NewColumn(
+     string statusCode,
+     string leaverDate,
+     string organisationChangeReason,
+     string joinerDate)
+    {
+        // Arrange  [DataRow("05", "01/01/2001", "", "")]
+        var organisations = RowDataTestHelper.GenerateOrgIdSubId(1).ToList();
+        organisations[0].LeaverCode = statusCode;
+        organisations[0].LeaverDate = leaverDate;
+        organisations[0].OrganisationChangeReason = organisationChangeReason;
+        organisations[0].JoinerDate = joinerDate;
+        var service = CreateService();
+
+        _submissionApiClientMock
+            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
+        // Act
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+
+        // Assert
+        result.Should().NotBeEmpty();
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverDateShouldNotBePresent);
+    }
+
+    [TestMethod]
+    [DataRow("02", "", "", "01/01/2001", 2)]
+    public async Task ValidateOrganisationsAsync_WithValidJoinerLeaverDetailsCombination(
+        string leaverCode,
+        string leaverDate,
+        string organisationChangeReason,
+        string joinerDate,
+        int expectedErrorCount)
+    {
+        // Arrange
+        var organisations = RowDataTestHelper.GenerateOrgIdSubId(1).ToList();
+        organisations[0].LeaverCode = leaverCode;
+        organisations[0].LeaverDate = leaverDate;
+        organisations[0].OrganisationChangeReason = organisationChangeReason;
+        organisations[0].JoinerDate = joinerDate;
         var service = CreateService();
 
         _submissionApiClientMock
@@ -2327,25 +2441,20 @@ public class ValidationServiceTests
     }
 
     [TestMethod]
-    [DataRow("A", "", "", "", 1)]
-    [DataRow("B", "", "", "", 2)]
-    [DataRow("C", "", "", "", 2)]
-    [DataRow("", "01/01/2001", "", "", 1)]
+    [DataRow("02", "01/01/2024", "", "01/01/2001", 1)]
     public async Task ValidateOrganisationsAsync_WithInvalidJoinerLeaverDetailsCombination(
-        string statusCode,
-        string leaverDate,
-        string organisationChangeReason,
-        string joinerDate,
-        int expectedErrorCount)
+       string leaverCode,
+       string leaverDate,
+       string organisationChangeReason,
+       string joinerDate,
+       int expectedErrorCount)
     {
         // Arrange
         var organisations = RowDataTestHelper.GenerateOrgIdSubId(1).ToList();
-
-        organisations[0].StatusCode = statusCode;
+        organisations[0].LeaverCode = leaverCode;
         organisations[0].LeaverDate = leaverDate;
         organisations[0].OrganisationChangeReason = organisationChangeReason;
         organisations[0].JoinerDate = joinerDate;
-
         var service = CreateService();
 
         _submissionApiClientMock
@@ -2358,13 +2467,24 @@ public class ValidationServiceTests
         // Assert
         result.Should().NotBeEmpty();
         result[0].ColumnErrors.Count.Should().Be(expectedErrorCount);
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverDateShouldNotBePresent);
     }
 
     [TestMethod]
-    public async Task ValidateOrganisationsAsync_WithSubsidiaryIdStatusCode_WithoutLeaverDate()
+    [DataRow("03", "", "", "", 1)]
+    public async Task ValidateOrganisationsAsync_WithInvalidJoinerLeaverCombination(
+        string leaverCode,
+        string leaverDate,
+        string organisationChangeReason,
+        string joinerDate,
+        int expectedErrorCount)
     {
         // Arrange
-        var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { SubsidiaryId = "1", StatusCode = "Any" } };
+        var organisations = RowDataTestHelper.GenerateOrgIdSubId(1).ToList();
+        organisations[0].LeaverCode = leaverCode;
+        organisations[0].LeaverDate = leaverDate;
+        organisations[0].OrganisationChangeReason = organisationChangeReason;
+        organisations[0].JoinerDate = joinerDate;
         var service = CreateService();
 
         _submissionApiClientMock
@@ -2376,7 +2496,63 @@ public class ValidationServiceTests
 
         // Assert
         result.Should().NotBeEmpty();
-        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverDateMustBePresentWhenStatusCodePresent);
+        result[0].ColumnErrors.Count.Should().Be(expectedErrorCount);
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.JoinerDateIsMandatoryDP);
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryId_WithLeverCode_WithoutLeaverDate()
+    {
+        // Arrange
+        var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "04" } };
+        var service = CreateService();
+
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
+        // Act
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+
+        // Assert
+        result.Should().NotBeEmpty();
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverDateIsMandatoryWhenLeaverCodePresent);
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryId_WithJoinerCode_WithoutLeaverDate()
+    {
+        var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "02" } };
+        var service = CreateService();
+
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
+        // Act
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+
+        // Assert
+        result.Should().NotBeEmpty();
+    }
+
+    [TestMethod]
+    public async Task ValidateOrganisationsAsync_WithSubsidiaryId_WithLeaverCode_WithoutLeaverDate()
+    {
+        // Arrange
+        var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "04" } };
+        var service = CreateService();
+
+        _submissionApiClientMock
+        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
+
+        // Act
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+
+        // Assert
+        result.Should().NotBeEmpty();
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverDateIsMandatoryWhenLeaverCodePresent);
     }
 
     [TestMethod]
@@ -2388,7 +2564,7 @@ public class ValidationServiceTests
             new OrganisationDataRow
             {
                 SubsidiaryId = "1",
-                StatusCode = "Any",
+                LeaverCode = "Any",
                 LeaverDate = DateTime.Now.AddDays(2).ToString("dd/MM/yyyy"),
             },
         };
@@ -2416,7 +2592,7 @@ public class ValidationServiceTests
             new OrganisationDataRow
             {
                 SubsidiaryId = "1",
-                StatusCode = "Any",
+                LeaverCode = "Any",
                 OrganisationChangeReason = new string('X', 201),
             },
         };
@@ -2462,7 +2638,7 @@ public class ValidationServiceTests
             new OrganisationDataRow
             {
                 SubsidiaryId = "1",
-                StatusCode = "Any",
+                LeaverCode = "Any",
                 OrganisationChangeReason = new string('X', 200),
                 LeaverDate = "01/01/2022",
             },
@@ -2481,7 +2657,7 @@ public class ValidationServiceTests
             .Should().NotContain(new[] { ErrorCodes.OrganisationChangeReasonCannotBeLongerThan200Characters });
     }
 
-    private ValidationService CreateService(ValidationSettings? validationSettings = null, RegistrationSettings? registrationSettings = null)
+    private ValidationService CreateService(ValidationSettings? validationSettings = null, RegistrationSettings? registrationSettings = null, bool enableLeaverCodeValidation = true)
     {
         var featureManageMock = new Mock<IFeatureManager>();
         featureManageMock
@@ -2493,6 +2669,9 @@ public class ValidationServiceTests
         featureManageMock
             .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableAdditionalValidationForJoinerLeaverColumns))
             .Returns(Task.FromResult(true));
+        featureManageMock
+            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableLeaverCodeValidation))
+            .Returns(Task.FromResult(enableLeaverCodeValidation));
 
         _companyDetailsApiClientMock = new Mock<ICompanyDetailsApiClient>();
         _submissionApiClientMock = new Mock<ISubmissionApiClient>();

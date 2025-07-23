@@ -37,20 +37,25 @@ public class CsvStreamParser : ICsvStreamParser
             using var reader = new StreamReader(memoryStream);
             using var csv = new CsvReader(reader, CsvConfiguration);
 
-            if (_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result == false &&
-                _featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result == false)
+            if (!_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result &&
+                !_featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
             {
                 csv.Context.RegisterClassMap<OrganisationDataRowWithoutOrgSizeLeaverAndJoinerColumnsMap>();
             }
-            else if (_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result == false)
+            else if (!_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result)
             {
                 // Register class map to populate data row without the (newer) organisation size property
                 csv.Context.RegisterClassMap<OrganisationDataRowWithoutOrgSizeColumnMap>();
             }
-            else if (_featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result == false)
+            else if (!_featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
             {
                 // Register class map to populate data row without the (newer) organisation size property
                 csv.Context.RegisterClassMap<OrganisationDataRowWithoutLeaverAndJoinerColumnsMap>();
+            }
+            else if (!_featureManager.IsEnabledAsync(FeatureFlags.EnableLeaverCodeValidation).Result)
+            {
+                // Register class map to populate data row without the (newer) organisation size property
+                csv.Context.RegisterClassMap<OrganisationDataRowWithoutLeaverCodeColumnsMap>();
             }
 
             if (useMinimalClassMaps)
@@ -69,7 +74,7 @@ public class CsvStreamParser : ICsvStreamParser
                 .OrderBy(x => x.Index)
                 .ToList();
 
-            if (_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result == false)
+            if (!_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result)
             {
                 var toBeRemoved = orderedHeaders.SingleOrDefault(x => x.Name == "organisation_size");
                 if (toBeRemoved != null)

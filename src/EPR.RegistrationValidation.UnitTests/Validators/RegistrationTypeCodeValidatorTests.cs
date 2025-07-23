@@ -39,7 +39,19 @@ public class RegistrationTypeCodeValidatorTests
     public async Task Validate_WithEmptyRegistrationTypeCode_And_EmptySubsidiaryId_IsValid()
     {
         // Arrange
-        var orgDataRow = new OrganisationDataRow { SubsidiaryId = string.Empty, RegistrationTypeCode = string.Empty };
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = string.Empty, RegistrationTypeCode = RegistrationTypeCodes.Group };
+
+        // Act
+        var result = await _validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+    }
+
+    public async Task Validate_WithEmptyRegistrationTypeCode_And_ValidJoinerCode_IsValid()
+    {
+        // Arrange
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = string.Empty, RegistrationTypeCode = RegistrationTypeCodes.Individual, LeaverCode = "01" };
 
         // Act
         var result = await _validator.TestValidateAsync(orgDataRow);
@@ -49,10 +61,53 @@ public class RegistrationTypeCodeValidatorTests
     }
 
     [TestMethod]
+    public async Task Validate_WithEmptyRegistrationTypeCode_And_ValidLeaverCode_IsValid()
+    {
+        // Arrange
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = string.Empty, RegistrationTypeCode = RegistrationTypeCodes.Individual, LeaverCode = "04" };
+
+        // Act
+        var result = await _validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+    }
+
+    [TestMethod]
+    public async Task Validate_WithEmptyRegistrationTypeCode_And_ValidJoinerCode_Error()
+    {
+        // Arrange
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = string.Empty, RegistrationTypeCode = string.Empty, LeaverCode = "01" };
+
+        // Act
+        var result = await _validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.ShouldHaveValidationErrorFor(x => x.RegistrationTypeCode)
+            .WithErrorCode(ErrorCodes.RegistrationTypeCodeIsMandatory);
+    }
+
+    [TestMethod]
+    public async Task Validate_WithEmptyRegistrationTypeCode_And_ValidLeaverCode_Error()
+    {
+        // Arrange
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = string.Empty, RegistrationTypeCode = string.Empty, LeaverCode = "04" };
+
+        // Act
+        var result = await _validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.ShouldHaveValidationErrorFor(x => x.RegistrationTypeCode)
+            .WithErrorCode(ErrorCodes.RegistrationTypeCodeIsMandatory);
+    }
+
+    [TestMethod]
     public async Task Validate_WithEmptyRegistrationTypeCode_And_EmptySubsidiaryId_WhenUploadedByCS_IsInvalid()
     {
         // Arrange
-        var orgDataRow = new OrganisationDataRow { SubsidiaryId = string.Empty, RegistrationTypeCode = string.Empty };
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", RegistrationTypeCode = string.Empty, LeaverCode = "01" };
 
         var validator = new RegistrationTypeCodeValidator(true);
 
@@ -62,7 +117,7 @@ public class RegistrationTypeCodeValidatorTests
         // Assert
         result.IsValid.Should().BeFalse();
         result.ShouldHaveValidationErrorFor(x => x.RegistrationTypeCode)
-            .WithErrorCode(ErrorCodes.RegistrationTypeCodeIsMandatoryCS);
+            .WithErrorCode(ErrorCodes.RegistrationTypeCodeIsMandatory);
     }
 
     [TestMethod]

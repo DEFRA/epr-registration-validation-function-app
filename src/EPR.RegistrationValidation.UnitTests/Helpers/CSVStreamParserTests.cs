@@ -257,7 +257,7 @@ error, error";
     }
 
     [TestMethod]
-    [DataRow(true, true,  "ValidFileWithCorrectHeaders.csv", 2)]
+    [DataRow(true, true, "ValidFileWithCorrectHeaders.csv", 2)]
     [DataRow(true, false, "ValidFileWithCorrectHeadersWithOldLeaverCodeColumnName.csv", 2)]
     [DataRow(false, true, "InvalidFileTooFewHeaders.csv", 2)]
     [DataRow(false, false, "InvalidFileTooFewHeaders.csv", 2)]

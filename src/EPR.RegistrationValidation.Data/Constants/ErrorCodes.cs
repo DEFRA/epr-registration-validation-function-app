@@ -93,7 +93,14 @@ public static class ErrorCodes
     public const string JoinerDateIsMandatoryCS = "917";
     public const string InvalidRegistrationWindowForSmallProducers2026DP = "918";
     public const string InvalidRegistrationWindowForSmallProducers2026CS = "919";
-
+    public const string JoinerDateMustBePresentWhenJoinerCodePresent = "920";
+    public const string LeaverDateShouldNotBePresent = "921";
+    public const string LeaverDateIsMandatoryWhenLeaverCodePresent = "922";
+    public const string InvalidLeaverOrJoinerCode = "923";
+    public const string JoinerdateNotAllowedWhenLeaverCodeIsPresent = "924";
+    public const string LeaveOrJoinderCodeShouldNotbeEmpty = "925";
+    public const string JoinerOrLeaverCodeMinLengthNotCorrect = "926";
+    public const string JoinerOrLeaverCodeMaxLengthNotCorrect = "927";
     /* Issue codes for warnings */
     public const string WarningZeroTurnover = "73";
 }

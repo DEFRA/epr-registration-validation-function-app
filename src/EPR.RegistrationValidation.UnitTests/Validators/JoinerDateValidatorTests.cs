@@ -19,7 +19,7 @@ public class JoinerDateValidatorTests
     public async Task Validate_WithIncorrectJoinerDateFormat_IsNotValid(string date)
     {
         // Arrange
-        var validator = new JoinerDateValidator(false, true);
+        var validator = new JoinerDateValidator(false, true, true);
         var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", JoinerDate = date };
 
         // Act
@@ -36,7 +36,7 @@ public class JoinerDateValidatorTests
     public async Task Validate_WithFutureJoinerDate_IsInvalid()
     {
         // Arrange
-        var validator = new JoinerDateValidator(false, true);
+        var validator = new JoinerDateValidator(false, true, true);
         var orgDataRow = new OrganisationDataRow
         {
             JoinerDate = DateTime.Now.AddDays(2).ToString("dd/MM/yyyy"),
@@ -56,7 +56,7 @@ public class JoinerDateValidatorTests
     public async Task Validate_WithSubsidiaryIdAndCorrectJoinerDateFormat_IsValid()
     {
         // Arrange
-        var validator = new JoinerDateValidator(false, true);
+        var validator = new JoinerDateValidator(false, true, true);
         var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", JoinerDate = "01/01/2000" };
 
         // Act
@@ -81,10 +81,10 @@ public class JoinerDateValidatorTests
         string expectedErrorCode)
     {
         // Arrange
-        var validator = new JoinerDateValidator(uploadedByComplianceScheme, true);
+        var validator = new JoinerDateValidator(uploadedByComplianceScheme, true, false);
         var orgDataRow = new OrganisationDataRow
         {
-            StatusCode = statusCode,
+            LeaverCode = statusCode,
             SubsidiaryId = subsidiaryId,
             JoinerDate = string.Empty,
         };
@@ -100,13 +100,67 @@ public class JoinerDateValidatorTests
     }
 
     [TestMethod]
+    [DataRow(false, "02", "1", ErrorCodes.JoinerDateIsMandatoryDP)]
+    [DataRow(true, "03", "1", ErrorCodes.JoinerDateIsMandatoryDP)]
+    public async Task Validate_WithPresetJoinerDate_and_LeaveCode_IsValid(
+     bool uploadedByComplianceScheme,
+     string leaverCode,
+     string subsidiaryId,
+     string expectedErrorCode)
+    {
+        // Arrange
+        var validator = new JoinerDateValidator(uploadedByComplianceScheme, true, true);
+        var orgDataRow = new OrganisationDataRow
+        {
+            LeaverCode = leaverCode,
+            SubsidiaryId = subsidiaryId,
+            JoinerDate = "01/01/2000",
+        };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    [DataRow(true, "04", "1")]
+    [DataRow(true, "05", "2")]
+    [DataRow(true, "06", "3")]
+    public async Task Validate_WithPresetJoinerDate_and_LeaveCode_Is_InValid(
+    bool uploadedByComplianceScheme,
+    string leaverCode,
+    string subsidiaryId)
+    {
+        // Arrange
+        var validator = new JoinerDateValidator(uploadedByComplianceScheme, true, true);
+        var orgDataRow = new OrganisationDataRow
+        {
+            LeaverCode = leaverCode,
+            SubsidiaryId = subsidiaryId,
+            JoinerDate = "01/01/2000",
+        };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
+        result.ShouldHaveValidationErrorFor(x => x.JoinerDate);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.JoinerdateNotAllowedWhenLeaverCodeIsPresent);
+    }
+
+    [TestMethod]
     public async Task Validate_WithAbsentJoinerDate_IsValid()
     {
         // Arrange
-        var validator = new JoinerDateValidator(false, true);
+        var validator = new JoinerDateValidator(false, true, true);
         var orgDataRow = new OrganisationDataRow
         {
-            StatusCode = "A",
+            LeaverCode = "A",
             JoinerDate = string.Empty,
         };
 
@@ -122,10 +176,10 @@ public class JoinerDateValidatorTests
     public async Task Validate_WithAbsentJoinerDateAndStatusCodeAndDisabledValidation_IsValid()
     {
         // Arrange
-        var validator = new JoinerDateValidator(false, false);
+        var validator = new JoinerDateValidator(false, false, true);
         var orgDataRow = new OrganisationDataRow
         {
-            StatusCode = "B",
+            LeaverCode = "B",
             JoinerDate = string.Empty,
         };
 
