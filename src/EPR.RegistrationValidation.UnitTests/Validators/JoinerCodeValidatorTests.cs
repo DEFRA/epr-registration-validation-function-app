@@ -14,7 +14,7 @@ public class JoinerCodeValidatorTests
     public async Task Validate_WithSubsidiaryIdPresentAndLeaverDatePresentEmptyStatusCode_IsNotValid()
     {
         // Arrange
-        var validator = new StatusCodeValidator(false, false);
+        var validator = new LeaverCodeValidator(false, false);
         var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverDate = "22/01/2025" };
 
         // Act
@@ -31,7 +31,7 @@ public class JoinerCodeValidatorTests
     public async Task Validate_WithUploadedByCSAndLeaverDatePresentEmptyStatusCode_IsNotValid()
     {
         // Arrange
-        var validator = new StatusCodeValidator(true, false);
+        var validator = new LeaverCodeValidator(true, false);
         var orgDataRow = new OrganisationDataRow { LeaverDate = "22/01/2025" };
 
         // Act
@@ -48,7 +48,7 @@ public class JoinerCodeValidatorTests
     public async Task Validate_WithInvalidStatusCode_IsNotValid()
     {
         // Arrange
-        var validator = new StatusCodeValidator(false, false);
+        var validator = new LeaverCodeValidator(false, false);
         var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "a" };
 
         // Act
@@ -184,7 +184,7 @@ public class JoinerCodeValidatorTests
     public async Task Validate_WithValidStatusCode_IsValid()
     {
         // Arrange
-        var validator = new StatusCodeValidator(false, false);
+        var validator = new LeaverCodeValidator(false, false);
         var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "A" };
 
         // Act

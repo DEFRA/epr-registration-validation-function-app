@@ -19,11 +19,10 @@
     "FeatureManagement:EnableBrandPartnerCrossFileValidation": false,
     "FeatureManagement:EnableCompanyDetailsValidation": false,
     "FeatureManagement:EnableOrganisationSizeFieldValidation": false,
-    "EnableAdditionalValidationForJoinerLeaverColumns": false,
+    "FeatureManagement:EnableAdditionalValidationForJoinerLeaverColumns": false,
     "RegistrationSettings:SmallProducersRegStartTime2026": "2026/01/01",
     "RegistrationSettings:SmallProducersRegEndTime2026": "2026/04/01",
-    "RegistrationSettings:SubmissionPeriod2026": "January to December 2026"
-    "EnableAdditionalValidationForJoinerLeaverColumns": false,
-    "FeatureManagement:EnableLeaverCodeValidation": true
+    "RegistrationSettings:SubmissionPeriod2026": "January to December 2026",
+    "FeatureManagement:EnableLeaverCodeValidation": false
   }
 }

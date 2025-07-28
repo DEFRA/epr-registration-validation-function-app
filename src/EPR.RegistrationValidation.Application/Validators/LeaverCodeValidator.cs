@@ -2,12 +2,12 @@
 
 using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Data.Constants;
+using EPR.RegistrationValidation.Data.Models;
 using FluentValidation;
 
-public class LeaverCodeValidator : AbstractCodeValidator
+public class LeaverCodeValidator : AbstractValidator<OrganisationDataRow>
 {
     public LeaverCodeValidator(bool uploadedByComplianceScheme, bool enableLeaverCodeValidation)
-        : base(uploadedByComplianceScheme, enableLeaverCodeValidation)
     {
         RuleLevelCascadeMode = CascadeMode.Stop;
 
@@ -18,7 +18,7 @@ public class LeaverCodeValidator : AbstractCodeValidator
             RuleFor(r => r.LeaverCode)
              .NotEmpty()
              .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && !string.IsNullOrEmpty(x.LeaverDate))
-             .WithErrorCode(ErrorCodes.LeaveOrJoinderCodeShouldNotbeEmpty);
+             .WithErrorCode(ErrorCodes.LeaveOrJoinerCodeShouldNotbeEmpty);
 
             RuleFor(r => r.LeaverCode)
              .Must(x => AllCodeIsValid(x))
@@ -28,7 +28,7 @@ public class LeaverCodeValidator : AbstractCodeValidator
             RuleFor(r => r.LeaverCode)
              .NotEmpty()
              .When(x => CodeAndDateAreValid(x.LeaverCode, x.LeaverDate, x.JoinerDate))
-             .WithErrorCode(ErrorCodes.LeaveOrJoinderCodeShouldNotbeEmpty);
+             .WithErrorCode(ErrorCodes.LeaveOrJoinerCodeShouldNotbeEmpty);
 
             RuleFor(r => r.LeaverCode)
               .Must(x => LeaverCodeIsValid(x))
@@ -39,6 +39,23 @@ public class LeaverCodeValidator : AbstractCodeValidator
               .MinimumLength(2)
               .When(r => !string.IsNullOrEmpty(r.LeaverCode) && CodeAndDateAreValid(r.LeaverCode, r.LeaverDate, r.JoinerDate))
               .WithMessage(ErrorCodes.JoinerOrLeaverCodeMinLengthNotCorrect);
+        }
+        else
+        {
+            RuleFor(r => r.LeaverCode)
+              .NotEmpty()
+              .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && !string.IsNullOrEmpty(x.LeaverDate))
+              .WithErrorCode(ErrorCodes.StatusCodeMustBePresentWhenLeaverDatePresent);
+
+            RuleFor(r => r.LeaverCode)
+                .NotEmpty()
+                .When(x => string.IsNullOrEmpty(x.SubsidiaryId) && uploadedByComplianceScheme && !string.IsNullOrEmpty(x.LeaverDate))
+                .WithErrorCode(ErrorCodes.StatusCodeMustBePresentWhenLeaverDatePresentCS);
+
+            RuleFor(r => r.LeaverCode)
+                .Must(x => StatusCodeIsValid(x))
+                .When(r => !string.IsNullOrEmpty(r.LeaverCode))
+                .WithErrorCode(ErrorCodes.InvalidStatusCode);
         }
     }
 
@@ -108,5 +125,26 @@ public class LeaverCodeValidator : AbstractCodeValidator
           code == JoinerCode.LeaverCode09 ||
           code == JoinerCode.LeaverCode15 ||
           code == JoinerCode.LeaverCode17;
+    }
+
+    private static bool StatusCodeIsValid(string statusCode)
+    {
+        return statusCode == StatusCode.A ||
+            statusCode == StatusCode.B ||
+            statusCode == StatusCode.C ||
+            statusCode == StatusCode.D ||
+            statusCode == StatusCode.E ||
+            statusCode == StatusCode.F ||
+            statusCode == StatusCode.G ||
+            statusCode == StatusCode.H ||
+            statusCode == StatusCode.I ||
+            statusCode == StatusCode.J ||
+            statusCode == StatusCode.K ||
+            statusCode == StatusCode.L ||
+            statusCode == StatusCode.M ||
+            statusCode == StatusCode.N ||
+            statusCode == StatusCode.O ||
+            statusCode == StatusCode.P ||
+            statusCode == StatusCode.Q;
     }
 }

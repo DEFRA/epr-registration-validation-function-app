@@ -26,15 +26,18 @@ public class JoinerDateValidator : AbstractValidator<OrganisationDataRow>
         }
         else
         {
-            RuleFor(r => r.JoinerDate)
+            if (enableAdditionalValidation)
+            {
+                RuleFor(r => r.JoinerDate)
                .NotEmpty()
                .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && (x.LeaverCode == StatusCode.B || x.LeaverCode == StatusCode.C))
                .WithErrorCode(ErrorCodes.JoinerDateIsMandatoryDP);
 
-            RuleFor(r => r.JoinerDate)
-               .NotEmpty()
-               .When(x => string.IsNullOrEmpty(x.SubsidiaryId) && uploadedByComplianceScheme && (x.LeaverCode == StatusCode.B || x.LeaverCode == StatusCode.C))
-               .WithErrorCode(ErrorCodes.JoinerDateIsMandatoryCS);
+                RuleFor(r => r.JoinerDate)
+                   .NotEmpty()
+                   .When(x => string.IsNullOrEmpty(x.SubsidiaryId) && uploadedByComplianceScheme && (x.LeaverCode == StatusCode.B || x.LeaverCode == StatusCode.C))
+                   .WithErrorCode(ErrorCodes.JoinerDateIsMandatoryCS);
+            }
         }
 
         RuleFor(r => r.JoinerDate)

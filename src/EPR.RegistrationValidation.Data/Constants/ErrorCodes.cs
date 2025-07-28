@@ -98,7 +98,7 @@ public static class ErrorCodes
     public const string LeaverDateIsMandatoryWhenLeaverCodePresent = "922";
     public const string InvalidLeaverOrJoinerCode = "923";
     public const string JoinerdateNotAllowedWhenLeaverCodeIsPresent = "924";
-    public const string LeaveOrJoinderCodeShouldNotbeEmpty = "925";
+    public const string LeaveOrJoinerCodeShouldNotbeEmpty = "925";
     public const string JoinerOrLeaverCodeMinLengthNotCorrect = "926";
     public const string JoinerOrLeaverCodeMaxLengthNotCorrect = "927";
     /* Issue codes for warnings */

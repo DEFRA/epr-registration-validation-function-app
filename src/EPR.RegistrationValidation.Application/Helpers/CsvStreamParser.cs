@@ -52,11 +52,6 @@ public class CsvStreamParser : ICsvStreamParser
                 // Register class map to populate data row without the (newer) organisation size property
                 csv.Context.RegisterClassMap<OrganisationDataRowWithoutLeaverAndJoinerColumnsMap>();
             }
-            else if (!_featureManager.IsEnabledAsync(FeatureFlags.EnableLeaverCodeValidation).Result)
-            {
-                // Register class map to populate data row without the (newer) organisation size property
-                csv.Context.RegisterClassMap<OrganisationDataRowWithoutLeaverCodeColumnsMap>();
-            }
 
             if (useMinimalClassMaps)
             {

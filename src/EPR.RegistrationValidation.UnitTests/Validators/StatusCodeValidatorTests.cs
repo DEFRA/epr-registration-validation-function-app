@@ -14,7 +14,7 @@ public class StatusCodeValidatorTests
     public async Task Validate_WithSubsidiaryIdPresentAndLeaverDatePresentEmptyStatusCode_IsNotValid()
     {
         // Arrange
-        var validator = new StatusCodeValidator(false, false);
+        var validator = new LeaverCodeValidator(false, false);
         var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverDate = "22/01/2025" };
 
         // Act
@@ -31,7 +31,7 @@ public class StatusCodeValidatorTests
     public async Task Validate_WithUploadedByCSAndLeaverDatePresentEmptyStatusCode_IsNotValid()
     {
         // Arrange
-        var validator = new StatusCodeValidator(true, false);
+        var validator = new LeaverCodeValidator(true, false);
         var orgDataRow = new OrganisationDataRow { LeaverDate = "22/01/2025" };
 
         // Act
@@ -48,7 +48,7 @@ public class StatusCodeValidatorTests
     public async Task Validate_WithInvalidStatusCode_IsNotValid()
     {
         // Arrange
-        var validator = new StatusCodeValidator(false, false);
+        var validator = new LeaverCodeValidator(false, false);
         var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "a" };
 
         // Act
@@ -79,6 +79,70 @@ public class StatusCodeValidatorTests
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.LeaverCode);
         result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.InvalidLeaverOrJoinerCode);
+    }
+
+    [TestMethod]
+    [DataRow("A")]
+    [DataRow("B")]
+    [DataRow("C")]
+    [DataRow("E")]
+    public async Task Validate_WithInvalidStatusCode_IsValid(string leaverCode)
+    {
+        // Arrange
+        var validator = new LeaverCodeValidator(false, false);
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = leaverCode };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+    }
+
+    [TestMethod]
+    [DataRow("")]
+    public async Task Validate_WithInvalid_EmptyStatusCode_IsValid(string leaverCode)
+    {
+        // Arrange
+        var validator = new LeaverCodeValidator(false, false);
+        var orgDataRow = new OrganisationDataRow
+        {
+            LeaverCode = leaverCode,
+            SubsidiaryId = "1",
+            LeaverDate = "01/01/2000",
+        };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
+        result.ShouldHaveValidationErrorFor(x => x.LeaverCode);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.StatusCodeMustBePresentWhenLeaverDatePresent);
+    }
+
+    [TestMethod]
+    [DataRow("")]
+    public async Task Validate_WithInvalid_EmptyStatusCode_EmptySub_IsInvalidValid(string leaverCode)
+    {
+        // Arrange
+        var validator = new LeaverCodeValidator(true, false);
+        var orgDataRow = new OrganisationDataRow
+        {
+            LeaverCode = leaverCode,
+            SubsidiaryId = string.Empty,
+            LeaverDate = "01/01/2000",
+        };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
+        result.ShouldHaveValidationErrorFor(x => x.LeaverCode);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.StatusCodeMustBePresentWhenLeaverDatePresentCS);
     }
 
     [TestMethod]
@@ -130,7 +194,7 @@ public class StatusCodeValidatorTests
     public async Task Validate_WithValidStatusCode_IsValid()
     {
         // Arrange
-        var validator = new StatusCodeValidator(false, true);
+        var validator = new LeaverCodeValidator(false, false);
         var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "A" };
 
         // Act

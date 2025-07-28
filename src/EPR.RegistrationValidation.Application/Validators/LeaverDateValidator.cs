@@ -17,20 +17,37 @@ public class LeaverDateValidator : AbstractValidator<OrganisationDataRow>
         if (enableLeaverCodeValidation)
         {
             RuleFor(r => r.LeaverDate)
-               .Empty()
-               .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && JoinerCodeIsValid(x.LeaverCode))
-               .WithErrorCode(ErrorCodes.LeaverDateShouldNotBePresent);
+            .Empty()
+            .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && JoinerCodeIsValid(x.LeaverCode))
+            .WithErrorCode(ErrorCodes.LeaverDateShouldNotBePresent);
+
+            RuleFor(r => r.LeaverDate)
+            .NotEmpty()
+            .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && LeaverCodeIsValid(x.LeaverCode))
+            .WithErrorCode(ErrorCodes.LeaverDateIsMandatoryWhenLeaverCodePresent);
+        }
+        else
+        {
+            RuleFor(r => r.LeaverDate)
+           .NotEmpty()
+           .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && !string.IsNullOrEmpty(x.LeaverCode))
+           .WithErrorCode(ErrorCodes.LeaverDateMustBePresentWhenStatusCodePresent);
 
             RuleFor(r => r.LeaverDate)
                 .NotEmpty()
-                .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && LeaverCodeIsValid(x.LeaverCode))
-                .WithErrorCode(ErrorCodes.LeaverDateIsMandatoryWhenLeaverCodePresent);
+                .When(x => string.IsNullOrEmpty(x.SubsidiaryId) && uploadedByComplianceScheme && !string.IsNullOrEmpty(x.LeaverCode))
+                .WithErrorCode(ErrorCodes.LeaverDateMustBePresentWhenStatusCodePresentCS);
+
+            RuleFor(r => r.LeaverDate)
+                .Must(x => DateFormatIsValid(x))
+                .When(x => !string.IsNullOrEmpty(x.LeaverDate))
+                .WithErrorCode(ErrorCodes.InvalidLeaverDateFormat);
         }
 
         RuleFor(r => r.LeaverDate)
-            .Must(x => DateFormatIsValid(x))
-            .When(x => !string.IsNullOrEmpty(x.LeaverDate))
-            .WithErrorCode(ErrorCodes.InvalidLeaverDateFormat);
+                .Must(x => DateFormatIsValid(x))
+                .When(x => !string.IsNullOrEmpty(x.LeaverDate))
+                .WithErrorCode(ErrorCodes.InvalidLeaverDateFormat);
 
         RuleFor(r => r.LeaverDate)
             .Must(x => DateTime.TryParseExact(x, "dd/MM/yyyy", CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var leaverDate) &&
@@ -87,7 +104,7 @@ public class LeaverDateValidator : AbstractValidator<OrganisationDataRow>
             leaverCode == LeaverCode.LeaverCode16;
     }
 
-    private bool DateFormatIsValid(string date)
+    private static bool DateFormatIsValid(string date)
     {
         return DateTime.TryParseExact(date, "dd/MM/yyyy", CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _);
     }
