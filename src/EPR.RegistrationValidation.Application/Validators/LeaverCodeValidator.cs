@@ -31,11 +31,6 @@ public class LeaverCodeValidator : AbstractValidator<OrganisationDataRow>
              .WithErrorCode(ErrorCodes.LeaveOrJoinerCodeShouldNotbeEmpty);
 
             RuleFor(r => r.LeaverCode)
-              .Must(x => LeaverCodeIsValid(x))
-              .When(x => !string.IsNullOrEmpty(x.LeaverCode) && !string.IsNullOrEmpty(x.LeaverDate) && string.IsNullOrEmpty(x.JoinerDate))
-              .WithErrorCode(ErrorCodes.InvalidLeaverOrJoinerCode);
-
-            RuleFor(r => r.LeaverCode)
               .MinimumLength(2)
               .When(r => !string.IsNullOrEmpty(r.LeaverCode) && CodeAndDateAreValid(r.LeaverCode, r.LeaverDate, r.JoinerDate))
               .WithMessage(ErrorCodes.JoinerOrLeaverCodeMinLengthNotCorrect);
@@ -90,20 +85,6 @@ public class LeaverCodeValidator : AbstractValidator<OrganisationDataRow>
         }
 
         return false;
-    }
-
-    private static bool LeaverCodeIsValid(string leaverCode)
-    {
-        return leaverCode == LeaverCode.LeaverCode04 ||
-            leaverCode == LeaverCode.LeaverCode05 ||
-            leaverCode == LeaverCode.LeaverCode06 ||
-            leaverCode == LeaverCode.LeaverCode08 ||
-            leaverCode == LeaverCode.LeaverCode10 ||
-            leaverCode == LeaverCode.LeaverCode11 ||
-            leaverCode == LeaverCode.LeaverCode12 ||
-            leaverCode == LeaverCode.LeaverCode13 ||
-            leaverCode == LeaverCode.LeaverCode14 ||
-            leaverCode == LeaverCode.LeaverCode16;
     }
 
     private static bool AllCodeIsValid(string code)
