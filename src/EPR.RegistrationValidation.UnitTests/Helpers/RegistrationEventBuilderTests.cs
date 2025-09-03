@@ -44,6 +44,34 @@ public class RegistrationEventBuilderTests
     }
 
     [TestMethod]
+    [DataRow("Par", "pRImary")]
+    [DataRow("PaR", "pRimary")]
+    [DataRow("pAr", "pRiMarY")]
+    [DataRow("pAR", "PRiMaRy")]
+    [DataRow("paR", "pRiMARy")]
+    [DataRow("par", "primary")]
+    [DataRow("llP", "sEcondary")]
+    [DataRow("lPA", "SeconDary")]
+    public void CreateValidationEvent_WhenCsvItemHasBrandsAndPartners_WithInCorrectCasing_ReturnsCorrectRegistrationEvent(
+        string organisationTypeCode,
+        string packagingActivity)
+    {
+        // Arrange
+        var validationErrors = new List<RegistrationValidationError>();
+        var csvDataRow = CSVRowTestHelper.GenerateOrgCsvDataRow(organisationTypeCode.ToString(), packagingActivity.ToString());
+        var csvDataRows = new List<OrganisationDataRow>
+        {
+            csvDataRow,
+        };
+
+        // Act
+        var regEvent = RegistrationEventBuilder.CreateValidationEvent(csvDataRows, validationErrors, BlobName, ContainerName, ErrorLimit, 1);
+
+        // Assert
+        RegistrationEventTestHelper.AssertRegistrationValidationEvent(regEvent, validationErrors, true, true, BlobName);
+    }
+
+    [TestMethod]
     [DataRow(RequiredPackagingActivityForBrands.Primary)]
     [DataRow(RequiredPackagingActivityForBrands.Secondary)]
     public void CreateValidationEvent_WhenCsvItemHasBrandsAndNoPartners_ReturnsCorrectRegistrationEvent(RequiredPackagingActivityForBrands brands)
