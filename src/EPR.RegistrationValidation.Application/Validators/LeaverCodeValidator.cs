@@ -13,16 +13,19 @@ public class LeaverCodeValidator : AbstractValidator<OrganisationDataRow>
 
         if (enableLeaverCodeValidation)
         {
-            this.CascadeMode = CascadeMode.StopOnFirstFailure;
+            RuleFor(r => r.LeaverCode)
+             .NotEmpty()
+             .When(x => !string.IsNullOrEmpty(x.JoinerDate) && !string.IsNullOrEmpty(x.LeaverDate))
+             .WithErrorCode(ErrorCodes.OnlyOneDateShouldbePresent);
 
             RuleFor(r => r.LeaverCode)
              .NotEmpty()
-             .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && !string.IsNullOrEmpty(x.LeaverDate))
-             .WithErrorCode(ErrorCodes.LeaveOrJoinerCodeShouldNotbeEmpty);
+             .When(x => string.IsNullOrEmpty(x.JoinerDate) && !string.IsNullOrEmpty(x.LeaverDate))
+             .WithErrorCode(ErrorCodes.LeaverCodeMustBePresentWhenLeaverDatePresent);
 
             RuleFor(r => r.LeaverCode)
              .Must(x => AllCodeIsValid(x))
-             .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && !string.IsNullOrEmpty(x.LeaverCode))
+             .When(x => !string.IsNullOrEmpty(x.LeaverCode))
              .WithErrorCode(ErrorCodes.InvalidLeaverOrJoinerCode);
 
             RuleFor(r => r.LeaverCode)
@@ -40,7 +43,7 @@ public class LeaverCodeValidator : AbstractValidator<OrganisationDataRow>
             RuleFor(r => r.LeaverCode)
               .NotEmpty()
               .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && !string.IsNullOrEmpty(x.LeaverDate))
-              .WithErrorCode(ErrorCodes.StatusCodeMustBePresentWhenLeaverDatePresent);
+              .WithErrorCode(ErrorCodes.LeaverCodeMustBePresentWhenLeaverDatePresent);
 
             RuleFor(r => r.LeaverCode)
                 .NotEmpty()
@@ -65,7 +68,8 @@ public class LeaverCodeValidator : AbstractValidator<OrganisationDataRow>
             leaverORJoinerCode == LeaverCode.LeaverCode12 ||
             leaverORJoinerCode == LeaverCode.LeaverCode13 ||
             leaverORJoinerCode == LeaverCode.LeaverCode14 ||
-            leaverORJoinerCode == LeaverCode.LeaverCode16;
+            leaverORJoinerCode == LeaverCode.LeaverCode16 ||
+            leaverORJoinerCode == LeaverCode.LeaverCode21;
 
         bool isItIsJoinerCode = leaverORJoinerCode == JoinerCode.LeaverCode01 ||
             leaverORJoinerCode == JoinerCode.LeaverCode02 ||
@@ -73,7 +77,10 @@ public class LeaverCodeValidator : AbstractValidator<OrganisationDataRow>
             leaverORJoinerCode == JoinerCode.LeaverCode07 ||
             leaverORJoinerCode == JoinerCode.LeaverCode09 ||
             leaverORJoinerCode == JoinerCode.LeaverCode15 ||
-            leaverORJoinerCode == JoinerCode.LeaverCode17;
+            leaverORJoinerCode == JoinerCode.LeaverCode17 ||
+            leaverORJoinerCode == JoinerCode.LeaverCode18 ||
+            leaverORJoinerCode == JoinerCode.LeaverCode19 ||
+            leaverORJoinerCode == JoinerCode.LeaverCode20;
 
         if (isItIsLeaverCode && !string.IsNullOrEmpty(leaverDate))
         {
@@ -105,7 +112,12 @@ public class LeaverCodeValidator : AbstractValidator<OrganisationDataRow>
           code == JoinerCode.LeaverCode07 ||
           code == JoinerCode.LeaverCode09 ||
           code == JoinerCode.LeaverCode15 ||
-          code == JoinerCode.LeaverCode17;
+          code == LeaverCode.LeaverCode16 ||
+          code == JoinerCode.LeaverCode17 ||
+          code == JoinerCode.LeaverCode18 ||
+          code == JoinerCode.LeaverCode19 ||
+          code == JoinerCode.LeaverCode20 ||
+          code == LeaverCode.LeaverCode21;
     }
 
     private static bool StatusCodeIsValid(string statusCode)

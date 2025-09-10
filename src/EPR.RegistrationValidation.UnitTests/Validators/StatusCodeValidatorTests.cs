@@ -24,7 +24,7 @@ public class StatusCodeValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.LeaverCode);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.StatusCodeMustBePresentWhenLeaverDatePresent);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.LeaverCodeMustBePresentWhenLeaverDatePresent);
     }
 
     [TestMethod]
@@ -119,7 +119,7 @@ public class StatusCodeValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.LeaverCode);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.StatusCodeMustBePresentWhenLeaverDatePresent);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.LeaverCodeMustBePresentWhenLeaverDatePresent);
     }
 
     [TestMethod]

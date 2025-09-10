@@ -125,6 +125,23 @@ public class PartnerDataRowOrganisationDataValidatorTests
         result.Errors.Should().BeEmpty();
     }
 
+    [TestMethod]
+    public async Task Validate_With_Empty_Subsidiary_IsValid()
+    {
+        // Arrange
+        const string defraId = "123456";
+        const string subsidiaryId = "";
+        var validator = CreateValidator();
+        var partnerDataRow = CreatePartnerDataRow(defraId, subsidiaryId);
+        var context = new ValidationContext<PartnersDataRow>(partnerDataRow);
+
+        // Act
+        var result = await validator.TestValidateAsync(context);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+    }
+
     private static PartnerDataRowOrganisationDataValidator CreateValidator()
     {
         return new PartnerDataRowOrganisationDataValidator();

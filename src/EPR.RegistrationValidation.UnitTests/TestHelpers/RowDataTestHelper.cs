@@ -133,6 +133,7 @@ public static class RowDataTestHelper
                 OrganisationTypeCode = UnIncorporationTypeCodes.SoleTrader,
                 OrganisationSize = OrganisationSizeCodes.L.ToString(),
                 JoinerDate = "01/01/2000",
+                LeaverCode = "02",
                 RegistrationTypeCode = RegistrationTypeCodes.Individual,
             };
             rows.Add(row);

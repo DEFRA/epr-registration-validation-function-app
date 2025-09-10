@@ -18,12 +18,12 @@ public class LeaverDateValidator : AbstractValidator<OrganisationDataRow>
         {
             RuleFor(r => r.LeaverDate)
             .Empty()
-            .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && JoinerCodeIsValid(x.LeaverCode))
+            .When(x => JoinerCodeIsValid(x.LeaverCode))
             .WithErrorCode(ErrorCodes.LeaverDateShouldNotBePresent);
 
             RuleFor(r => r.LeaverDate)
             .NotEmpty()
-            .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && LeaverCodeIsValid(x.LeaverCode))
+            .When(x => LeaverCodeIsValid(x.LeaverCode))
             .WithErrorCode(ErrorCodes.LeaverDateIsMandatoryWhenLeaverCodePresent);
         }
         else

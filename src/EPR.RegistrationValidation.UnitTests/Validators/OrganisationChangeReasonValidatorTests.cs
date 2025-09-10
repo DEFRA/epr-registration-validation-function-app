@@ -73,4 +73,58 @@ public class OrganisationChangeReasonValidatorTests
         result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
     }
+
+    [TestMethod]
+    [DataRow("02", "This is joiner code 02", "01/01/2000", ErrorCodes.JoinerDateIsMandatoryDP)]
+    [DataRow("03", "", "01/01/2000", ErrorCodes.JoinerDateIsMandatoryDP)]
+    public async Task Validate_WithOrganisationChangeReason_may_Not_Be_Empty_For_Leaver_Codes_20_21_IsValid(
+            string leaverCode,
+            string organisationChangeReason,
+            string joinerDate,
+            string expectedErrorCode)
+    {
+        // Arrange
+        var validator = new OrganisationChangeReasonValidator();
+        var orgDataRow = new OrganisationDataRow
+                    {
+                        SubsidiaryId = "1", LeaverCode = leaverCode,
+                        JoinerDate = joinerDate, OrganisationChangeReason = organisationChangeReason,
+                    };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    [DataRow("20", "", "01/01/2000", ErrorCodes.OrganisationChangeReasonMustBePresent)]
+    [DataRow("21", "", "01/01/2020", ErrorCodes.OrganisationChangeReasonMustBePresent)]
+    public async Task Validate_WithOrganisationChangeReason_Should_Not_Be_Empty_For_Leaver_Codes_20_21_IsValid(
+            string leaverCode,
+            string organisationChangeReason,
+            string joinerDate,
+            string expectedErrorCode)
+    {
+        // Arrange
+        var validator = new OrganisationChangeReasonValidator();
+        var orgDataRow = new OrganisationDataRow
+        {
+            SubsidiaryId = "1",
+            LeaverCode = leaverCode,
+            JoinerDate = joinerDate,
+            OrganisationChangeReason = organisationChangeReason,
+        };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
+        result.ShouldHaveValidationErrorFor(x => x.OrganisationChangeReason);
+        result.Errors.Should().Contain(err => err.ErrorCode == expectedErrorCode);
+    }
 }

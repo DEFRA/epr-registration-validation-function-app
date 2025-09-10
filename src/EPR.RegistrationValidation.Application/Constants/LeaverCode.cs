@@ -12,4 +12,5 @@ public static class LeaverCode
     public const string LeaverCode13 = "13";
     public const string LeaverCode14 = "14";
     public const string LeaverCode16 = "16";
+    public const string LeaverCode21 = "21";
 }

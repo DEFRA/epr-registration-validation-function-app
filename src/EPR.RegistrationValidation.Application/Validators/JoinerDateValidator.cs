@@ -16,12 +16,16 @@ public class JoinerDateValidator : AbstractValidator<OrganisationDataRow>
         {
             RuleFor(r => r.JoinerDate)
                 .NotEmpty()
-                .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && (x.LeaverCode == JoinerCode.LeaverCode02 || x.LeaverCode == JoinerCode.LeaverCode03))
+                .When(x => (x.LeaverCode == JoinerCode.LeaverCode02 ||
+                                x.LeaverCode == JoinerCode.LeaverCode03 ||
+                                x.LeaverCode == JoinerCode.LeaverCode18 ||
+                                x.LeaverCode == JoinerCode.LeaverCode19 ||
+                                x.LeaverCode == JoinerCode.LeaverCode20))
                 .WithErrorCode(ErrorCodes.JoinerDateIsMandatoryDP);
 
             RuleFor(r => r.JoinerDate)
                 .Empty()
-                .When(x => !string.IsNullOrEmpty(x.SubsidiaryId) && LeaverCodeIsValid(x.LeaverCode))
+                .When(x => LeaverCodeIsValid(x.LeaverCode))
                 .WithErrorCode(ErrorCodes.JoinerdateNotAllowedWhenLeaverCodeIsPresent);
         }
         else

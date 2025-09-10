@@ -43,8 +43,8 @@ public static class RegistrationEventBuilder
         int errorLimit,
         int? organisationMemberCount)
     {
-        bool requiresPartnershipsFile = csvItems.Exists(row => Enum.IsDefined(typeof(RequiredOrganisationTypeCodeForPartners), row.OrganisationTypeCode));
-        bool requiresBrandsFile = csvItems.Exists(row => Enum.IsDefined(typeof(RequiredPackagingActivityForBrands), row.PackagingActivitySO));
+        bool requiresPartnershipsFile = csvItems.Exists(row => Enum.TryParse(typeof(RequiredOrganisationTypeCodeForPartners), row.OrganisationTypeCode, true, out _));
+        bool requiresBrandsFile = csvItems.Exists(row => Enum.TryParse(typeof(RequiredPackagingActivityForBrands), row.PackagingActivitySO, true, out _));
 
         var validationEvent = new RegistrationValidationEvent
         {

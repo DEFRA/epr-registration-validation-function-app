@@ -24,7 +24,7 @@ public class JoinerCodeValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.LeaverCode);
-        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.StatusCodeMustBePresentWhenLeaverDatePresent);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.LeaverCodeMustBePresentWhenLeaverDatePresent);
     }
 
     [TestMethod]
@@ -119,6 +119,10 @@ public class JoinerCodeValidatorTests
     [DataRow("10")]
     [DataRow("12")]
     [DataRow("13")]
+    [DataRow("18")]
+    [DataRow("19")]
+    [DataRow("20")]
+    [DataRow("21")]
     public async Task Validate_WithValidLeaverCode_IsValid(string leaverCode)
     {
         // Arrange
@@ -140,7 +144,7 @@ public class JoinerCodeValidatorTests
 
     [TestMethod]
     [DataRow("01")]
-    public async Task Validate_WithValidLeaverCode_IsValid2(string leaverCode)
+    public async Task Validate_With_ValidLeaverCode_IsValid(string leaverCode)
     {
         // Arrange
         var validator = new LeaverCodeValidator(false, true);
@@ -175,9 +179,8 @@ public class JoinerCodeValidatorTests
         // Assert
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
-
-        // result.ShouldHaveValidationErrorFor(x => x.LeaverCode);
-        // result.Errors.Should().Contain(err => err.ErrorCode == "926"); // ErrorCodes.JoinerOrLeaverCodeMinLengthNotCorrect);
+        result.ShouldHaveValidationErrorFor(x => x.LeaverCode);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.InvalidLeaverOrJoinerCode);
     }
 
     [TestMethod]

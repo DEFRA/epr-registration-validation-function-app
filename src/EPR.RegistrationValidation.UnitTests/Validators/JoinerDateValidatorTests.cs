@@ -126,10 +126,36 @@ public class JoinerDateValidatorTests
     }
 
     [TestMethod]
+    [DataRow(false, "02", "1", ErrorCodes.JoinerDateIsMandatoryDP)]
+    [DataRow(true, "03", "1", ErrorCodes.JoinerDateIsMandatoryDP)]
+    public async Task Validate_WithNullSubsId_WithPresetJoinerDate_and_LeaveCode_IsValid(
+     bool uploadedByComplianceScheme,
+     string leaverCode,
+     string subsidiaryId,
+     string expectedErrorCode)
+    {
+        // Arrange
+        var validator = new JoinerDateValidator(uploadedByComplianceScheme, true, true);
+        var orgDataRow = new OrganisationDataRow
+        {
+            LeaverCode = leaverCode,
+            SubsidiaryId = null,
+            JoinerDate = "01/01/2000",
+        };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+    }
+
+    [TestMethod]
     [DataRow(true, "04", "1")]
     [DataRow(true, "05", "2")]
     [DataRow(true, "06", "3")]
-    public async Task Validate_WithPresetJoinerDate_and_LeaveCode_Is_InValid(
+    public async Task Validate_WithPresetJoinerDate_and_LeaverCode_Is_InValid(
     bool uploadedByComplianceScheme,
     string leaverCode,
     string subsidiaryId)
@@ -151,6 +177,36 @@ public class JoinerDateValidatorTests
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.JoinerDate);
         result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.JoinerdateNotAllowedWhenLeaverCodeIsPresent);
+    }
+
+    [TestMethod]
+    [DataRow(true, "02", "1")]
+    [DataRow(true, "03", "1")]
+    [DataRow(true, "18", "1")]
+    [DataRow(true, "19", "1")]
+    [DataRow(true, "20", "1")]
+    public async Task Validate_With_MissingJoinerDate_and_Present_LeaverCode_Is_InValid(
+    bool uploadedByComplianceScheme,
+    string leaverCode,
+    string subsidiaryId)
+    {
+        // Arrange
+        var validator = new JoinerDateValidator(uploadedByComplianceScheme, true, true);
+        var orgDataRow = new OrganisationDataRow
+        {
+            LeaverCode = leaverCode,
+            SubsidiaryId = subsidiaryId,
+            JoinerDate = string.Empty,
+        };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
+        result.ShouldHaveValidationErrorFor(x => x.JoinerDate);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.JoinerDateIsMandatoryDP);
     }
 
     [TestMethod]

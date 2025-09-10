@@ -72,7 +72,7 @@ public static class ErrorCodes
     public const string SmallProducerTurnoverInvalid = "896";
     public const string LargeProducerTurnoverInvalid = "897";
     public const string InvalidJoinerDateFormat = "898";
-    public const string StatusCodeMustBePresentWhenLeaverDatePresent = "899";
+    public const string LeaverCodeMustBePresentWhenLeaverDatePresent = "899";
     public const string LeaverDateMustBePresentWhenStatusCodePresent = "900";
     public const string InvalidLeaverDateFormat = "901";
     public const string LeaverDateMustBeAfterJoinerDate = "902";
@@ -101,6 +101,9 @@ public static class ErrorCodes
     public const string LeaveOrJoinerCodeShouldNotbeEmpty = "925";
     public const string JoinerOrLeaverCodeMinLengthNotCorrect = "926";
     public const string JoinerOrLeaverCodeMaxLengthNotCorrect = "927";
+    public const string JoinerCodeMustBePresentWhenJoinerDatePresent = "928";
+    public const string OnlyOneDateShouldbePresent = "929";
+    public const string OrganisationChangeReasonMustBePresent = "930";
     /* Issue codes for warnings */
     public const string WarningZeroTurnover = "73";
 }
