@@ -304,7 +304,7 @@ error, error";
         Assert.AreEqual(expectedResultCount, result.Count);
     }
 
-    private Mock<IFeatureManager> CreateFeatureManagerMock(bool featureFlag)
+    private static Mock<IFeatureManager> CreateFeatureManagerMock(bool featureFlag)
     {
         var featureManageMock = new Mock<IFeatureManager>();
         featureManageMock

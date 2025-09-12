@@ -38,7 +38,7 @@ public class BrandDataRowOrganisationDataValidator : AbstractValidator<BrandData
             .WithErrorCode(ErrorCodes.BrandDetailsNotMatchingSubsidiary);
     }
 
-    private Dictionary<string, Dictionary<string, OrganisationIdentifiers>> GetOrganisationDataLookupTableData(IValidationContext context)
+    private Dictionary<string, Dictionary<string, OrganisationIdentifiers>> GetOrganisationDataLookupTableData(FluentValidation.ValidationContext<BrandDataRow> context)
     {
         if (context.RootContextData.TryGetValue(nameof(OrganisationDataLookupTable), out var lookup)
             && lookup is OrganisationDataLookupTable table)

@@ -163,7 +163,7 @@ public class CompanyDetailsApiClient : ICompanyDetailsApiClient
         return default;
     }
 
-    private StringContent CreateHttpContent(object data)
+    private static StringContent CreateHttpContent(object data)
     {
         var json = JsonConvert.SerializeObject(data);
         return new StringContent(json, System.Text.Encoding.UTF8, "application/json");

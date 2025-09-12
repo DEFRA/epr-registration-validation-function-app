@@ -22,12 +22,9 @@
             var turnoverValue = decimal.Parse(turnover);
             var totalTonnageValue = decimal.Parse(totalTonnage);
 
-            if (size.Equals(OrganisationSizeCodes.S.ToString(), StringComparison.CurrentCultureIgnoreCase))
+            if (size.Equals(OrganisationSizeCodes.S.ToString(), StringComparison.CurrentCultureIgnoreCase) && (turnoverValue > 2 && totalTonnageValue > 50))
             {
-                if (turnoverValue > 2 && totalTonnageValue > 50)
-                {
-                    return false;
-                }
+                return false;
             }
 
             return true;

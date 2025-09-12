@@ -17,11 +17,11 @@ public class ColumnMetaDataProvider
     private const string OrganisationChangeReasonName = "OrganisationChangeReason";
     private const string ReportingTypeName = "ReportingType";
     private const string JoinerDateName = "JoinerDate";
-    private static IFeatureManager _featureManager;
+    private readonly IFeatureManager _featureManager;
 
-    private readonly IDictionary<string, ColumnMetaData> _organisationMetaData;
-    private readonly IDictionary<string, ColumnMetaData> _brandMetaData;
-    private readonly IDictionary<string, ColumnMetaData> _partnerMetaData;
+    private readonly Dictionary<string, ColumnMetaData> _organisationMetaData;
+    private readonly Dictionary<string, ColumnMetaData> _brandMetaData;
+    private readonly Dictionary<string, ColumnMetaData> _partnerMetaData;
 
     public ColumnMetaDataProvider(IFeatureManager featureManager)
     {
@@ -49,7 +49,7 @@ public class ColumnMetaDataProvider
     }
 
     [ExcludeFromCodeCoverage]
-    private static Dictionary<string, ColumnMetaData> LoadColumnMetaData<T>()
+    private Dictionary<string, ColumnMetaData> LoadColumnMetaData<T>()
     {
         var columnValues = typeof(T).GetProperties()
             .Where(x => x.GetCustomAttribute<ColumnAttribute>() != null)
@@ -64,20 +64,24 @@ public class ColumnMetaDataProvider
                 }
 
                 return (
-                Key: x.Name,
-                Index: x.GetCustomAttribute<ColumnAttribute>().Index,
-                Name: name);
+                    Key: x.Name,
+                    Index: x.GetCustomAttribute<ColumnAttribute>().Index,
+                    Name: name);
             })
             .ToList();
 
-        var returnDictionary = columnValues.Count > 0 ? columnValues.ToDictionary(x => x.Key, x => new ColumnMetaData(x.Name, x.Index)) : new Dictionary<string, ColumnMetaData>();
+        var returnDictionary = columnValues.Count > 0
+            ? columnValues.ToDictionary(x => x.Key, x => new ColumnMetaData(x.Name, x.Index))
+            : new Dictionary<string, ColumnMetaData>();
 
-        if (typeof(T).Equals(typeof(OrganisationDataRow)) && _featureManager != null && !_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result)
+        if (typeof(T).Equals(typeof(OrganisationDataRow)) &&
+            !_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result)
         {
             returnDictionary.Remove(OrganisationSizeColumnName);
         }
 
-        if (typeof(T).Equals(typeof(OrganisationDataRow)) && _featureManager != null && !_featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
+        if (typeof(T).Equals(typeof(OrganisationDataRow)) &&
+            !_featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
         {
             returnDictionary.Remove(StatusCodeName);
             returnDictionary.Remove(LeaverDateName);

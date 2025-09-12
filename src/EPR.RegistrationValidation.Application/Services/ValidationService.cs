@@ -346,7 +346,7 @@ public class ValidationService : IValidationService
         try
         {
             var subsidiaryDetailsRequest = _subsidiaryDetailsRequestBuilder.CreateRequest(rows);
-            if (subsidiaryDetailsRequest?.SubsidiaryOrganisationDetails == null || !subsidiaryDetailsRequest.SubsidiaryOrganisationDetails.Any())
+            if (subsidiaryDetailsRequest?.SubsidiaryOrganisationDetails == null || subsidiaryDetailsRequest.SubsidiaryOrganisationDetails.Count == 0)
             {
                 return (totalErrors, validationErrors);
             }

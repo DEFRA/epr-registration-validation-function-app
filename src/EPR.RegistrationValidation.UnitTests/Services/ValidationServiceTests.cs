@@ -2054,7 +2054,7 @@ public class ValidationServiceTests
         var errors = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
 
         // Assert
-        errors.Count().Should().Be(errorCount);
+        errors.Count.Should().Be(errorCount);
 
         _companyDetailsApiClientMock.Verify(
             m => m.GetCompanyDetailsByProducer(It.IsAny<string>()),
@@ -2066,7 +2066,7 @@ public class ValidationServiceTests
     public async Task ValidateSubsidiary_ShouldNotAddError_WhenJoinerDateDoesNotMatchJoinerDateInDatabaseButThereIsAlreadyAJoinerDateError()
     {
         // Arrange
-        var expectedErrorCodes = new string[] { };
+        var expectedErrorCodes = Array.Empty<string>();
         var existingErrors = new List<Data.Models.SubmissionApi.RegistrationValidationError>()
         {
             new RegistrationValidationError()
