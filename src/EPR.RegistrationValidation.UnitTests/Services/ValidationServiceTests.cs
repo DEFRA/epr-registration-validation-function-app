@@ -2516,7 +2516,7 @@ public class ValidationServiceTests
 
         // Assert
         result.Should().NotBeEmpty();
-        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverDateIsMandatoryWhenLeaverCodePresent);
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverDateIsMandatoryForThisCode);
     }
 
     [TestMethod]
@@ -2552,7 +2552,7 @@ public class ValidationServiceTests
 
         // Assert
         result.Should().NotBeEmpty();
-        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverDateIsMandatoryWhenLeaverCodePresent);
+        result[0].ColumnErrors.Should().Contain(x => x.ErrorCode == ErrorCodes.LeaverDateIsMandatoryForThisCode);
     }
 
     [TestMethod]

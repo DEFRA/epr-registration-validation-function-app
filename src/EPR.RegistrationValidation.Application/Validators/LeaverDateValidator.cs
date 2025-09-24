@@ -24,7 +24,7 @@ public class LeaverDateValidator : AbstractValidator<OrganisationDataRow>
             RuleFor(r => r.LeaverDate)
             .NotEmpty()
             .When(x => LeaverCodeIsValid(x.LeaverCode))
-            .WithErrorCode(ErrorCodes.LeaverDateIsMandatoryWhenLeaverCodePresent);
+            .WithErrorCode(ErrorCodes.LeaverDateIsMandatoryForThisCode);
         }
         else
         {
@@ -101,7 +101,8 @@ public class LeaverDateValidator : AbstractValidator<OrganisationDataRow>
             leaverCode == LeaverCode.LeaverCode12 ||
             leaverCode == LeaverCode.LeaverCode13 ||
             leaverCode == LeaverCode.LeaverCode14 ||
-            leaverCode == LeaverCode.LeaverCode16;
+            leaverCode == LeaverCode.LeaverCode16 ||
+            leaverCode == LeaverCode.LeaverCode21;
     }
 
     private static bool DateFormatIsValid(string date)

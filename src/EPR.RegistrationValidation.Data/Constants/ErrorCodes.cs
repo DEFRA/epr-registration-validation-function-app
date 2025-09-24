@@ -104,6 +104,7 @@ public static class ErrorCodes
     public const string JoinerCodeMustBePresentWhenJoinerDatePresent = "928";
     public const string OnlyOneDateShouldbePresent = "929";
     public const string OrganisationChangeReasonMustBePresent = "930";
+    public const string LeaverDateIsMandatoryForThisCode = "931";
     /* Issue codes for warnings */
     public const string WarningZeroTurnover = "73";
 }

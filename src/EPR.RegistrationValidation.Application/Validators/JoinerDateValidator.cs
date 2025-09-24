@@ -67,6 +67,7 @@ public class JoinerDateValidator : AbstractValidator<OrganisationDataRow>
             leaverCode == LeaverCode.LeaverCode12 ||
             leaverCode == LeaverCode.LeaverCode13 ||
             leaverCode == LeaverCode.LeaverCode14 ||
-            leaverCode == LeaverCode.LeaverCode16;
+            leaverCode == LeaverCode.LeaverCode16 ||
+            leaverCode == LeaverCode.LeaverCode21;
     }
 }
