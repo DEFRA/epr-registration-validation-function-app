@@ -23,7 +23,7 @@ public class RegistrationTypeCodeValidator : AbstractValidator<OrganisationDataR
             .WithErrorCode(ErrorCodes.RegistrationTypeCodeIsMandatoryCS);
 
         RuleFor(r => r.RegistrationTypeCode)
-            .Must(x => Regex.IsMatch(x, "^(GR|IN)$", RegexOptions.None, TimeSpan.FromMilliseconds(100)))
+            .Must(x => Regex.IsMatch(x, "^(GR|IN)$", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(100)))
             .When(x => !string.IsNullOrEmpty(x.RegistrationTypeCode))
             .WithErrorCode(ErrorCodes.RegistrationTypeCodeInvalidValue);
 

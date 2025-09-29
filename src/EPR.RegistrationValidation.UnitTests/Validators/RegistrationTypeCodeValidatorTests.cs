@@ -158,4 +158,30 @@ public class RegistrationTypeCodeValidatorTests
                 .WithErrorCode(ErrorCodes.RegistrationTypeCodeInvalidValue);
         }
     }
+
+    [TestMethod]
+    [DataRow("iN")]
+    [DataRow("gR")]
+    public async Task Validate_RegistrationTypeCode_ShouldValidateCorrectly_IgnoringCaseSensitivity(string registrationTypeCode)
+    {
+        // Arrange
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", RegistrationTypeCode = registrationTypeCode };
+
+        // Act
+        var result = await _validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        if (string.Equals(registrationTypeCode, RegistrationTypeCodes.Group, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(registrationTypeCode, RegistrationTypeCodes.Individual, StringComparison.OrdinalIgnoreCase))
+        {
+            result.IsValid.Should().BeTrue();
+            result.Errors.Should().BeEmpty();
+        }
+        else
+        {
+            result.IsValid.Should().BeFalse();
+            result.ShouldHaveValidationErrorFor(x => x.RegistrationTypeCode)
+                .WithErrorCode(ErrorCodes.RegistrationTypeCodeInvalidValue);
+        }
+    }
 }

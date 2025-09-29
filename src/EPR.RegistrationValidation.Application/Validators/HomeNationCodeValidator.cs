@@ -12,7 +12,7 @@ public class HomeNationCodeValidator : AbstractValidator<OrganisationDataRow>
     {
         RuleFor(x => x.HomeNationCode)
             .NotEmpty().WithErrorCode(ErrorCodes.MissingHomeNationCode)
-            .Must(code => ValidHomeCodes.Contains(code))
+            .Must(code => ValidHomeCodes.Contains(code, StringComparer.OrdinalIgnoreCase))
             .WithErrorCode(ErrorCodes.InvalidHomeNationCode);
     }
 }

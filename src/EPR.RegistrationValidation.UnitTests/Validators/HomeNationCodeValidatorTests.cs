@@ -60,6 +60,23 @@ public class HomeNationCodeValidatorTests
         result.Errors.Should().NotContain(err => err.ErrorCode == ErrorCodes.MissingHomeNationCode);
     }
 
+    [TestMethod]
+    [DataRow("eN")]
+    [DataRow("nI")]
+    public async Task Validate_HomeNationCode_IsValid_IgnoringCaseSensitivity(string homeNationCode)
+    {
+        // Arrange
+        var validator = CreateValidator();
+        var orgDataRow = new OrganisationDataRow { DefraId = "1234567890", HomeNationCode = homeNationCode };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+    }
+
     private static HomeNationCodeValidator CreateValidator()
     {
         return new HomeNationCodeValidator();
