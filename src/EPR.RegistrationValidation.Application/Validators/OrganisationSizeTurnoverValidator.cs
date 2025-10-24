@@ -19,10 +19,12 @@
 
         private static bool BeSmallProducerSizeTurnoverValidValue(string size, string turnover, string totalTonnage)
         {
-            var turnoverValue = decimal.Parse(turnover);
-            var totalTonnageValue = decimal.Parse(totalTonnage);
+            if (!decimal.TryParse(turnover, out var turnoverValue) || !decimal.TryParse(totalTonnage, out var totalTonnageValue))
+            {
+                return false;
+            }
 
-            if (size.Equals(OrganisationSizeCodes.S.ToString(), StringComparison.CurrentCultureIgnoreCase) && (turnoverValue > 2 && totalTonnageValue > 50))
+            if (OrganisationSizeCodes.S.ToString().Equals(size, StringComparison.CurrentCultureIgnoreCase) && (turnoverValue > 2 && totalTonnageValue > 50))
             {
                 return false;
             }
