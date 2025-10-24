@@ -77,7 +77,7 @@ namespace EPR.RegistrationValidation.Functions
                 MaxRetryAttempts = 4,
                 Delay = TimeSpan.FromSeconds(2),
                 BackoffType = DelayBackoffType.Exponential,
-                ShouldHandle = (RetryPredicateArguments<HttpResponseMessage> args) =>
+                ShouldHandle = args =>
                 {
                     bool shouldHandle;
                     var exception = args.Outcome.Exception;
