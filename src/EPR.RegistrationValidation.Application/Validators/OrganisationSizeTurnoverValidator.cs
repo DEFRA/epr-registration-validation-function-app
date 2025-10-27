@@ -11,6 +11,8 @@
     {
         public OrganisationSizeTurnoverValidator()
         {
+            RuleLevelCascadeMode = CascadeMode.Stop;
+
             RuleFor(size => size)
                 .Cascade(CascadeMode.Stop)
                 .Must(size => BeSmallProducerSizeTurnoverValidValue(size.OrganisationSize, size.Turnover, size.TotalTonnage)).WithErrorCode(ErrorCodes.SmallProducerTurnoverInvalid).WithName(nameof(OrganisationDataRow.OrganisationSize))

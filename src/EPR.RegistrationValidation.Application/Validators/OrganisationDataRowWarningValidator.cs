@@ -10,6 +10,7 @@ public class OrganisationDataRowWarningValidator : AbstractValidator<Organisatio
 {
     public OrganisationDataRowWarningValidator()
     {
+        RuleLevelCascadeMode = CascadeMode.Stop;
         Include(new Warnings.TurnoverValueValidator());
     }
 }
