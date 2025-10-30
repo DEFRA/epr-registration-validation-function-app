@@ -14,6 +14,7 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
 
     public OrganisationDataRowValidator(IFeatureManager featureManager)
     {
+        ClassLevelCascadeMode = CascadeMode.Stop;
         RuleLevelCascadeMode = CascadeMode.Stop;
         _featureManager = featureManager;
         _validatorsRegistred = false;
