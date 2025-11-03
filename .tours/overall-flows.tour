@@ -1,0 +1,37 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Overall flows",
+  "steps": [
+    {
+      "file": "src/EPR.RegistrationValidation.Functions/V1/ServiceBusQueueTrigger.cs",
+      "description": "Service bus queue triggered function app",
+      "line": 18
+    },
+    {
+      "file": "src/EPR.RegistrationValidation.Application/Services/RegistrationService.cs",
+      "description": "Deserialize received message string into object...",
+      "line": 57
+    },
+    {
+      "file": "src/EPR.RegistrationValidation.Application/Providers/DequeueProvider.cs",
+      "description": "Note: \"Dequeue\" does not dequeue. It just deserializes the json from the message string.",
+      "line": 12
+    },
+    {
+      "file": "src/EPR.RegistrationValidation.Data/Models/QueueMessages/BlobQueueMessage.cs",
+      "description": "Message deserialized into type `BlobQueueMessage`",
+      "line": 5
+    },
+    {
+      "file": "src/EPR.RegistrationValidation.Application/Services/RegistrationService.cs",
+      "description": "Calls validation functions depending on submission type",
+      "line": 64
+    },
+    {
+      "file": "src/EPR.RegistrationValidation.Application/Services/RegistrationService.cs",
+      "description": "Specialized exception handling for various csv errors (we'll return to this later)",
+      "line": 78
+    }
+  ],
+  "ref": "35b191e46cb5e30e59711149d4c319c05c47766e"
+}
