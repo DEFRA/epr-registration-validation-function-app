@@ -1,8 +1,9 @@
 ﻿namespace EPR.RegistrationValidation.Application.Validators
 {
-    using EPR.RegistrationValidation.Application.Constants;
+    using Constants;
+    using Data.Enums;
+    using Data.Models;
     using EPR.RegistrationValidation.Data.Constants;
-    using EPR.RegistrationValidation.Data.Models;
     using FluentValidation;
 
     public class OrganisationSizeValidator : AbstractValidator<OrganisationDataRow>
@@ -16,7 +17,9 @@
 
             if (registrationJourney != null)
             {
-                var errorCode = registrationJourney.ToLowerInvariant().Contains("large")
+                var errorCode =
+                    (registrationJourney == RegistrationJourney.CsoLargeProducer.ToString() ||
+                     registrationJourney == RegistrationJourney.DirectLargeProducer.ToString())
                     ? ErrorCodes.SmallProducerInLargeProducerFile
                     : ErrorCodes.LargeProducerInSmallProducerFile;
 
@@ -30,11 +33,15 @@
 
         private static bool BeCorrectSizeForJourneyChosen(string size, string registrationJourney)
         {
-            if (registrationJourney.ToLowerInvariant().Contains("large") && size.ToUpper() == OrganisationSizeCodes.L.ToString())
+            if ((registrationJourney.Equals(RegistrationJourney.CsoLargeProducer.ToString()) ||
+                 registrationJourney.Equals(RegistrationJourney.DirectLargeProducer.ToString()))
+                && size.ToUpper() == OrganisationSizeCodes.L.ToString())
             {
                 return true;
             }
-            else if (registrationJourney.ToLowerInvariant().Contains("small") && size.ToUpper() == OrganisationSizeCodes.S.ToString())
+            else if ((registrationJourney.Equals(RegistrationJourney.CsoSmallProducer.ToString()) ||
+                      registrationJourney.Equals(RegistrationJourney.DirectSmallProducer.ToString()))
+                     && size.ToUpper() == OrganisationSizeCodes.S.ToString())
             {
                 return true;
             }
