@@ -42,7 +42,6 @@ public class ValidationService : IValidationService
     private readonly PartnerDataRowValidator _partnerDataRowValidator;
     private readonly ColumnMetaDataProvider _metaDataProvider;
     private readonly ValidationSettings _validationSettings;
-    private readonly RegistrationSettings _registrationSettings;
     private readonly ILogger<ValidationService> _logger;
     private readonly IFeatureManager _featureManager;
     private readonly ICompanyDetailsApiClient _companyDetailsApiClient;
@@ -70,7 +69,6 @@ public class ValidationService : IValidationService
         _logger = logger;
         _featureManager = featureManager;
         _validationSettings = config.ValidationSettings.Value;
-        _registrationSettings = config.RegistrationSettings.Value;
         _subsidiaryDetailsRequestBuilder = subsidiaryDetailsRequestBuilder;
     }
 
@@ -165,13 +163,8 @@ public class ValidationService : IValidationService
 
     public async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateRowsAsync(IList<OrganisationDataRow> rows, bool uploadedByComplianceScheme, string submissionPeriod, string? registrationJourney)
     {
-        bool isSubmissionPeriod2026 = string.Equals(submissionPeriod, _registrationSettings.SubmissionPeriod2026, StringComparison.OrdinalIgnoreCase);
-
-        _organisationDataRowValidator.RegisterValidators(
+        await _organisationDataRowValidator.RegisterValidators(
                                                             uploadedByComplianceScheme,
-                                                            isSubmissionPeriod2026,
-                                                            _registrationSettings.SmallProducersRegStartTime2026,
-                                                            _registrationSettings.SmallProducersRegEndTime2026,
                                                             registrationJourney);
 
         List<RegistrationValidationError> validationErrors = new();

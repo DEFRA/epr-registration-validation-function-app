@@ -20,9 +20,6 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
 
     public async Task RegisterValidators(
         bool uploadedByComplianceScheme,
-        bool isSubmissionPeriod2026,
-        DateTime smallProducersRegStartTime2026,
-        DateTime smallProducersRegEndTime2026,
         string? registrationJourney)
     {
         if (_areValidatorsRegistered)
@@ -51,6 +48,8 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
         Include(new TotalTonnageValidator());
         Include(new CompanyHouseValidator());
         Include(new OrganisationTypeValidator());
+
+        await Task.WhenAll(isSubsidiaryJoinerLeaverEnabled, isOrganisationSizeFieldValidationEnabled, enableAdditionalValidationForJoinerLeaverColumnsTask, enableLeaverCodeValidationTask);
 
         if (await isSubsidiaryJoinerLeaverEnabled)
         {
