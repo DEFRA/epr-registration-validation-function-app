@@ -107,4 +107,6 @@ public static class ErrorCodes
     public const string LeaverDateIsMandatoryForThisCode = "931";
     /* Issue codes for warnings */
     public const string WarningZeroTurnover = "73";
+    public const string SmallProducerInLargeProducerFile = "932";
+    public const string LargeProducerInSmallProducerFile = "933";
 }

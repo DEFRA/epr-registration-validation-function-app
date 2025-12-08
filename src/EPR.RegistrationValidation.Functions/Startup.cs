@@ -3,7 +3,6 @@ using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.FeatureManagement;
 using Polly;
-using Polly.Retry;
 using Polly.Timeout;
 
 [assembly: FunctionsStartup(typeof(Startup))]

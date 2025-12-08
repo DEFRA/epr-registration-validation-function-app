@@ -10,20 +10,30 @@ using Microsoft.FeatureManagement;
 public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRow>
 {
     private readonly IFeatureManager _featureManager;
-    private bool _validatorsRegistred;
+    private bool _areValidatorsRegistered;
 
     public OrganisationDataRowValidator(IFeatureManager featureManager)
     {
         _featureManager = featureManager;
-        _validatorsRegistred = false;
+        _areValidatorsRegistered = false;
     }
 
-    public void RegisterValidators(bool uploadedByComplianceScheme, bool isSubmissionPeriod2026, DateTime smallProducersRegStartTime2026, DateTime smallProducersRegEndTime2026)
+    public async Task RegisterValidators(
+        bool uploadedByComplianceScheme,
+        bool isSubmissionPeriod2026,
+        DateTime smallProducersRegStartTime2026,
+        DateTime smallProducersRegEndTime2026,
+        string? registrationJourney)
     {
-        if (_validatorsRegistred)
+        if (_areValidatorsRegistered)
         {
             return;
         }
+
+        var isSubsidiaryJoinerLeaverEnabled = _featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns);
+        var isOrganisationSizeFieldValidationEnabled = _featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation);
+        var enableAdditionalValidationForJoinerLeaverColumnsTask = _featureManager.IsEnabledAsync(FeatureFlags.EnableAdditionalValidationForJoinerLeaverColumns);
+        var enableLeaverCodeValidationTask = _featureManager.IsEnabledAsync(FeatureFlags.EnableLeaverCodeValidation);
 
         Include(new OrganisationIdValidator());
         Include(new OrganisationNameValidator());
@@ -42,25 +52,23 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
         Include(new CompanyHouseValidator());
         Include(new OrganisationTypeValidator());
 
-        if (_featureManager != null && _featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
+        if (await isSubsidiaryJoinerLeaverEnabled)
         {
-            var enableAdditionalValidationForJoinerLeaverColumns = _featureManager.IsEnabledAsync(FeatureFlags.EnableAdditionalValidationForJoinerLeaverColumns).Result;
-            var enableLeaverCodeValidation = _featureManager.IsEnabledAsync(FeatureFlags.EnableLeaverCodeValidation).Result;
-
-            Include(new JoinerDateValidator(
-                uploadedByComplianceScheme, enableAdditionalValidationForJoinerLeaverColumns, enableLeaverCodeValidation));
+            var enableAdditionalValidationForJoinerLeaverColumns = await enableAdditionalValidationForJoinerLeaverColumnsTask;
+            var enableLeaverCodeValidation = await enableLeaverCodeValidationTask;
+            Include(new JoinerDateValidator(uploadedByComplianceScheme, enableAdditionalValidationForJoinerLeaverColumns, enableLeaverCodeValidation));
             Include(new LeaverDateValidator(uploadedByComplianceScheme, enableLeaverCodeValidation));
             Include(new LeaverCodeValidator(uploadedByComplianceScheme, enableLeaverCodeValidation));
             Include(new OrganisationChangeReasonValidator());
             Include(new RegistrationTypeCodeValidator(uploadedByComplianceScheme));
         }
 
-        if (_featureManager != null && _featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result)
+        if (await isOrganisationSizeFieldValidationEnabled)
         {
-            Include(new OrganisationSizeValidator(uploadedByComplianceScheme, isSubmissionPeriod2026, smallProducersRegStartTime2026, smallProducersRegEndTime2026));
+            Include(new OrganisationSizeValidator(registrationJourney));
             Include(new OrganisationSizeTurnoverValidator());
         }
 
-        _validatorsRegistred = true;
+        _areValidatorsRegistered = true;
     }
 }
