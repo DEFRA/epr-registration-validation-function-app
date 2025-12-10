@@ -1,7 +1,10 @@
 ﻿namespace EPR.RegistrationValidation.UnitTests.Validators;
 
 using EPR.RegistrationValidation.Application.Validators;
+
+using EPR.RegistrationValidation.Data.Enums;
 using EPR.RegistrationValidation.Data.Models;
+
 using FluentAssertions;
 using FluentValidation.TestHelper;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -12,102 +15,86 @@ public class OrganisationSizeValidatorTests
     [TestMethod]
     public async Task Validate_WithOrganisationSize_IsNull_ReturnError()
     {
-        // Arrange
-        var validator = CreateOrganisationSizeValidator(false, false);
+        var validator = CreateOrganisationSizeValidator();
         var orgDataRow = new OrganisationDataRow { DefraId = "1234567890", OrganisationSize = null };
 
-        // Act
         var result = await validator.TestValidateAsync(orgDataRow);
 
-        // Assert
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
+        result.Errors.Should().Contain(err => err.ErrorCode == "894");
     }
 
     [TestMethod]
     public async Task Validate_WithOrganisationSize_IsInValid_ReturnError()
     {
-        // Arrange
-        var validator = CreateOrganisationSizeValidator(false, false);
+        var validator = CreateOrganisationSizeValidator();
         var invalidSizeValue = "x";
         var orgDataRow = new OrganisationDataRow { DefraId = "1234567890", OrganisationSize = invalidSizeValue };
 
-        // Act
         var result = await validator.TestValidateAsync(orgDataRow);
 
-        // Assert
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
+        result.Errors.Should().Contain(err => err.ErrorCode == "895");
     }
 
     [TestMethod]
-    public async Task ValidateDP_WhenOrganisationSizeIsSmall_ReturnCorrectResultBasedOnRegDate()
+    public async Task ValidateDP_WhenOrganisationSizeIsSmall_ReturnCorrectResultBasedOnRegJourney()
     {
-        // Arrange
-        var validator = CreateOrganisationSizeValidator(false, true);
+        var largeValidator = CreateOrganisationSizeValidator("DirectLargeProducer");
+        var smallValidator = CreateOrganisationSizeValidator("DirectSmallProducer");
         var orgDataRow = new OrganisationDataRow { DefraId = "1234567890", OrganisationSize = "s" };
 
-        // Act
-        var result = await validator.TestValidateAsync(orgDataRow);
+        var largeResult = await largeValidator.TestValidateAsync(orgDataRow);
+        var smallResult = await smallValidator.TestValidateAsync(orgDataRow);
 
-        // Assert
-        // Small producers registration window for 2026
-        if (DateTime.UtcNow >= new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Unspecified) && DateTime.UtcNow <= new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Unspecified))
-        {
-            result.IsValid.Should().BeTrue();
-            result.Errors.Should().BeEmpty();
-        }
-        else
-        {
-            result.IsValid.Should().BeFalse();
-            result.Errors.Should().NotBeEmpty();
-        }
+        smallResult.IsValid.Should().BeTrue();
+        smallResult.Errors.Should().BeEmpty();
+
+        largeResult.IsValid.Should().BeFalse();
+        largeResult.Errors.Should().NotBeEmpty();
+        largeResult.Errors.Should().Contain(err => err.ErrorCode == "932");
     }
 
     [TestMethod]
-    public async Task ValidateCS_WhenOrganisationSizeIsSmall_ReturnCorrectResultBasedOnRegDate()
+    public async Task ValidateCS_WhenOrganisationSizeIsSmall_ReturnCorrectResultBasedOnRegJourney()
     {
-        // Arrange
-        var validator = CreateOrganisationSizeValidator(true, true);
+        var largeValidator = CreateOrganisationSizeValidator("CsoLargeProducer");
+        var smallValidator = CreateOrganisationSizeValidator("CsoSmallProducer");
         var orgDataRow = new OrganisationDataRow { DefraId = "1234567890", OrganisationSize = "s" };
 
-        // Act
-        var result = await validator.TestValidateAsync(orgDataRow);
+        var largeResult = await largeValidator.TestValidateAsync(orgDataRow);
+        var smallResult = await smallValidator.TestValidateAsync(orgDataRow);
 
-        // Assert
-        // Small producers registration window for 2026
-        if (DateTime.UtcNow >= new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Unspecified) && DateTime.UtcNow <= new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Unspecified))
-        {
-            result.IsValid.Should().BeTrue();
-            result.Errors.Should().BeEmpty();
-        }
-        else
-        {
-            result.IsValid.Should().BeFalse();
-            result.Errors.Should().NotBeEmpty();
-        }
+        smallResult.IsValid.Should().BeTrue();
+        smallResult.Errors.Should().BeEmpty();
+
+        largeResult.IsValid.Should().BeFalse();
+        largeResult.Errors.Should().NotBeEmpty();
+        largeResult.Errors.Should().Contain(err => err.ErrorCode == "932");
     }
 
     [TestMethod]
-    public async Task ValidateCS_WhenOrganisationSizeIsLarge_ReturnIsValid()
+    public async Task ValidateCS_WhenOrganisationSizeIsLarge_ReturnCorrectResultBasedOnRegJourney()
     {
-        // Arrange
-        var validator = CreateOrganisationSizeValidator(false, true);
+        var largeValidator = CreateOrganisationSizeValidator(RegistrationJourney.CsoLargeProducer.ToString());
+        var smallValidator = CreateOrganisationSizeValidator(RegistrationJourney.CsoSmallProducer.ToString());
         var orgDataRow = new OrganisationDataRow { DefraId = "1234567890", OrganisationSize = "L" };
 
-        // Act
-        var result = await validator.TestValidateAsync(orgDataRow);
+        var largeResult = await largeValidator.TestValidateAsync(orgDataRow);
+        var smallResult = await smallValidator.TestValidateAsync(orgDataRow);
 
-        // Assert
-        result.IsValid.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
+        largeResult.IsValid.Should().BeTrue();
+        largeResult.Errors.Should().BeEmpty();
+
+        smallResult.IsValid.Should().BeFalse();
+        smallResult.Errors.Should().NotBeEmpty();
+        smallResult.Errors.Should().Contain(err => err.ErrorCode == "933");
     }
 
-    private static OrganisationSizeValidator CreateOrganisationSizeValidator(bool uploadedByComplianceScheme, bool isSubmissionPeriod2026)
+    private static OrganisationSizeValidator CreateOrganisationSizeValidator(string? registrationJourney = null)
     {
-        DateTime smallProducersRegStartTime2026 = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        DateTime smallProducersRegEndTime2026 = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
-        return new OrganisationSizeValidator(uploadedByComplianceScheme, isSubmissionPeriod2026, smallProducersRegStartTime2026, smallProducersRegEndTime2026);
+        return new OrganisationSizeValidator(registrationJourney);
     }
 }

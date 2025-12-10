@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Reflection;
 using EPR.RegistrationValidation.Application.Clients;
@@ -43,7 +42,6 @@ public class ValidationService : IValidationService
     private readonly PartnerDataRowValidator _partnerDataRowValidator;
     private readonly ColumnMetaDataProvider _metaDataProvider;
     private readonly ValidationSettings _validationSettings;
-    private readonly RegistrationSettings _registrationSettings;
     private readonly ILogger<ValidationService> _logger;
     private readonly IFeatureManager _featureManager;
     private readonly ICompanyDetailsApiClient _companyDetailsApiClient;
@@ -71,7 +69,6 @@ public class ValidationService : IValidationService
         _logger = logger;
         _featureManager = featureManager;
         _validationSettings = config.ValidationSettings.Value;
-        _registrationSettings = config.RegistrationSettings.Value;
         _subsidiaryDetailsRequestBuilder = subsidiaryDetailsRequestBuilder;
     }
 
@@ -81,7 +78,12 @@ public class ValidationService : IValidationService
 
         var organisationFileDetails = await _submissionApiClient.GetOrganisationFileDetails(blobQueueMessage.SubmissionId, blobQueueMessage.BlobName);
 
-        var rowValidationResult = await ValidateRowsAsync(rows, !string.IsNullOrEmpty(blobQueueMessage.ComplianceSchemeId), organisationFileDetails.SubmissionPeriod);
+        var rowValidationResult = await ValidateRowsAsync(
+            rows,
+            !string.IsNullOrEmpty(blobQueueMessage.ComplianceSchemeId),
+            organisationFileDetails.SubmissionPeriod,
+            organisationFileDetails.RegistrationJourney);
+
         validationErrors.AddRange(rowValidationResult.ValidationErrors);
 
         var organisationSubsidiaryRelationshipsResult = ValidateOrganisationSubsidiaryRelationships(rows, rowValidationResult.TotalErrors);
@@ -159,13 +161,15 @@ public class ValidationService : IValidationService
         return validationWarnings;
     }
 
-    public async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateRowsAsync(IList<OrganisationDataRow> rows, bool uploadedByComplianceScheme, string submissionPeriod)
+    public async Task<(int TotalErrors, List<RegistrationValidationError> ValidationErrors)> ValidateRowsAsync(IList<OrganisationDataRow> rows, bool uploadedByComplianceScheme, string submissionPeriod, string? registrationJourney)
     {
-        bool isSubmissionPeriod2026 = string.Equals(submissionPeriod, _registrationSettings.SubmissionPeriod2026, StringComparison.OrdinalIgnoreCase);
-        _organisationDataRowValidator.RegisterValidators(uploadedByComplianceScheme, isSubmissionPeriod2026, _registrationSettings.SmallProducersRegStartTime2026, _registrationSettings.SmallProducersRegEndTime2026);
+        await _organisationDataRowValidator.RegisterValidators(
+                                                            uploadedByComplianceScheme,
+                                                            registrationJourney);
 
         List<RegistrationValidationError> validationErrors = new();
         int totalErrors = 0;
+
         foreach (var row in rows.TakeWhile(_ => totalErrors < _validationSettings.ErrorLimit))
         {
             var result = await _organisationDataRowValidator.ValidateAsync(row);
@@ -189,8 +193,8 @@ public class ValidationService : IValidationService
                 error.ColumnErrors.Add(new ColumnValidationError
                 {
                     ErrorCode = validationError.ErrorCode,
-                    ColumnIndex = columnMeta?.Index,
-                    ColumnName = columnMeta?.Name,
+                    ColumnIndex = columnMeta.Index,
+                    ColumnName = columnMeta.Name,
                 });
 
                 LogValidationWarning(row.LineNumber, validationError);

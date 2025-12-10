@@ -11,7 +11,7 @@ using TestHelpers;
 [TestClass]
 public class DequeueProviderTests
 {
-    private DequeueProvider _sut = new();
+    private readonly DequeueProvider _dequeueProvider = new();
 
     [TestInitialize]
     public void SetUp()
@@ -32,7 +32,7 @@ public class DequeueProviderTests
         var message = QueueMessageTestHelper.GenerateMessage(blobName, submissionId, submissionSubType.ToString(), userId, organisationId, complianceSchemeId, userType);
 
         // Act
-        var response = _sut.GetMessageFromJson<BlobQueueMessage>(message);
+        var response = _dequeueProvider.GetMessageFromJson<BlobQueueMessage>(message);
 
         // Assert
         response.OrganisationId.Should().Be(organisationId);
@@ -51,7 +51,7 @@ public class DequeueProviderTests
         var message = "invalid";
 
         // Act
-        Action act = () => _sut.GetMessageFromJson<BlobQueueMessage>(message);
+        Action act = () => _dequeueProvider.GetMessageFromJson<BlobQueueMessage>(message);
 
         // Assert
         act.Should().Throw<DeserializeQueueException>();
