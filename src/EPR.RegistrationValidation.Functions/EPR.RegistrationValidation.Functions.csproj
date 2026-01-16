@@ -8,11 +8,6 @@
     <UserSecretsId>ac5fee56-6904-45dc-9ea6-360548ea864f</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="local.settings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\EPR.RegistrationValidation.Application\EPR.RegistrationValidation.Application.csproj" />
   </ItemGroup>
   <ItemGroup>
