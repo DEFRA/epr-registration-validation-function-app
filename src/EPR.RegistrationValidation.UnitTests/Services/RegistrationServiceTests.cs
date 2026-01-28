@@ -1447,7 +1447,6 @@ public class RegistrationServiceTests
     {
         // Arrange
         var blobName = "test";
-        var registrationBlobName = "registrationblob";
         var submissionId = Guid.NewGuid().ToString();
         var userId = Guid.NewGuid().ToString();
         var organisationId = Guid.NewGuid().ToString();
@@ -1506,9 +1505,7 @@ public class RegistrationServiceTests
     [TestMethod]
     public void ProcessServiceBusMessage_BrandPartnerCrossFileValidationFeature_Empty_OrganisationFile_Logs_Error()
     {
-        // Arrange
         var blobName = "test";
-        var registrationBlobName = "registrationblob";
         var submissionId = Guid.NewGuid().ToString();
         var userId = Guid.NewGuid().ToString();
         var organisationId = Guid.NewGuid().ToString();

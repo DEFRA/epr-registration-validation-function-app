@@ -14,7 +14,7 @@ using TestHelpers;
 [TestClass]
 public class CsvStreamParserTests
 {
-    private CsvStreamParser _sut;
+    private CsvStreamParser _csvStreamParser;
 
     [TestInitialize]
     public void Setup()
@@ -30,7 +30,7 @@ public class CsvStreamParserTests
            .Setup(m => m.IsEnabledAsync(FeatureFlags.EnableStatusCodeColumn))
            .Returns(Task.FromResult(true));
 
-        _sut = new CsvStreamParser(new ColumnMetaDataProvider(featureManageMock.Object), featureManageMock.Object);
+        _csvStreamParser = new CsvStreamParser(new ColumnMetaDataProvider(featureManageMock.Object), featureManageMock.Object);
     }
 
     [TestMethod]
@@ -42,7 +42,7 @@ public class CsvStreamParserTests
         var memoryStream = CsvFileReader.ReadFile("ValidFileWithCorrectHeaders.csv");
 
         // Act
-        var response = await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream, useMinimalClassMaps);
+        var response = await _csvStreamParser.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream, useMinimalClassMaps);
 
         // Assert
         response[0].OrganisationTypeCode.Should().Be(RequiredOrganisationTypeCodeForPartners.PAR.ToString());
@@ -65,7 +65,7 @@ error, error";
         stream.Position = 0;
 
         // Act
-        Func<Task> act = () => _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(stream);
+        Func<Task> act = () => _csvStreamParser.GetItemsFromCsvStreamAsync<OrganisationDataRow>(stream);
 
         // Assert
         await act.Should().ThrowAsync<CsvHeaderException>();
@@ -79,7 +79,7 @@ error, error";
         var memoryStream = CsvFileReader.ReadFile(invalidCsvFile);
 
         // Act
-        Func<Task> act = () => _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+        Func<Task> act = () => _csvStreamParser.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
 
         // Assert
         await act.Should().ThrowAsync<CsvHeaderException>().WithMessage("The CSV file header is invalid.");
@@ -92,7 +92,7 @@ error, error";
         var memoryStream = CsvFileReader.ReadFile("InvalidFileTooManyHeaders.csv");
 
         // Act
-        Func<Task> act = () => _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+        Func<Task> act = () => _csvStreamParser.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
 
         // Assert
         await act.Should().ThrowAsync<CsvHeaderException>().WithMessage("The CSV file header is invalid.");
@@ -105,7 +105,7 @@ error, error";
         var memoryStream = CsvFileReader.ReadFile("InvalidFileTooFewHeaders.csv");
 
         // Act
-        Func<Task> act = () => _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+        Func<Task> act = () => _csvStreamParser.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
 
         // Assert
         await act.Should().ThrowAsync<CsvHeaderException>().WithMessage("The CSV file header is invalid.");
@@ -120,7 +120,7 @@ error, error";
         // Act
         Func<Task> act = async () =>
         {
-            await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+            await _csvStreamParser.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
         };
 
         // Assert
@@ -136,7 +136,7 @@ error, error";
         using var memoryStream = CsvFileReader.ReadFile("ValidFileWithCorrectHeaders.csv");
 
         // Act
-        var items = await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream, useMinimalClassMaps);
+        var items = await _csvStreamParser.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream, useMinimalClassMaps);
 
         // Assert
         items.Should().HaveCount(2);
@@ -151,7 +151,7 @@ error, error";
         using var memoryStream = CsvFileReader.ReadFile("ValidFileWithCorrectHeaders.csv");
 
         // Act
-        var items = await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream, useMinimalClassMaps);
+        var items = await _csvStreamParser.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream, useMinimalClassMaps);
 
         // Assert
         items.Should().HaveCount(2);
@@ -166,7 +166,7 @@ error, error";
         using var memoryStream = CsvFileReader.ReadFile("ValidFileWithCorrectHeaders.csv");
 
         // Act
-        var items = await _sut.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
+        var items = await _csvStreamParser.GetItemsFromCsvStreamAsync<OrganisationDataRow>(memoryStream);
 
         // Assert minimal set of properties are not empty
         foreach (var row in items)
@@ -195,7 +195,7 @@ error, error";
         using var memoryStream = CsvFileReader.ReadString(csvString);
 
         // Act
-        var items = await _sut.GetItemsFromCsvStreamAsync<BrandDataRow>(memoryStream, useMinimalClassMaps);
+        var items = await _csvStreamParser.GetItemsFromCsvStreamAsync<BrandDataRow>(memoryStream, useMinimalClassMaps);
 
         // Assert
         items[0].DefraId.Should().Be(defraId);
@@ -223,7 +223,7 @@ error, error";
         using var memoryStream = CsvFileReader.ReadString(csvString);
 
         // Act
-        var items = await _sut.GetItemsFromCsvStreamAsync<PartnersDataRow>(memoryStream, useMinimalClassMaps);
+        var items = await _csvStreamParser.GetItemsFromCsvStreamAsync<PartnersDataRow>(memoryStream, useMinimalClassMaps);
 
         // Assert
         items[0].DefraId.Should().Be(defraId);

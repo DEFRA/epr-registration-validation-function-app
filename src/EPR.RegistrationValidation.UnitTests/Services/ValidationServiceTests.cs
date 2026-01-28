@@ -1,26 +1,28 @@
 ﻿namespace EPR.RegistrationValidation.UnitTests.Services;
 
+using Application.Constants;
+using Data.Config;
+using Data.Constants;
+using Data.Models;
+using Data.Models.CompanyDetailsApi;
+using Data.Models.QueueMessages;
+using Data.Models.SubmissionApi;
+
 using EPR.RegistrationValidation.Application.Clients;
-using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Application.Helpers;
 using EPR.RegistrationValidation.Application.Services;
 using EPR.RegistrationValidation.Application.Services.Subsidiary;
 using EPR.RegistrationValidation.Application.Validators;
-using EPR.RegistrationValidation.Data.Config;
-using EPR.RegistrationValidation.Data.Constants;
-using EPR.RegistrationValidation.Data.Models;
-using EPR.RegistrationValidation.Data.Models.CompanyDetailsApi;
-using EPR.RegistrationValidation.Data.Models.QueueMessages;
 using EPR.RegistrationValidation.Data.Models.Services;
-using EPR.RegistrationValidation.Data.Models.SubmissionApi;
 using EPR.RegistrationValidation.Data.Models.Subsidiary;
-using EPR.RegistrationValidation.UnitTests.TestHelpers;
+
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.FeatureManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using TestHelpers;
 
 [TestClass]
 public class ValidationServiceTests
@@ -73,9 +75,6 @@ public class ValidationServiceTests
     public async Task Validate_WithSubFeatureFlagOn_ShouldCallSubValidation()
     {
         // Arrange
-        const int expectedRow = 0;
-        const int expectedColumnIndex = 0;
-        const string expectedColumnName = "organisation_id";
         var service = CreateService();
         var blobQueueMessage = new BlobQueueMessage();
         var dataRows = new List<OrganisationDataRow>
@@ -89,7 +88,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -125,7 +124,7 @@ public class ValidationServiceTests
             new()
             {
                 DefraId = "1234567890",
-                OrganisationName = $"AAA ltd",
+                OrganisationName = "AAA ltd",
                 HomeNationCode = "EN",
                 PrimaryContactPersonLastName = "LName",
                 PrimaryContactPersonFirstName = "Fname",
@@ -139,7 +138,7 @@ public class ValidationServiceTests
                 PackagingActivityOm = "No",
                 PackagingActivitySe = "Secondary",
                 ProduceBlankPackagingFlag = "No",
-                Turnover = $"99.99",
+                Turnover = "99.99",
                 ServiceOfNoticeAddressLine1 = "9 Surrey",
                 ServiceOfNoticeAddressPostcode = "KT5 8JU",
                 ServiceOfNoticeAddressPhoneNumber = "0123456789",
@@ -265,7 +264,7 @@ public class ValidationServiceTests
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
         // Act
-        var results = await service.ValidateRowsAsync(dataRows.ToList(), false, "July to December 2025");
+        var results = await service.ValidateRowsAsync(dataRows.ToList(), false, "July to December 2025", null);
 
         // Assert
         results.TotalErrors.Should().Be(maxErrors);
@@ -295,9 +294,9 @@ public class ValidationServiceTests
         var i = 123;
         const int maxErrors = 1;
 
-        List<OrganisationDataRow> orgDataRowList = new()
-        {
-            new OrganisationDataRow
+        List<OrganisationDataRow> orgDataRowList =
+        [
+            new()
             {
                 DefraId = "12345" + i,
                 SubsidiaryId = "678",
@@ -332,8 +331,9 @@ public class ValidationServiceTests
                 OrganisationSize = OrganisationSizeCodes.L.ToString(),
                 JoinerDate = "01/01/2000",
                 RegistrationTypeCode = RegistrationTypeCodes.Individual,
-            },
-        };
+            }
+
+        ];
 
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
 
@@ -411,7 +411,7 @@ public class ValidationServiceTests
             .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Act
-        var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow }, blobQueueMessage, false);
+        var errors = await service.ValidateOrganisationsAsync([dataRow], blobQueueMessage, false);
 
         // Assert
         var columnError = errors.Single().ColumnErrors.Single();
@@ -435,7 +435,7 @@ public class ValidationServiceTests
             .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Act
-        var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow>() { dataRow }, blobQueueMessage, false);
+        var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow> { dataRow }, blobQueueMessage, false);
 
         // Assert
         var columnError = errors.Single().ColumnErrors.Single();
@@ -1425,7 +1425,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1439,7 +1439,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1460,7 +1460,7 @@ public class ValidationServiceTests
             .ReturnsAsync(subsidiaryDetailsResponse);
 
         // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<RegistrationValidationError>());
 
         // Assert
         Assert.AreEqual(0, totalErrors);
@@ -1480,7 +1480,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1495,7 +1495,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1516,7 +1516,7 @@ public class ValidationServiceTests
             .ReturnsAsync(subsidiaryDetailsResponse);
 
         // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<RegistrationValidationError>());
 
         // Assert
         Assert.AreEqual(1, totalErrors);
@@ -1537,7 +1537,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1552,7 +1552,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1574,7 +1574,7 @@ public class ValidationServiceTests
             .ReturnsAsync(subsidiaryDetailsResponse);
 
         // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<RegistrationValidationError>());
 
         // Assert
         Assert.AreEqual(1, totalErrors);
@@ -1595,7 +1595,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1610,7 +1610,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1632,7 +1632,7 @@ public class ValidationServiceTests
             .ReturnsAsync(subsidiaryDetailsResponse);
 
         // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<RegistrationValidationError>());
 
         // Assert
         Assert.AreEqual(1, totalErrors);
@@ -1654,7 +1654,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1668,7 +1668,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1689,7 +1689,7 @@ public class ValidationServiceTests
             .ReturnsAsync(subsidiaryDetailsResponse);
 
         // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<RegistrationValidationError>());
 
         // Assert
         Assert.AreEqual(1, totalErrors);
@@ -1708,7 +1708,7 @@ public class ValidationServiceTests
 
         _subsidiaryDetailsRequestBuilderMock
             .Setup(x => x.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
-            .Returns(new SubsidiaryDetailsRequest() { SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>() { new SubsidiaryOrganisationDetail() } });
+            .Returns(new SubsidiaryDetailsRequest { SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail> { new() } });
         var service = CreateService(new ValidationSettings { ErrorLimit = 1 });
 
         _companyDetailsApiClientMock
@@ -1716,9 +1716,8 @@ public class ValidationServiceTests
             .ThrowsAsync(new HttpRequestException());
 
         // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<RegistrationValidationError>());
 
-        // Assert
         Assert.AreEqual(0, totalErrors);
         Assert.AreEqual(0, validationErrors.Count);
         _loggerMock.Verify(
@@ -1734,7 +1733,6 @@ public class ValidationServiceTests
     [TestMethod]
     public async Task ValidateSubsidiary_ShouldReturnTotalErrorsAndValidationErrors_WhenRequestIsNull()
     {
-        // Arrange
         var rows = new List<OrganisationDataRow>();
         var totalErrors = 0;
 
@@ -1743,10 +1741,8 @@ public class ValidationServiceTests
             .Setup(builder => builder.CreateRequest(It.IsAny<List<OrganisationDataRow>>()))
             .Returns((SubsidiaryDetailsRequest)null); // Simulating null request
 
-        // Act
-        var result = await service.ValidateSubsidiary(rows, totalErrors, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
+        var result = await service.ValidateSubsidiary(rows, totalErrors, new List<RegistrationValidationError>());
 
-        // Assert
         Assert.AreEqual(totalErrors, result.TotalErrors);
         Assert.AreEqual(0, result.ValidationErrors.Count);
     }
@@ -1764,9 +1760,8 @@ public class ValidationServiceTests
             .Returns(new SubsidiaryDetailsRequest { SubsidiaryOrganisationDetails = null });
 
         // Act
-        var result = await service.ValidateSubsidiary(rows, totalErrors, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
+        var result = await service.ValidateSubsidiary(rows, totalErrors, new List<RegistrationValidationError>());
 
-        // Assert
         Assert.AreEqual(totalErrors, result.TotalErrors);
         Assert.AreEqual(0, result.ValidationErrors.Count);
     }
@@ -1784,9 +1779,8 @@ public class ValidationServiceTests
             .Returns(new SubsidiaryDetailsRequest { SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>() });
 
         // Act
-        var result = await service.ValidateSubsidiary(rows, totalErrors, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
+        var result = await service.ValidateSubsidiary(rows, totalErrors, new List<RegistrationValidationError>());
 
-        // Assert
         Assert.AreEqual(totalErrors, result.TotalErrors);
         Assert.AreEqual(0, result.ValidationErrors.Count);
     }
@@ -1805,7 +1799,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1821,7 +1815,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1844,7 +1838,7 @@ public class ValidationServiceTests
             .ReturnsAsync(subsidiaryDetailsResponse);
 
         // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<RegistrationValidationError>());
 
         // Assert
         Assert.AreEqual(0, totalErrors);
@@ -1866,7 +1860,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1882,7 +1876,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1905,7 +1899,7 @@ public class ValidationServiceTests
             .ReturnsAsync(subsidiaryDetailsResponse);
 
         // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<RegistrationValidationError>());
 
         // Assert
         Assert.AreEqual(0, totalErrors);
@@ -1927,7 +1921,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1943,7 +1937,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -1966,7 +1960,7 @@ public class ValidationServiceTests
             .ReturnsAsync(subsidiaryDetailsResponse);
 
         // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<RegistrationValidationError>());
 
         // Assert
         Assert.AreEqual(2, totalErrors);
@@ -2067,9 +2061,9 @@ public class ValidationServiceTests
     {
         // Arrange
         var expectedErrorCodes = Array.Empty<string>();
-        var existingErrors = new List<Data.Models.SubmissionApi.RegistrationValidationError>()
+        var existingErrors = new List<RegistrationValidationError>
         {
-            new RegistrationValidationError()
+            new()
             {
                 RowNumber = 1,
                 ColumnErrors = new List<ColumnValidationError>(),
@@ -2085,7 +2079,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -2100,7 +2094,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -2153,7 +2147,7 @@ public class ValidationServiceTests
         bool subsidiaryBelongsToAnyOtherOrganisation,
         bool subsidiaryDoesNotBelongToAnyOrganisation,
         string[] expectedErrorCodes,
-        bool nullDateReturnedFromDB = false)
+        bool nullDateReturnedFromDb = false)
     {
         // Arrange
         var rows = new List<OrganisationDataRow>
@@ -2165,7 +2159,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -2180,7 +2174,7 @@ public class ValidationServiceTests
         {
             SubsidiaryOrganisationDetails = new List<SubsidiaryOrganisationDetail>
             {
-                new SubsidiaryOrganisationDetail
+                new()
                 {
                     OrganisationReference = "ORG1",
                     SubsidiaryDetails = new List<SubsidiaryDetail>
@@ -2212,7 +2206,7 @@ public class ValidationServiceTests
             .ReturnsAsync(subsidiaryDetailsResponse);
 
         // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<Data.Models.SubmissionApi.RegistrationValidationError>());
+        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, new List<RegistrationValidationError>());
 
         // Assert
         Assert.AreEqual(errorCount, totalErrors);
@@ -2237,12 +2231,11 @@ public class ValidationServiceTests
         _featureManagerMock.Setup(fm => fm.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns))
             .ReturnsAsync(true);
 
-        var service = CreateService();
+        var validationService = CreateService();
 
-        // Act
-        var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, existingErrors);
+        var (totalErrors, validationErrors) = await validationService.ValidateSubsidiary(rows, 0, existingErrors);
 
-        // Assert
+        Assert.AreEqual(0, totalErrors);
         Assert.IsFalse(validationErrors.Exists(e => e.ColumnErrors.Any(ce => ce.ErrorCode == ErrorCodes.JoinerDateDoesNotMatchJoinerDateInDatabase)));
     }
 
@@ -2265,7 +2258,7 @@ public class ValidationServiceTests
         // Act
         var (totalErrors, validationErrors) = await service.ValidateSubsidiary(rows, 0, existingErrors);
 
-        // Assert
+        Assert.AreEqual(0, totalErrors);
         Assert.AreEqual(0, validationErrors.Count); // No validation should occur
     }
 

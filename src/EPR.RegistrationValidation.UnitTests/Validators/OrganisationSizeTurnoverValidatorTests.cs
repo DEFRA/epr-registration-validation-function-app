@@ -28,9 +28,7 @@ public class OrganisationSizeTurnoverValidatorTests
 
         // Assert
         result.IsValid.Should().Be(testResult);
-
-        // result.Errors.Should().NotBeEmpty();
-        result.Errors.Count().Should().Be(errorCount);
+        result.Errors.Count.Should().Be(errorCount);
     }
 
     [TestMethod]
