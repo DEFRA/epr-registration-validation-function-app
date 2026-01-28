@@ -39,4 +39,9 @@
       <CopyToPublishDirectory>Never</CopyToPublishDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <SonarQubeSetting Include="sonar.exclusions">
+      <Value>Program.cs</Value>
+    </SonarQubeSetting>
+  </ItemGroup>
 </Project>
