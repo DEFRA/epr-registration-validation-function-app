@@ -1,28 +1,30 @@
 ﻿namespace EPR.RegistrationValidation.Functions.V1;
 
 using Application.Services;
-using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
 public class ServiceBusQueueTrigger
 {
     private readonly IRegistrationService _registrationService;
+    private readonly ILogger<ServiceBusQueueTrigger> _logger;
 
-    public ServiceBusQueueTrigger(IRegistrationService registrationService)
+    public ServiceBusQueueTrigger(IRegistrationService registrationService, ILogger<ServiceBusQueueTrigger> logger)
     {
         _registrationService = registrationService;
+        _logger = logger;
     }
 
-    [FunctionName("ServiceBusQueueTrigger")]
+    [Function("ServiceBusQueueTrigger")]
     public async Task RunAsync(
         [ServiceBusTrigger("%ServiceBus:UploadQueueName%", Connection = "ServiceBus:ConnectionString")]
         string message,
-        ILogger logger)
+        FunctionContext context)
     {
-        logger.LogInformation("Entering function");
+        _logger.LogInformation("Entering function");
 
         await _registrationService.ProcessServiceBusMessage(message);
 
-        logger.LogInformation("Exiting function");
+        _logger.LogInformation("Exiting function");
     }
 }
