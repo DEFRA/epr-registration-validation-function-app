@@ -6,15 +6,11 @@ using CsvHelper.Configuration;
 using Data.Models;
 
 [ExcludeFromCodeCoverage]
-public sealed class OrganisationDataRowWithoutOrgSizeLeaverAndJoinerColumnsMap : ClassMap<OrganisationDataRow>
+public sealed class OrganisationDataRowWithoutOrgSizeAndClosedLoopColumnsMap : ClassMap<OrganisationDataRow>
 {
-    public OrganisationDataRowWithoutOrgSizeLeaverAndJoinerColumnsMap()
+    public OrganisationDataRowWithoutOrgSizeAndClosedLoopColumnsMap()
     {
         AutoMap(CultureInfo.InvariantCulture);
-        Map(x => x.LeaverCode).Ignore();
-        Map(x => x.OrganisationChangeReason).Ignore();
-        Map(x => x.LeaverDate).Ignore();
-        Map(x => x.JoinerDate).Ignore();
         Map(x => x.OrganisationSize).Ignore();
         Map(x => x.ClosedLoopRegistration).Ignore();
     }

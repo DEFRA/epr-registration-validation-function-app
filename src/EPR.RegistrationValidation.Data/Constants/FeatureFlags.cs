@@ -13,4 +13,5 @@ public static class FeatureFlags
     public const string EnableStatusCodeColumn = "EnableStatusCodeColumn";
     public const string EnableLeaverCodeValidation = "EnableLeaverCodeValidation";
     public const string EnableAdditionalValidationForJoinerLeaverColumns = "EnableAdditionalValidationForJoinerLeaverColumns";
+    public const string EnableClosedLoopRegistrationColumn = "EnableClosedLoopRegistrationColumn";
 }

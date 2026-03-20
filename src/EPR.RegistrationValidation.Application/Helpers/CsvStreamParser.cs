@@ -37,39 +37,58 @@ public class CsvStreamParser : ICsvStreamParser
             using var reader = new StreamReader(memoryStream);
             using var csv = new CsvReader(reader, CsvConfiguration);
 
-            if (!_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result &&
-                !_featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
-            {
-                csv.Context.RegisterClassMap<OrganisationDataRowWithoutOrgSizeLeaverAndJoinerColumnsMap>();
-            }
-            else if (!_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result)
-            {
-                // Register class map to populate data row without the (newer) organisation size property
-                csv.Context.RegisterClassMap<OrganisationDataRowWithoutOrgSizeColumnMap>();
-            }
-            else if (!_featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
-            {
-                // Register class map to populate data row without the (newer) organisation size property
-                csv.Context.RegisterClassMap<OrganisationDataRowWithoutLeaverAndJoinerColumnsMap>();
-            }
-
-            if (useMinimalClassMaps)
-            {
-                // Register class map to populate minimal set of properties to keep memory usage to a minimum
-                csv.Context.RegisterClassMap<MinimalOrganisationDataRowMap>();
-            }
+            var orgSizeEnabled = _featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result;
+            var leaverJoinerEnabled = _featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result;
+            var closedLoopEnabled = _featureManager.IsEnabledAsync(FeatureFlags.EnableClosedLoopRegistrationColumn).Result;
 
             await csv.ReadAsync();
             csv.ReadHeader();
 
             var header = csv.HeaderRecord;
+            var csvHasClosedLoop = header?.Contains("closed_loop_registration") ?? false;
+
+            var orgSizeOff = !orgSizeEnabled;
+            var leaverJoinerOff = !leaverJoinerEnabled;
+            var closedLoopOff = !closedLoopEnabled || !csvHasClosedLoop;
+
+            if (!useMinimalClassMaps)
+            {
+                if (orgSizeOff && leaverJoinerOff)
+                {
+                    // Also ignores ClosedLoopRegistration — leaver/joiner off implies ClosedLoop absent too
+                    csv.Context.RegisterClassMap<OrganisationDataRowWithoutOrgSizeLeaverAndJoinerColumnsMap>();
+                }
+                else if (orgSizeOff && closedLoopOff)
+                {
+                    csv.Context.RegisterClassMap<OrganisationDataRowWithoutOrgSizeAndClosedLoopColumnsMap>();
+                }
+                else if (orgSizeOff)
+                {
+                    csv.Context.RegisterClassMap<OrganisationDataRowWithoutOrgSizeColumnMap>();
+                }
+                else if (leaverJoinerOff)
+                {
+                    // Also ignores ClosedLoopRegistration — leaver/joiner off implies ClosedLoop absent too
+                    csv.Context.RegisterClassMap<OrganisationDataRowWithoutLeaverAndJoinerColumnsMap>();
+                }
+                else if (closedLoopOff)
+                {
+                    csv.Context.RegisterClassMap<OrganisationDataRowWithoutClosedLoopColumnMap>();
+                }
+            }
+            else
+            {
+                // Register class map to populate minimal set of properties to keep memory usage to a minimum
+                csv.Context.RegisterClassMap<MinimalOrganisationDataRowMap>();
+            }
+
             var columnAttributes = _metaDataProvider.ListColumnMetaData<T>();
             var orderedHeaders = columnAttributes
                 .Select(x => x.Value)
                 .OrderBy(x => x.Index)
                 .ToList();
 
-            if (!_featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result)
+            if (orgSizeOff)
             {
                 var toBeRemoved = orderedHeaders.SingleOrDefault(x => x.Name == "organisation_size");
                 if (toBeRemoved != null)
@@ -78,7 +97,7 @@ public class CsvStreamParser : ICsvStreamParser
                 }
             }
 
-            if (!_featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
+            if (leaverJoinerOff)
             {
                 var leaverAndJoinerColumns = new HashSet<string>
                 {
@@ -88,7 +107,12 @@ public class CsvStreamParser : ICsvStreamParser
                     "joiner_date",
                 };
 
-                orderedHeaders.RemoveAll(header => leaverAndJoinerColumns.Contains(header.Name));
+                orderedHeaders.RemoveAll(h => leaverAndJoinerColumns.Contains(h.Name));
+            }
+
+            if (closedLoopOff)
+            {
+                orderedHeaders.RemoveAll(h => h.Name == "closed_loop_registration");
             }
 
             if (!header.SequenceEqual(orderedHeaders.Select(x => x.Name)))
