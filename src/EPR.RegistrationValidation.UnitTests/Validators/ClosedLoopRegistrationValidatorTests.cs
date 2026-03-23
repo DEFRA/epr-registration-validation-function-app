@@ -26,7 +26,7 @@ public class ClosedLoopRegistrationValidatorTests
     }
 
     [TestMethod]
-    public async Task Validate_WhenClosedLoopRegistrationIsEmpty_IsValid()
+    public async Task Validate_WhenClosedLoopRegistrationIsEmpty_IsNotValid()
     {
         // Arrange
         var validator = CreateValidator();
@@ -36,8 +36,9 @@ public class ClosedLoopRegistrationValidatorTests
         var result = await validator.TestValidateAsync(orgDataRow);
 
         // Assert
-        result.IsValid.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
+        result.IsValid.Should().BeFalse();
+        result.ShouldHaveValidationErrorFor(x => x.ClosedLoopRegistration);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.InvalidClosedLoopRegistrationValue);
     }
 
     [DataTestMethod]

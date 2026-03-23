@@ -9,10 +9,13 @@ public class ClosedLoopRegistrationValidator : AbstractValidator<OrganisationDat
 {
     public ClosedLoopRegistrationValidator()
     {
-        // Column is optional — only validate when a value is provided
-        When(row => !string.IsNullOrEmpty(row.ClosedLoopRegistration), () =>
+        // Column is optional — if absent (null) the row is valid.
+        // If the column is present, a non-empty Yes/No value is required.
+        When(row => row.ClosedLoopRegistration != null, () =>
         {
             RuleFor(row => row.ClosedLoopRegistration)
+                .Cascade(CascadeMode.Stop)
+                .NotEmpty().WithErrorCode(ErrorCodes.InvalidClosedLoopRegistrationValue)
                 .Must(v => v.Equals(YesNoOption.Yes, StringComparison.OrdinalIgnoreCase)
                         || v.Equals(YesNoOption.No, StringComparison.OrdinalIgnoreCase))
                 .WithErrorCode(ErrorCodes.InvalidClosedLoopRegistrationValue);
