@@ -31,7 +31,6 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
         var isOrganisationSizeFieldValidationEnabled = _featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation);
         var enableAdditionalValidationForJoinerLeaverColumnsTask = _featureManager.IsEnabledAsync(FeatureFlags.EnableAdditionalValidationForJoinerLeaverColumns);
         var enableLeaverCodeValidationTask = _featureManager.IsEnabledAsync(FeatureFlags.EnableLeaverCodeValidation);
-        var isClosedLoopRegistrationEnabled = _featureManager.IsEnabledAsync(FeatureFlags.EnableClosedLoopRegistrationColumn);
 
         Include(new OrganisationIdValidator());
         Include(new OrganisationNameValidator());
@@ -50,7 +49,7 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
         Include(new CompanyHouseValidator());
         Include(new OrganisationTypeValidator());
 
-        await Task.WhenAll(isSubsidiaryJoinerLeaverEnabled, isOrganisationSizeFieldValidationEnabled, enableAdditionalValidationForJoinerLeaverColumnsTask, enableLeaverCodeValidationTask, isClosedLoopRegistrationEnabled);
+        await Task.WhenAll(isSubsidiaryJoinerLeaverEnabled, isOrganisationSizeFieldValidationEnabled, enableAdditionalValidationForJoinerLeaverColumnsTask, enableLeaverCodeValidationTask);
 
         if (await isSubsidiaryJoinerLeaverEnabled)
         {
@@ -69,10 +68,7 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
             Include(new OrganisationSizeTurnoverValidator());
         }
 
-        if (await isClosedLoopRegistrationEnabled)
-        {
-            Include(new ClosedLoopRegistrationValidator());
-        }
+        Include(new ClosedLoopRegistrationValidator());
 
         _areValidatorsRegistered = true;
     }

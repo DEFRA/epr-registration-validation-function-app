@@ -39,17 +39,15 @@ public class CsvStreamParser : ICsvStreamParser
 
             var orgSizeEnabled = _featureManager.IsEnabledAsync(FeatureFlags.EnableOrganisationSizeFieldValidation).Result;
             var leaverJoinerEnabled = _featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result;
-            var closedLoopEnabled = _featureManager.IsEnabledAsync(FeatureFlags.EnableClosedLoopRegistrationColumn).Result;
 
             await csv.ReadAsync();
             csv.ReadHeader();
 
             var header = csv.HeaderRecord;
-            var csvHasClosedLoop = header?.Contains("closed_loop_registration") ?? false;
 
             var orgSizeOff = !orgSizeEnabled;
             var leaverJoinerOff = !leaverJoinerEnabled;
-            var closedLoopOff = !closedLoopEnabled || !csvHasClosedLoop;
+            var closedLoopOff = !(header?.Contains("closed_loop_registration") ?? false);
 
             if (!useMinimalClassMaps)
             {
