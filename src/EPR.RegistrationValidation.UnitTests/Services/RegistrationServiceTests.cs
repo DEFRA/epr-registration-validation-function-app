@@ -39,6 +39,7 @@ public class RegistrationServiceTests
     private Mock<IFeatureManager> _featureManagerMock;
     private RegistrationService _sut;
     private Mock<IValidationService> _validationServiceMock;
+    private IBlobReader _blobReader;
 
     [TestInitialize]
     public void Setup()
@@ -56,12 +57,12 @@ public class RegistrationServiceTests
         var blobClientMock = BlobStorageServiceTestsHelper.GetBlobClientMock();
         var blobContainerClientMock = BlobStorageServiceTestsHelper.GetBlobContainerClientMock(blobClientMock.Object);
         var blobServiceClientMock = BlobStorageServiceTestsHelper.GetBlobServiceClientMock(blobContainerClientMock.Object);
-        var blobReader = new BlobReader(blobServiceClientMock.Object, options);
+        _blobReader = new BlobReader(blobServiceClientMock.Object, options);
         _loggerMock = new Mock<ILogger<RegistrationService>>();
         ValidationSettings validationSettings = new() { ErrorLimit = 200 };
         _sut = new RegistrationService(
             _dequeueProviderMock.Object,
-            blobReader,
+            _blobReader,
             _csvStreamParserMock.Object,
             _submissionApiClientMock.Object,
             options,
@@ -1760,5 +1761,263 @@ public class RegistrationServiceTests
                         && x.Errors.Count == 1 && x.Errors[0] == ErrorCodes.UncaughtExceptionErrorCode
                         && !x.IsValid)),
             Times.Once);
+    }
+
+    [TestMethod]
+    public async Task ProcessServiceBusMessage_WhenClosedLoopColumnPresentAndPeriodBeforeMinYear_ReturnsYearGateError()
+    {
+        // Arrange
+        var blobName = "test";
+        var submissionId = Guid.NewGuid().ToString();
+        var closedLoopRow = CSVRowTestHelper.GenerateOrgCsvDataRow();
+        closedLoopRow.ClosedLoopRegistration = "Yes";
+
+        _blobQueueMessage = new BlobQueueMessage
+        {
+            UserId = Guid.NewGuid().ToString(),
+            OrganisationId = Guid.NewGuid().ToString(),
+            SubmissionId = submissionId,
+            SubmissionSubType = SubmissionSubType.CompanyDetails.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<OrganisationDataRow> { closedLoopRow });
+        _submissionApiClientMock
+            .Setup(x => x.GetOrganisationFileDetails(submissionId, blobName))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { SubmissionPeriod = "January to December 2026" });
+        _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation)).ReturnsAsync(true);
+        _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableOrganisationDataRowValidation)).ReturnsAsync(true);
+
+        var sut = CreateRegistrationServiceWithSettings(new ValidationSettings { ErrorLimit = 200, ClosedLoopRegistrationFromYear = 2027 });
+
+        // Act
+        await sut.ProcessServiceBusMessage(JsonConvert.SerializeObject(_blobQueueMessage));
+
+        // Assert
+        _submissionApiClientMock.Verify(
+            m => m.SendEventRegistrationMessage(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.Is<ValidationEvent>(x =>
+                    x.Type == EventType.Registration
+                    && x.Errors.Count == 1 && x.Errors[0] == ErrorCodes.ClosedLoopRegistrationColumnNotAllowedForPeriod
+                    && x.BlobContainerName == ContainerName
+                    && x.BlobName == blobName
+                    && !x.IsValid)),
+            Times.Once);
+        _validationServiceMock.Verify(
+            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), It.IsAny<BlobQueueMessage>(), It.IsAny<bool>()),
+            Times.Never);
+    }
+
+    [TestMethod]
+    public async Task ProcessServiceBusMessage_WhenClosedLoopColumnPresentAndPeriodEqualToMinYear_DoesNotReturnYearGateError()
+    {
+        // Arrange
+        var blobName = "test";
+        var submissionId = Guid.NewGuid().ToString();
+        var closedLoopRow = CSVRowTestHelper.GenerateOrgCsvDataRow();
+        closedLoopRow.ClosedLoopRegistration = "Yes";
+
+        _blobQueueMessage = new BlobQueueMessage
+        {
+            UserId = Guid.NewGuid().ToString(),
+            OrganisationId = Guid.NewGuid().ToString(),
+            SubmissionId = submissionId,
+            SubmissionSubType = SubmissionSubType.CompanyDetails.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<OrganisationDataRow> { closedLoopRow });
+        _submissionApiClientMock
+            .Setup(x => x.GetOrganisationFileDetails(submissionId, blobName))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { SubmissionPeriod = "January to December 2027" });
+        _validationServiceMock
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), It.IsAny<BlobQueueMessage>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<RegistrationValidationError>());
+        _validationServiceMock
+            .Setup(x => x.ValidateOrganisationWarningsAsync(It.IsAny<List<OrganisationDataRow>>()))
+            .ReturnsAsync(new List<RegistrationValidationWarning>());
+        _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation)).ReturnsAsync(true);
+        _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableOrganisationDataRowValidation)).ReturnsAsync(true);
+
+        var sut = CreateRegistrationServiceWithSettings(new ValidationSettings { ErrorLimit = 200, ClosedLoopRegistrationFromYear = 2027 });
+
+        // Act
+        await sut.ProcessServiceBusMessage(JsonConvert.SerializeObject(_blobQueueMessage));
+
+        // Assert
+        _submissionApiClientMock.Verify(
+            m => m.SendEventRegistrationMessage(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.Is<ValidationEvent>(x => x.Errors == null || !x.Errors.Contains(ErrorCodes.ClosedLoopRegistrationColumnNotAllowedForPeriod))),
+            Times.Once);
+    }
+
+    [TestMethod]
+    public async Task ProcessServiceBusMessage_WhenClosedLoopColumnAbsentAndFromYearConfigured_DoesNotFetchOrgFileDetailsForYearGate()
+    {
+        // Arrange
+        var blobName = "test";
+        var submissionId = Guid.NewGuid().ToString();
+        var row = CSVRowTestHelper.GenerateOrgCsvDataRow();
+
+        _blobQueueMessage = new BlobQueueMessage
+        {
+            UserId = Guid.NewGuid().ToString(),
+            OrganisationId = Guid.NewGuid().ToString(),
+            SubmissionId = submissionId,
+            SubmissionSubType = SubmissionSubType.CompanyDetails.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<OrganisationDataRow> { row });
+        _validationServiceMock
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), It.IsAny<BlobQueueMessage>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<RegistrationValidationError>());
+        _validationServiceMock
+            .Setup(x => x.ValidateOrganisationWarningsAsync(It.IsAny<List<OrganisationDataRow>>()))
+            .ReturnsAsync(new List<RegistrationValidationWarning>());
+        _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation)).ReturnsAsync(true);
+        _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableOrganisationDataRowValidation)).ReturnsAsync(true);
+
+        var sut = CreateRegistrationServiceWithSettings(new ValidationSettings { ErrorLimit = 200, ClosedLoopRegistrationFromYear = 2027 });
+
+        // Act
+        await sut.ProcessServiceBusMessage(JsonConvert.SerializeObject(_blobQueueMessage));
+
+        // Assert
+        _submissionApiClientMock.Verify(x => x.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task ProcessServiceBusMessage_WhenClosedLoopFromYearIsZero_DoesNotFetchOrgFileDetailsForYearGate()
+    {
+        // Arrange
+        var blobName = "test";
+        var submissionId = Guid.NewGuid().ToString();
+        var closedLoopRow = CSVRowTestHelper.GenerateOrgCsvDataRow();
+        closedLoopRow.ClosedLoopRegistration = "Yes";
+
+        _blobQueueMessage = new BlobQueueMessage
+        {
+            UserId = Guid.NewGuid().ToString(),
+            OrganisationId = Guid.NewGuid().ToString(),
+            SubmissionId = submissionId,
+            SubmissionSubType = SubmissionSubType.CompanyDetails.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<OrganisationDataRow> { closedLoopRow });
+        _validationServiceMock
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), It.IsAny<BlobQueueMessage>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<RegistrationValidationError>());
+        _validationServiceMock
+            .Setup(x => x.ValidateOrganisationWarningsAsync(It.IsAny<List<OrganisationDataRow>>()))
+            .ReturnsAsync(new List<RegistrationValidationWarning>());
+        _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation)).ReturnsAsync(true);
+        _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableOrganisationDataRowValidation)).ReturnsAsync(true);
+
+        // Act — uses default _sut which has ClosedLoopRegistrationFromYear = 0
+        await _sut.ProcessServiceBusMessage(JsonConvert.SerializeObject(_blobQueueMessage));
+
+        // Assert
+        _submissionApiClientMock.Verify(x => x.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task ProcessServiceBusMessage_WhenClosedLoopColumnPresentAndSubmissionPeriodUnparseable_DoesNotReturnYearGateError()
+    {
+        // Arrange
+        var blobName = "test";
+        var submissionId = Guid.NewGuid().ToString();
+        var closedLoopRow = CSVRowTestHelper.GenerateOrgCsvDataRow();
+        closedLoopRow.ClosedLoopRegistration = "Yes";
+
+        _blobQueueMessage = new BlobQueueMessage
+        {
+            UserId = Guid.NewGuid().ToString(),
+            OrganisationId = Guid.NewGuid().ToString(),
+            SubmissionId = submissionId,
+            SubmissionSubType = SubmissionSubType.CompanyDetails.ToString(),
+            BlobName = blobName,
+            RequiresRowValidation = true,
+        };
+        _dequeueProviderMock
+            .Setup(x => x.GetMessageFromJson<BlobQueueMessage>(It.IsAny<string>()))
+            .Returns(_blobQueueMessage);
+        _csvStreamParserMock
+            .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<OrganisationDataRow> { closedLoopRow });
+        _submissionApiClientMock
+            .Setup(x => x.GetOrganisationFileDetails(submissionId, blobName))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { SubmissionPeriod = "not a valid period" });
+        _validationServiceMock
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), It.IsAny<BlobQueueMessage>(), It.IsAny<bool>()))
+            .ReturnsAsync(new List<RegistrationValidationError>());
+        _validationServiceMock
+            .Setup(x => x.ValidateOrganisationWarningsAsync(It.IsAny<List<OrganisationDataRow>>()))
+            .ReturnsAsync(new List<RegistrationValidationWarning>());
+        _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation)).ReturnsAsync(true);
+        _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableOrganisationDataRowValidation)).ReturnsAsync(true);
+
+        var sut = CreateRegistrationServiceWithSettings(new ValidationSettings { ErrorLimit = 200, ClosedLoopRegistrationFromYear = 2027 });
+
+        // Act
+        await sut.ProcessServiceBusMessage(JsonConvert.SerializeObject(_blobQueueMessage));
+
+        // Assert: year gate does not fire — no error 935
+        _submissionApiClientMock.Verify(
+            m => m.SendEventRegistrationMessage(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.Is<ValidationEvent>(x => x.Errors == null || !x.Errors.Contains(ErrorCodes.ClosedLoopRegistrationColumnNotAllowedForPeriod))),
+            Times.Once);
+    }
+
+    private RegistrationService CreateRegistrationServiceWithSettings(ValidationSettings settings)
+    {
+        IOptions<StorageAccountConfig> options = Options.Create(new StorageAccountConfig
+        {
+            ConnectionString = "A",
+            BlobContainerName = ContainerName,
+        });
+        return new RegistrationService(
+            _dequeueProviderMock.Object,
+            _blobReader,
+            _csvStreamParserMock.Object,
+            _submissionApiClientMock.Object,
+            options,
+            _featureManagerMock.Object,
+            _validationServiceMock.Object,
+            _loggerMock.Object,
+            Options.Create(settings));
     }
 }
