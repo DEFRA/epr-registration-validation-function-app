@@ -16,6 +16,5 @@ public sealed class OrganisationDataRowWithoutOrgSizeLeaverAndJoinerColumnsMap :
         Map(x => x.LeaverDate).Ignore();
         Map(x => x.JoinerDate).Ignore();
         Map(x => x.OrganisationSize).Ignore();
-        Map(x => x.ClosedLoopRegistration).Ignore();
     }
 }
