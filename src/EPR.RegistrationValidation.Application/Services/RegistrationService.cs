@@ -187,11 +187,12 @@ public class RegistrationService : IRegistrationService
                     ErrorCodes.CharacterLengthExceeded);
             }
 
+            var organisationFileDetails = await _submissionApiClient.GetOrganisationFileDetails(
+                blobQueueMessage.SubmissionId, blobQueueMessage.BlobName);
+
             if (_validationSettings.ClosedLoopRegistrationFromYear > 0
                 && csvRows.Exists(r => r.ClosedLoopRegistration != null))
             {
-                var organisationFileDetails = await _submissionApiClient.GetOrganisationFileDetails(
-                    blobQueueMessage.SubmissionId, blobQueueMessage.BlobName);
                 var periodYear = ParseSubmissionPeriodYear(organisationFileDetails?.SubmissionPeriod);
                 if (periodYear.HasValue && periodYear.Value < _validationSettings.ClosedLoopRegistrationFromYear)
                 {
@@ -206,7 +207,8 @@ public class RegistrationService : IRegistrationService
             validationErrors = await _validationService.ValidateOrganisationsAsync(
                 csvRows,
                 blobQueueMessage,
-                await IsCompanyDetailsDataValidationEnabledAsync(blobQueueMessage));
+                await IsCompanyDetailsDataValidationEnabledAsync(blobQueueMessage),
+                organisationFileDetails);
 
             validationWarnings = await _validationService.ValidateOrganisationWarningsAsync(csvRows);
         }

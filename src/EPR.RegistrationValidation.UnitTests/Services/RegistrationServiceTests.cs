@@ -452,7 +452,7 @@ public class RegistrationServiceTests
                 });
 
         _validationServiceMock
-            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()))
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>(), It.IsAny<OrganisationFileDetailsResponse>()))
             .ReturnsAsync(new List<RegistrationValidationError>
             {
                 It.IsAny<RegistrationValidationError>(),
@@ -472,7 +472,7 @@ public class RegistrationServiceTests
 
         // Assert
         _validationServiceMock.Verify(
-            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()),
+            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>(), It.IsAny<OrganisationFileDetailsResponse>()),
             Times.Never);
     }
 
@@ -511,7 +511,7 @@ public class RegistrationServiceTests
                 });
 
         _validationServiceMock
-            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()))
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>(), It.IsAny<OrganisationFileDetailsResponse>()))
             .ReturnsAsync(new List<RegistrationValidationError>
             {
                 It.IsAny<RegistrationValidationError>(),
@@ -532,7 +532,7 @@ public class RegistrationServiceTests
         // Assert
         f.Should().NotThrowAsync<Exception>();
         _validationServiceMock.Verify(
-            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()),
+            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>(), It.IsAny<OrganisationFileDetailsResponse>()),
             Times.Once);
     }
 
@@ -569,7 +569,7 @@ public class RegistrationServiceTests
                 });
 
         _validationServiceMock
-            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()))
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>(), It.IsAny<OrganisationFileDetailsResponse>()))
             .ReturnsAsync(new List<RegistrationValidationError>
             {
                 It.IsAny<RegistrationValidationError>(),
@@ -590,7 +590,7 @@ public class RegistrationServiceTests
         // Assert
         f.Should().NotThrowAsync<Exception>();
         _validationServiceMock.Verify(
-            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()),
+            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>(), It.IsAny<OrganisationFileDetailsResponse>()),
             Times.Never);
     }
 
@@ -629,7 +629,7 @@ public class RegistrationServiceTests
                 });
 
         _validationServiceMock
-            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()))
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>(), It.IsAny<OrganisationFileDetailsResponse>()))
             .ReturnsAsync(new List<RegistrationValidationError>
             {
                 It.IsAny<RegistrationValidationError>(),
@@ -656,7 +656,8 @@ public class RegistrationServiceTests
             v => v.ValidateOrganisationsAsync(
                 It.IsAny<List<OrganisationDataRow>>(),
                 _blobQueueMessage,
-                true),
+                true,
+                It.IsAny<OrganisationFileDetailsResponse>()),
             Times.Once);
     }
 
@@ -695,7 +696,7 @@ public class RegistrationServiceTests
                 });
 
         _validationServiceMock
-            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>()))
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), _blobQueueMessage, It.IsAny<bool>(), It.IsAny<OrganisationFileDetailsResponse>()))
             .ReturnsAsync(new List<RegistrationValidationError>
             {
                 It.IsAny<RegistrationValidationError>(),
@@ -722,7 +723,8 @@ public class RegistrationServiceTests
             v => v.ValidateOrganisationsAsync(
                 It.IsAny<List<OrganisationDataRow>>(),
                 _blobQueueMessage,
-                false),
+                false,
+                It.IsAny<OrganisationFileDetailsResponse>()),
             Times.Once);
     }
 
@@ -1813,7 +1815,7 @@ public class RegistrationServiceTests
                     && !x.IsValid)),
             Times.Once);
         _validationServiceMock.Verify(
-            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), It.IsAny<BlobQueueMessage>(), It.IsAny<bool>()),
+            v => v.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), It.IsAny<BlobQueueMessage>(), It.IsAny<bool>(), It.IsAny<OrganisationFileDetailsResponse>()),
             Times.Never);
     }
 
@@ -1845,7 +1847,7 @@ public class RegistrationServiceTests
             .Setup(x => x.GetOrganisationFileDetails(submissionId, blobName))
             .ReturnsAsync(new OrganisationFileDetailsResponse { SubmissionPeriod = "January to December 2027" });
         _validationServiceMock
-            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), It.IsAny<BlobQueueMessage>(), It.IsAny<bool>()))
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), It.IsAny<BlobQueueMessage>(), It.IsAny<bool>(), It.IsAny<OrganisationFileDetailsResponse>()))
             .ReturnsAsync(new List<RegistrationValidationError>());
         _validationServiceMock
             .Setup(x => x.ValidateOrganisationWarningsAsync(It.IsAny<List<OrganisationDataRow>>()))
@@ -1893,25 +1895,35 @@ public class RegistrationServiceTests
             .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
             .ReturnsAsync(new List<OrganisationDataRow> { row });
         _validationServiceMock
-            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), It.IsAny<BlobQueueMessage>(), It.IsAny<bool>()))
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), It.IsAny<BlobQueueMessage>(), It.IsAny<bool>(), It.IsAny<OrganisationFileDetailsResponse>()))
             .ReturnsAsync(new List<RegistrationValidationError>());
         _validationServiceMock
             .Setup(x => x.ValidateOrganisationWarningsAsync(It.IsAny<List<OrganisationDataRow>>()))
             .ReturnsAsync(new List<RegistrationValidationWarning>());
         _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation)).ReturnsAsync(true);
         _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableOrganisationDataRowValidation)).ReturnsAsync(true);
+        _submissionApiClientMock
+            .Setup(x => x.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "January to December 2026" });
 
         var sut = CreateRegistrationServiceWithSettings(new ValidationSettings { ErrorLimit = 200, ClosedLoopRegistrationFromYear = 2027 });
 
         // Act
         await sut.ProcessServiceBusMessage(JsonConvert.SerializeObject(_blobQueueMessage));
 
-        // Assert
-        _submissionApiClientMock.Verify(x => x.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        // Assert — year gate should not trigger when column is absent
+        _submissionApiClientMock.Verify(
+            m => m.SendEventRegistrationMessage(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.Is<ValidationEvent>(x => x.Errors == null || !x.Errors.Contains(ErrorCodes.ClosedLoopRegistrationColumnNotAllowedForPeriod))),
+            Times.Once);
     }
 
     [TestMethod]
-    public async Task ProcessServiceBusMessage_WhenClosedLoopFromYearIsZero_DoesNotFetchOrgFileDetailsForYearGate()
+    public async Task ProcessServiceBusMessage_WhenClosedLoopFromYearIsZero_DoesNotReturnYearGateError()
     {
         // Arrange
         var blobName = "test";
@@ -1935,19 +1947,29 @@ public class RegistrationServiceTests
             .Setup(x => x.GetItemsFromCsvStreamAsync<OrganisationDataRow>(It.IsAny<MemoryStream>(), It.IsAny<bool>()))
             .ReturnsAsync(new List<OrganisationDataRow> { closedLoopRow });
         _validationServiceMock
-            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), It.IsAny<BlobQueueMessage>(), It.IsAny<bool>()))
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), It.IsAny<BlobQueueMessage>(), It.IsAny<bool>(), It.IsAny<OrganisationFileDetailsResponse>()))
             .ReturnsAsync(new List<RegistrationValidationError>());
         _validationServiceMock
             .Setup(x => x.ValidateOrganisationWarningsAsync(It.IsAny<List<OrganisationDataRow>>()))
             .ReturnsAsync(new List<RegistrationValidationWarning>());
         _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableRowValidation)).ReturnsAsync(true);
         _featureManagerMock.Setup(f => f.IsEnabledAsync(FeatureFlags.EnableOrganisationDataRowValidation)).ReturnsAsync(true);
+        _submissionApiClientMock
+            .Setup(x => x.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "January to December 2026" });
 
         // Act — uses default _sut which has ClosedLoopRegistrationFromYear = 0
         await _sut.ProcessServiceBusMessage(JsonConvert.SerializeObject(_blobQueueMessage));
 
-        // Assert
-        _submissionApiClientMock.Verify(x => x.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        // Assert — year gate inactive when ClosedLoopRegistrationFromYear = 0
+        _submissionApiClientMock.Verify(
+            m => m.SendEventRegistrationMessage(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.Is<ValidationEvent>(x => x.Errors == null || !x.Errors.Contains(ErrorCodes.ClosedLoopRegistrationColumnNotAllowedForPeriod))),
+            Times.Once);
     }
 
     [TestMethod]
@@ -1978,7 +2000,7 @@ public class RegistrationServiceTests
             .Setup(x => x.GetOrganisationFileDetails(submissionId, blobName))
             .ReturnsAsync(new OrganisationFileDetailsResponse { SubmissionPeriod = "not a valid period" });
         _validationServiceMock
-            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), It.IsAny<BlobQueueMessage>(), It.IsAny<bool>()))
+            .Setup(x => x.ValidateOrganisationsAsync(It.IsAny<List<OrganisationDataRow>>(), It.IsAny<BlobQueueMessage>(), It.IsAny<bool>(), It.IsAny<OrganisationFileDetailsResponse>()))
             .ReturnsAsync(new List<RegistrationValidationError>());
         _validationServiceMock
             .Setup(x => x.ValidateOrganisationWarningsAsync(It.IsAny<List<OrganisationDataRow>>()))
