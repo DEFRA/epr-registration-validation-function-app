@@ -53,6 +53,8 @@ public class CompanyDetailsIntegrationTests
         harness.CapturedEvent.Should().NotBeNull();
         harness.CapturedEvent.Type.Should().Be(EventType.Registration);
         harness.CapturedEvent.IsValid.Should().BeFalse();
+        var registrationEvent = harness.CapturedEvent as RegistrationValidationEvent;
+        registrationEvent.Should().BeNull();
         harness.CapturedEvent.Errors.Should().ContainSingle().Which.Should().Be(ErrorCodes.CsvFileInvalidHeaderErrorCode);
     }
 
@@ -76,19 +78,13 @@ public class CompanyDetailsIntegrationTests
         harness.CapturedEvent.Type.Should().Be(EventType.Registration);
         harness.CapturedEvent.IsValid.Should().BeFalse();
         var registrationEvent = harness.CapturedEvent as RegistrationValidationEvent;
-        if (registrationEvent is not null)
-        {
-            registrationEvent.ValidationErrors.Should().NotBeEmpty();
-            registrationEvent.ValidationErrors
-                .SelectMany(x => x.ColumnErrors)
-                .Select(x => x.ErrorCode)
-                .Should()
-                .Contain(ErrorCodes.MissingOrganisationId);
-        }
-        else
-        {
-            harness.CapturedEvent.Errors.Should().Contain(ErrorCodes.CsvFileInvalidHeaderErrorCode);
-        }
+        registrationEvent.Should().NotBeNull();
+        registrationEvent.ValidationErrors.Should().NotBeEmpty();
+        registrationEvent.ValidationErrors
+            .SelectMany(x => x.ColumnErrors)
+            .Select(x => x.ErrorCode)
+            .Should()
+            .Contain(ErrorCodes.MissingOrganisationId);
     }
 
     [TestMethod]
