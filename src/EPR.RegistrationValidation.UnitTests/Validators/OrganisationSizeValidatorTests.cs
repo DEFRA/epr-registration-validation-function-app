@@ -1,7 +1,8 @@
-﻿namespace EPR.RegistrationValidation.UnitTests.Validators;
+namespace EPR.RegistrationValidation.UnitTests.Validators;
 
 using EPR.RegistrationValidation.Application.Validators;
 
+using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Enums;
 using EPR.RegistrationValidation.Data.Models;
 
@@ -22,7 +23,7 @@ public class OrganisationSizeValidatorTests
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
-        result.Errors.Should().Contain(err => err.ErrorCode == "894");
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.MissingOrganisationSizeValue);
     }
 
     [TestMethod]
@@ -36,7 +37,7 @@ public class OrganisationSizeValidatorTests
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
-        result.Errors.Should().Contain(err => err.ErrorCode == "895");
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.InvalidOrganisationSizeValue);
     }
 
     [TestMethod]
@@ -54,7 +55,7 @@ public class OrganisationSizeValidatorTests
 
         largeResult.IsValid.Should().BeFalse();
         largeResult.Errors.Should().NotBeEmpty();
-        largeResult.Errors.Should().Contain(err => err.ErrorCode == "932");
+        largeResult.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.SmallProducerInLargeProducerFile);
     }
 
     [TestMethod]
@@ -72,7 +73,7 @@ public class OrganisationSizeValidatorTests
 
         largeResult.IsValid.Should().BeFalse();
         largeResult.Errors.Should().NotBeEmpty();
-        largeResult.Errors.Should().Contain(err => err.ErrorCode == "932");
+        largeResult.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.SmallProducerInLargeProducerFile);
     }
 
     [TestMethod]
@@ -90,7 +91,7 @@ public class OrganisationSizeValidatorTests
 
         smallResult.IsValid.Should().BeFalse();
         smallResult.Errors.Should().NotBeEmpty();
-        smallResult.Errors.Should().Contain(err => err.ErrorCode == "933");
+        smallResult.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.LargeProducerInSmallProducerFile);
     }
 
     private static OrganisationSizeValidator CreateOrganisationSizeValidator(string? registrationJourney = null)
