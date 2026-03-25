@@ -109,4 +109,5 @@ public static class ErrorCodes
     public const string WarningZeroTurnover = "73";
     public const string SmallProducerInLargeProducerFile = "932";
     public const string LargeProducerInSmallProducerFile = "933";
+    public const string InvalidClosedLoopRegistrationValue = "934";
 }

@@ -321,4 +321,8 @@ public class OrganisationDataRow : ICsvDataRow
     [Column(77)]
     [Name("joiner_date")]
     public string JoinerDate { get; set; }
+
+    [Column(78)]
+    [Name("closed_loop_registration")]
+    public string ClosedLoopRegistration { get; set; }
 }

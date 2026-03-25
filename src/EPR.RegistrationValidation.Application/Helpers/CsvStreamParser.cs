@@ -27,6 +27,8 @@ public class CsvStreamParser : ICsvStreamParser
     private static CsvConfiguration CsvConfiguration => new(CultureInfo.InvariantCulture)
     {
         HasHeaderRecord = true,
+        HeaderValidated = null,
+        MissingFieldFound = null,
     };
 
     public async Task<List<T>> GetItemsFromCsvStreamAsync<T>(MemoryStream memoryStream, bool useMinimalClassMaps = false)
@@ -49,7 +51,7 @@ public class CsvStreamParser : ICsvStreamParser
             }
             else if (!_featureManager.IsEnabledAsync(FeatureFlags.EnableSubsidiaryJoinerAndLeaverColumns).Result)
             {
-                // Register class map to populate data row without the (newer) organisation size property
+                // Register class map to populate data row without the (newer) leaver and joiner columns
                 csv.Context.RegisterClassMap<OrganisationDataRowWithoutLeaverAndJoinerColumnsMap>();
             }
 
@@ -88,7 +90,12 @@ public class CsvStreamParser : ICsvStreamParser
                     "joiner_date",
                 };
 
-                orderedHeaders.RemoveAll(header => leaverAndJoinerColumns.Contains(header.Name));
+                orderedHeaders.RemoveAll(h => leaverAndJoinerColumns.Contains(h.Name));
+            }
+
+            if (!(header?.Contains("closed_loop_registration") ?? false))
+            {
+                orderedHeaders.RemoveAll(h => h.Name == "closed_loop_registration");
             }
 
             if (!header.SequenceEqual(orderedHeaders.Select(x => x.Name)))

@@ -68,6 +68,8 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
             Include(new OrganisationSizeTurnoverValidator());
         }
 
+        Include(new ClosedLoopRegistrationValidator());
+
         _areValidatorsRegistered = true;
     }
 }
