@@ -10,7 +10,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class PartnershipValidationIntegrationTests
 {
     [TestMethod]
-    [TestCategory("Integration")]
+    [TestCategory("IntegrationTest")]
     public async Task ProcessServiceBusMessage_WhenPartnerDoesNotMatchOrganisationFile_EmitsCrossFileError()
     {
         var harness = IntegrationTestHarness.Create(

@@ -11,7 +11,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class CompanyDetailsIntegrationTests
 {
     [TestMethod]
-    [TestCategory("Integration")]
+    [TestCategory("IntegrationTest")]
     public async Task ProcessServiceBusMessage_WhenCompanyDetailsCsvIsValid_EmitsValidRegistrationEvent()
     {
         var harness = IntegrationTestHarness.Create(
@@ -35,7 +35,7 @@ public class CompanyDetailsIntegrationTests
     }
 
     [TestMethod]
-    [TestCategory("Integration")]
+    [TestCategory("IntegrationTest")]
     public async Task ProcessServiceBusMessage_WhenCompanyDetailsHeadersAreInvalid_EmitsHeaderError()
     {
         var harness = IntegrationTestHarness.Create(
@@ -59,7 +59,7 @@ public class CompanyDetailsIntegrationTests
     }
 
     [TestMethod]
-    [TestCategory("Integration")]
+    [TestCategory("IntegrationTest")]
     public async Task ProcessServiceBusMessage_WhenOrganisationRowsContainErrors_EmitsRowValidationErrors()
     {
         var harness = IntegrationTestHarness.Create(
@@ -88,7 +88,7 @@ public class CompanyDetailsIntegrationTests
     }
 
     [TestMethod]
-    [TestCategory("Integration")]
+    [TestCategory("IntegrationTest")]
     public async Task ProcessServiceBusMessage_WhenClosedLoopRegistrationColumnIsAbsent_DoesNotEmitClosedLoopError()
     {
         var harness = IntegrationTestHarness.Create(
@@ -115,7 +115,7 @@ public class CompanyDetailsIntegrationTests
     }
 
     [TestMethod]
-    [TestCategory("Integration")]
+    [TestCategory("IntegrationTest")]
     public async Task ProcessServiceBusMessage_WhenClosedLoopRegistrationIsEmpty_EmitsClosedLoopError()
     {
         var harness = IntegrationTestHarness.Create(
@@ -144,7 +144,7 @@ public class CompanyDetailsIntegrationTests
     }
 
     [TestMethod]
-    [TestCategory("Integration")]
+    [TestCategory("IntegrationTest")]
     public async Task ProcessServiceBusMessage_WhenClosedLoopRegistrationIsInvalidValue_EmitsClosedLoopError()
     {
         var harness = IntegrationTestHarness.Create(

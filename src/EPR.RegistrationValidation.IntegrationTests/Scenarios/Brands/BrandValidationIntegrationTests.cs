@@ -10,7 +10,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class BrandValidationIntegrationTests
 {
     [TestMethod]
-    [TestCategory("Integration")]
+    [TestCategory("IntegrationTest")]
     public async Task ProcessServiceBusMessage_WhenBrandDoesNotMatchOrganisationFile_EmitsCrossFileError()
     {
         var harness = IntegrationTestHarness.Create(
