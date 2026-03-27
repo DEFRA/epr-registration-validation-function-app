@@ -53,7 +53,7 @@ docker run -e AzureWebJobsStorage="X" -e FUNCTIONS_EXTENSION_VERSION="X" -e FUNC
 On root directory `src`, execute:
 
 ```
-dotnet test --filter "TestCategory!=IntegrationTest"
+dotnet test --filter "Category!=IntegrationTest"
 ```
  
 ### Pact tests 
@@ -64,13 +64,13 @@ N/A
 On root directory `src`, execute:
 
 ```
-dotnet test --filter "TestCategory=IntegrationTest"
+dotnet test --filter "Category=IntegrationTest"
 ```
 
 To run only the integration test project:
 
 ```
-dotnet test EPR.RegistrationValidation.IntegrationTests/EPR.RegistrationValidation.IntegrationTests.csproj --filter "TestCategory=IntegrationTest"
+dotnet test EPR.RegistrationValidation.IntegrationTests/EPR.RegistrationValidation.IntegrationTests.csproj --filter "Category=IntegrationTest"
 ```
  
 ## How To Debug 
