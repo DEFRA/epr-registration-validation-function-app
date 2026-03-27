@@ -1,7 +1,8 @@
-﻿namespace EPR.RegistrationValidation.UnitTests.Validators;
+namespace EPR.RegistrationValidation.UnitTests.Validators;
 
 using EPR.RegistrationValidation.Application.Constants;
 using EPR.RegistrationValidation.Application.Validators;
+using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
 using FluentAssertions;
 using FluentValidation.TestHelper;
@@ -49,6 +50,10 @@ public class OrganisationSizeTurnoverValidatorTests
         // Assert
         result.IsValid.Should().Be(testResult);
         result.Errors.Count.Should().Be(errorCount);
+        if (organisationSize == OrganisationSizeCodes.S)
+        {
+            result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.SmallProducerTurnoverInvalid);
+        }
     }
 
     private static OrganisationSizeTurnoverValidator CreateOrganisationSizeTurnoverValidator()

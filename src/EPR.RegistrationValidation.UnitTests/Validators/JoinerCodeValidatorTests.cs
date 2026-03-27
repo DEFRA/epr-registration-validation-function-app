@@ -1,4 +1,4 @@
-﻿namespace EPR.RegistrationValidation.UnitTests.Validators;
+namespace EPR.RegistrationValidation.UnitTests.Validators;
 
 using EPR.RegistrationValidation.Application.Validators;
 using EPR.RegistrationValidation.Data.Constants;
@@ -10,6 +10,29 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 [TestClass]
 public class JoinerCodeValidatorTests
 {
+    [TestMethod]
+    public async Task Validate_WithJoinerAndLeaverDatesPresent_AndEmptyLeaverCode_IsNotValid()
+    {
+        // Arrange
+        var validator = new LeaverCodeValidator(false, true);
+        var orgDataRow = new OrganisationDataRow
+        {
+            SubsidiaryId = "1",
+            JoinerDate = "01/01/2000",
+            LeaverDate = "02/01/2000",
+            LeaverCode = string.Empty,
+        };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
+        result.ShouldHaveValidationErrorFor(x => x.LeaverCode);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.OnlyOneDateShouldbePresent);
+    }
+
     [TestMethod]
     public async Task Validate_WithSubsidiaryIdPresentAndLeaverDatePresentEmptyStatusCode_IsNotValid()
     {
