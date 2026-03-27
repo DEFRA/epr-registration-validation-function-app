@@ -7,7 +7,7 @@ using EPR.RegistrationValidation.Data.Models.SubmissionApi;
 
 public interface IValidationService
 {
-    Task<List<RegistrationValidationError>> ValidateOrganisationsAsync(List<OrganisationDataRow> rows, BlobQueueMessage blobQueueMessage, bool validateCompanyDetailsData);
+    Task<List<RegistrationValidationError>> ValidateOrganisationsAsync(List<OrganisationDataRow> rows, BlobQueueMessage blobQueueMessage, bool validateCompanyDetailsData, OrganisationFileDetailsResponse organisationFileDetails);
 
     Task<List<RegistrationValidationWarning>> ValidateOrganisationWarningsAsync(List<OrganisationDataRow> rows);
 

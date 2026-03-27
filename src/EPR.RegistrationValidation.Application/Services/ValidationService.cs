@@ -72,11 +72,9 @@ public class ValidationService : IValidationService
         _subsidiaryDetailsRequestBuilder = subsidiaryDetailsRequestBuilder;
     }
 
-    public async Task<List<RegistrationValidationError>> ValidateOrganisationsAsync(List<OrganisationDataRow> rows, BlobQueueMessage blobQueueMessage, bool validateCompanyDetailsData)
+    public async Task<List<RegistrationValidationError>> ValidateOrganisationsAsync(List<OrganisationDataRow> rows, BlobQueueMessage blobQueueMessage, bool validateCompanyDetailsData, OrganisationFileDetailsResponse organisationFileDetails)
     {
         List<RegistrationValidationError> validationErrors = new();
-
-        var organisationFileDetails = await _submissionApiClient.GetOrganisationFileDetails(blobQueueMessage.SubmissionId, blobQueueMessage.BlobName);
 
         var rowValidationResult = await ValidateRowsAsync(
             rows,

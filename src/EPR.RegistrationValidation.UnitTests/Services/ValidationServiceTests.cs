@@ -56,12 +56,8 @@ public class ValidationServiceTests
         var dataRows = new List<OrganisationDataRow> { new() };
         var blobQueueMessage = new BlobQueueMessage();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage, false);
+        var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage, false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         var validationError = results.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.MissingOrganisationId));
@@ -103,12 +99,8 @@ public class ValidationServiceTests
             .Setup(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()))
             .ReturnsAsync(subsidiaryDetailsResponse);
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage, false);
+        var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage, false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         var validationError = results.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.SubsidiaryIdBelongsToDifferentOrganisation));
@@ -156,12 +148,8 @@ public class ValidationServiceTests
         };
         var blobQueueMessage = new BlobQueueMessage();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage, false);
+        var results = await service.ValidateOrganisationsAsync(dataRows, blobQueueMessage, false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         results.Should().BeEmpty();
@@ -177,12 +165,8 @@ public class ValidationServiceTests
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
         var blobQueueMessage = new BlobQueueMessage();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         results.Should().BeEmpty();
@@ -198,12 +182,8 @@ public class ValidationServiceTests
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
         var blobQueueMessage = new BlobQueueMessage();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         results.Should().BeEmpty();
@@ -220,12 +200,8 @@ public class ValidationServiceTests
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
         var blobQueueMessage = new BlobQueueMessage();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         var validationError = results.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.DuplicateOrganisationIdSubsidiaryId));
@@ -242,12 +218,8 @@ public class ValidationServiceTests
         var service = CreateService(new ValidationSettings { ErrorLimit = maxErrors });
         var blobQueueMessage = new BlobQueueMessage();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
+        var results = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         results.Sum(x => x.ColumnErrors.Count).Should().Be(maxErrors);
@@ -406,12 +378,8 @@ public class ValidationServiceTests
         dataRow.MainActivitySic = "123456";
         var blobQueueMessage = new BlobQueueMessage();
 
-        _submissionApiClientMock
-            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var errors = await service.ValidateOrganisationsAsync([dataRow], blobQueueMessage, false);
+        var errors = await service.ValidateOrganisationsAsync([dataRow], blobQueueMessage, false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         var columnError = errors.Single().ColumnErrors.Single();
@@ -430,12 +398,8 @@ public class ValidationServiceTests
         dataRow.TradingName = dataRow.OrganisationName;
         var blobQueueMessage = new BlobQueueMessage();
 
-        _submissionApiClientMock
-            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow> { dataRow }, blobQueueMessage, false);
+        var errors = await service.ValidateOrganisationsAsync(new List<OrganisationDataRow> { dataRow }, blobQueueMessage, false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         var columnError = errors.Single().ColumnErrors.Single();
@@ -755,14 +719,10 @@ public class ValidationServiceTests
             .Setup(f => f.GetCompanyDetailsByProducer(It.IsAny<string>()))
             .ReturnsAsync(companyDetailsDataResult);
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var errors = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
+        var errors = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         errors.Should().BeEmpty();
@@ -796,14 +756,10 @@ public class ValidationServiceTests
             .Setup(f => f.GetCompanyDetailsByProducer(It.IsAny<string>()))
             .ReturnsAsync(companyDetailsDataResult);
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var errors = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, true);
+        var errors = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, true, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         var validationError = errors.Find(x => x.ColumnErrors.Any(e => e.ErrorCode == ErrorCodes.CheckOrganisationId));
@@ -1996,14 +1952,10 @@ public class ValidationServiceTests
             .Setup(f => f.GetCompanyDetailsByProducer(It.IsAny<string>()))
             .ReturnsAsync(companyDetailsDataResult);
 
-        _submissionApiClientMock
-            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var errors = async () => await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
+        var errors = async () => await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         errors.Should().ThrowAsync<ArgumentException>();
@@ -2040,14 +1992,10 @@ public class ValidationServiceTests
             .Setup(f => f.GetCompanyDetailsByProducer(It.IsAny<string>()))
             .ReturnsAsync(companyDetailsDataResult);
 
-        _submissionApiClientMock
-            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         var blobQueueMessage = new BlobQueueMessage();
 
         // Act
-        var errors = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false);
+        var errors = await service.ValidateOrganisationsAsync(dataRows.ToList(), blobQueueMessage, false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         errors.Count.Should().Be(errorCount);
@@ -2279,12 +2227,8 @@ public class ValidationServiceTests
 
         var service = CreateService();
 
-        _submissionApiClientMock
-            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         result.Should().NotBeEmpty();
@@ -2311,12 +2255,8 @@ public class ValidationServiceTests
 
         var service = CreateService(enableLeaverCodeValidation: false);
 
-        _submissionApiClientMock
-            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         result.Should().BeEmpty();
@@ -2339,12 +2279,8 @@ public class ValidationServiceTests
         organisations[0].JoinerDate = joinerDate;
         var service = CreateService();
 
-        _submissionApiClientMock
-            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         result.Should().BeEmpty();
@@ -2367,12 +2303,8 @@ public class ValidationServiceTests
         organisations[0].JoinerDate = joinerDate;
         var service = CreateService();
 
-        _submissionApiClientMock
-            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         result.Should().BeEmpty();
@@ -2395,12 +2327,8 @@ public class ValidationServiceTests
         organisations[0].JoinerDate = joinerDate;
         var service = CreateService();
 
-        _submissionApiClientMock
-            .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         result.Should().NotBeEmpty();
@@ -2424,12 +2352,8 @@ public class ValidationServiceTests
         organisations[0].JoinerDate = joinerDate;
         var service = CreateService();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         result.Should().BeEmpty();
@@ -2452,12 +2376,8 @@ public class ValidationServiceTests
         organisations[0].JoinerDate = joinerDate;
         var service = CreateService();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         result.Should().NotBeEmpty();
@@ -2482,12 +2402,8 @@ public class ValidationServiceTests
         organisations[0].JoinerDate = joinerDate;
         var service = CreateService();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         result.Should().NotBeEmpty();
@@ -2502,12 +2418,8 @@ public class ValidationServiceTests
         var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "04" } };
         var service = CreateService();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         result.Should().NotBeEmpty();
@@ -2520,12 +2432,8 @@ public class ValidationServiceTests
         var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "02" } };
         var service = CreateService();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         result.Should().NotBeEmpty();
@@ -2538,12 +2446,8 @@ public class ValidationServiceTests
         var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "04" } };
         var service = CreateService();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         result.Should().NotBeEmpty();
@@ -2566,12 +2470,8 @@ public class ValidationServiceTests
 
         var service = CreateService();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         result.Should().NotBeEmpty();
@@ -2593,12 +2493,8 @@ public class ValidationServiceTests
         };
         var service = CreateService();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         result.Should().NotBeEmpty();
@@ -2612,12 +2508,8 @@ public class ValidationServiceTests
         var organisations = new List<OrganisationDataRow> { new OrganisationDataRow { RegistrationTypeCode = string.Empty } };
         var service = CreateService();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage { ComplianceSchemeId = "1" }, false);
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage { ComplianceSchemeId = "1" }, false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         result.Should().NotBeEmpty();
@@ -2640,12 +2532,8 @@ public class ValidationServiceTests
         };
         var service = CreateService();
 
-        _submissionApiClientMock
-        .Setup(f => f.GetOrganisationFileDetails(It.IsAny<string>(), It.IsAny<string>()))
-        .ReturnsAsync(new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
-
         // Act
-        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false);
+        var result = await service.ValidateOrganisationsAsync(organisations, new BlobQueueMessage(), false, new OrganisationFileDetailsResponse { BlobName = string.Empty, SubmissionPeriod = "July to December 2025" });
 
         // Assert
         result.SelectMany(x => x.ColumnErrors.Select(y => y.ErrorCode)).ToList()

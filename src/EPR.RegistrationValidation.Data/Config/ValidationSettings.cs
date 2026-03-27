@@ -5,4 +5,6 @@ public class ValidationSettings
     public const string Section = "ValidationSettings";
 
     public int ErrorLimit { get; set; } = 200;
+
+    public int ClosedLoopRegistrationFromYear { get; set; } = 0;
 }

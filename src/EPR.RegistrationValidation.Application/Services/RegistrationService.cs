@@ -131,6 +131,17 @@ public class RegistrationService : IRegistrationService
         }
     }
 
+    private static int? ParseSubmissionPeriodYear(string? submissionPeriod)
+    {
+        if (string.IsNullOrWhiteSpace(submissionPeriod))
+        {
+            return null;
+        }
+
+        var lastToken = submissionPeriod.Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+        return int.TryParse(lastToken, out var year) ? year : null;
+    }
+
     private static EventType GetEventType(string submissionSubType) =>
         submissionSubType switch
         {
@@ -176,10 +187,28 @@ public class RegistrationService : IRegistrationService
                     ErrorCodes.CharacterLengthExceeded);
             }
 
+            var organisationFileDetails = await _submissionApiClient.GetOrganisationFileDetails(
+                blobQueueMessage.SubmissionId, blobQueueMessage.BlobName);
+
+            if (_validationSettings.ClosedLoopRegistrationFromYear > 0
+                && csvRows.Exists(r => r.ClosedLoopRegistration != null))
+            {
+                var periodYear = ParseSubmissionPeriodYear(organisationFileDetails?.SubmissionPeriod);
+                if (periodYear.HasValue && periodYear.Value < _validationSettings.ClosedLoopRegistrationFromYear)
+                {
+                    return CreateValidationEvent(
+                        EventType.Registration,
+                        blobQueueMessage.BlobName,
+                        _options.BlobContainerName,
+                        ErrorCodes.ClosedLoopRegistrationColumnNotAllowedForPeriod);
+                }
+            }
+
             validationErrors = await _validationService.ValidateOrganisationsAsync(
                 csvRows,
                 blobQueueMessage,
-                await IsCompanyDetailsDataValidationEnabledAsync(blobQueueMessage));
+                await IsCompanyDetailsDataValidationEnabledAsync(blobQueueMessage),
+                organisationFileDetails);
 
             validationWarnings = await _validationService.ValidateOrganisationWarningsAsync(csvRows);
         }
