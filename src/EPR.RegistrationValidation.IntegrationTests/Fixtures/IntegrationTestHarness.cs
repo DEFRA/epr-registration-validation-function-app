@@ -37,7 +37,13 @@ public class IntegrationTestHarness
 
     public ValidationEvent CapturedEvent => SubmissionApiClient.CapturedValidationEvent;
 
-    public static IntegrationTestHarness Create(params string[] enabledFlags)
+    public static IntegrationTestHarness Create(params string[] enabledFlags) =>
+        BuildHarness(new ValidationSettings { ErrorLimit = 200 }, enabledFlags);
+
+    public static IntegrationTestHarness CreateWithClosedLoopFromYear(int closedLoopRegistrationFromYear, params string[] enabledFlags) =>
+        BuildHarness(new ValidationSettings { ErrorLimit = 200, ClosedLoopRegistrationFromYear = closedLoopRegistrationFromYear }, enabledFlags);
+
+    private static IntegrationTestHarness BuildHarness(ValidationSettings validationSettings, string[] enabledFlags)
     {
         var featureManager = new InMemoryFeatureManager(
             new[]
@@ -74,7 +80,7 @@ public class IntegrationTestHarness
             new ColumnMetaDataProvider(featureManager),
             new ValidationConfig
             {
-                ValidationSettings = Options.Create(new ValidationSettings { ErrorLimit = 200 }),
+                ValidationSettings = Options.Create(validationSettings),
                 RegistrationSettings = Options.Create(new RegistrationSettings
                 {
                     SubmissionPeriod2026 = "January to June 2026",
@@ -104,7 +110,7 @@ public class IntegrationTestHarness
             featureManager,
             validationService,
             NullLogger<RegistrationService>.Instance,
-            Options.Create(new ValidationSettings { ErrorLimit = 200 }));
+            Options.Create(validationSettings));
 
         return new IntegrationTestHarness(registrationService, blobReader, submissionApiClient, companyDetailsApiClient);
     }
