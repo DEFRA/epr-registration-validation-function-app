@@ -1,4 +1,4 @@
-﻿namespace EPR.RegistrationValidation.UnitTests.Validators;
+namespace EPR.RegistrationValidation.UnitTests.Validators;
 
 using System.Threading.Tasks;
 using EPR.RegistrationValidation.Application.Validators;
@@ -11,6 +11,40 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 [TestClass]
 public class LeaverDateValidatorTests
 {
+    [TestMethod]
+    public async Task Validate_WithSubsidiaryIdAndStatusCodePresentAndEmptyLeaverDate_IsNotValid()
+    {
+        // Arrange
+        var validator = new LeaverDateValidator(false, false);
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = "1", LeaverCode = "A", LeaverDate = string.Empty };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
+        result.ShouldHaveValidationErrorFor(x => x.LeaverDate);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.LeaverDateMustBePresentWhenStatusCodePresent);
+    }
+
+    [TestMethod]
+    public async Task Validate_WithUploadedByCSAndEmptySubsidiaryIdAndStatusCodePresentAndEmptyLeaverDate_IsNotValid()
+    {
+        // Arrange
+        var validator = new LeaverDateValidator(true, false);
+        var orgDataRow = new OrganisationDataRow { SubsidiaryId = string.Empty, LeaverCode = "A", LeaverDate = string.Empty };
+
+        // Act
+        var result = await validator.TestValidateAsync(orgDataRow);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
+        result.ShouldHaveValidationErrorFor(x => x.LeaverDate);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.LeaverDateMustBePresentWhenStatusCodePresentCS);
+    }
+
     [TestMethod]
     public async Task Validate_WithSubsidiaryIdAndJoinerCodeNotEmptyAndEmptyLeaverDate_IsValid()
     {

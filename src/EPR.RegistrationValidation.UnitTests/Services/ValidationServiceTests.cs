@@ -1,4 +1,4 @@
-﻿namespace EPR.RegistrationValidation.UnitTests.Services;
+namespace EPR.RegistrationValidation.UnitTests.Services;
 
 using Application.Constants;
 using Data.Config;
@@ -1921,6 +1921,8 @@ public class ValidationServiceTests
         // Assert
         Assert.AreEqual(2, totalErrors);
         Assert.AreEqual(2, validationErrors.Count);
+        validationErrors.Should().OnlyContain(e =>
+            e.ColumnErrors.Any(c => c.ErrorCode == ErrorCodes.SubsidiaryIdDoesNotMatchCompaniesHouseNumber));
         _companyDetailsApiClientMock.Verify(x => x.GetSubsidiaryDetails(It.IsAny<SubsidiaryDetailsRequest>()), Times.Once);
     }
 

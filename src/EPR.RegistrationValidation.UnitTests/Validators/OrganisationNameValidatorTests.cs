@@ -1,6 +1,7 @@
-﻿namespace EPR.RegistrationValidation.UnitTests.Validators;
+namespace EPR.RegistrationValidation.UnitTests.Validators;
 
 using EPR.RegistrationValidation.Application.Validators;
+using EPR.RegistrationValidation.Data.Constants;
 using EPR.RegistrationValidation.Data.Models;
 using FluentAssertions;
 using FluentValidation.TestHelper;
@@ -23,6 +24,7 @@ public class OrganisationNameValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
         result.ShouldHaveValidationErrorFor(x => x.OrganisationName);
+        result.Errors.Should().Contain(err => err.ErrorCode == ErrorCodes.MissingOrganisationName);
     }
 
     [TestMethod]
