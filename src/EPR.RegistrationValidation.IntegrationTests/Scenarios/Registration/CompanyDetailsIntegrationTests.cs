@@ -145,6 +145,36 @@ public class CompanyDetailsIntegrationTests
 
     [TestMethod]
     [TestProperty("Category", "IntegrationTest")]
+    public async Task ProcessServiceBusMessage_WhenClosedLoopRegistrationColumnPresentButPeriodNotAllowed_EmitsError935()
+    {
+        var harness = IntegrationTestHarness.CreateWithClosedLoopFromYear(
+            2026,
+            FeatureFlags.EnableRowValidation,
+            FeatureFlags.EnableOrganisationDataRowValidation);
+
+        harness.BlobReader.AddOrUpdateBlob(
+            "closed-loop-not-allowed.csv",
+            CsvFixtureFactory.OrganisationCsvWithClosedLoopRegistrationValue("Yes"));
+
+        // InMemorySubmissionApiClient defaults to SubmissionPeriod "January to June 2025"
+        // so period year (2025) is earlier than ClosedLoopRegistrationFromYear (2026)
+        var queueMessage = QueueMessageFixture.Build(
+            blobName: "closed-loop-not-allowed.csv",
+            submissionSubType: nameof(SubmissionSubType.CompanyDetails),
+            requiresRowValidation: true);
+
+        await harness.RegistrationService.ProcessServiceBusMessage(queueMessage);
+
+        harness.CapturedEvent.Should().NotBeNull();
+        harness.CapturedEvent.Type.Should().Be(EventType.Registration);
+        harness.CapturedEvent.IsValid.Should().BeFalse();
+        harness.CapturedEvent.Errors.Should()
+            .ContainSingle()
+            .Which.Should().Be(ErrorCodes.ClosedLoopRegistrationColumnNotAllowedForPeriod);
+    }
+
+    [TestMethod]
+    [TestProperty("Category", "IntegrationTest")]
     public async Task ProcessServiceBusMessage_WhenClosedLoopRegistrationIsInvalidValue_EmitsClosedLoopError()
     {
         var harness = IntegrationTestHarness.Create(
