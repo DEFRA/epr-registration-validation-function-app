@@ -66,6 +66,7 @@ public class OrganisationDataRowValidator : AbstractValidator<OrganisationDataRo
         {
             Include(new OrganisationSizeValidator(registrationJourney));
             Include(new OrganisationSizeTurnoverValidator());
+            Include(new SmallProducerClosedLoopRegistrationValidator());
         }
 
         Include(new ClosedLoopRegistrationValidator());
