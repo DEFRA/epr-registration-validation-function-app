@@ -111,4 +111,5 @@ public static class ErrorCodes
     public const string LargeProducerInSmallProducerFile = "933";
     public const string InvalidClosedLoopRegistrationValue = "934";
     public const string ClosedLoopRegistrationColumnNotAllowedForPeriod = "935";
+    public const string ClosedLoopRegistrationNotAllowedForSmallProducer = "936";
 }
