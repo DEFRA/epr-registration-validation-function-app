@@ -13,7 +13,7 @@ public static class CsvFileReader
 
         memStream.SetLength(fileStream.Length);
 
-        fileStream.Read(memStream.GetBuffer(), 0, (int)fileStream.Length);
+        fileStream.ReadExactly(memStream.GetBuffer(), 0, (int)fileStream.Length);
         return memStream;
     }
 
