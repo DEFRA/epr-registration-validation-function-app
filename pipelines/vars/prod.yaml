@@ -1,6 +1,10 @@
 variables:
-  azureSubscription: 'AZR-RWD-PRD1'
-  docker.imageName: 'registrationvalidationrepository'
-  acr.azureContainerRegistryName: 'prdrwdinfac1401'
-  acr.repositoryName: 'registrationvalidationrepository'
-  serviceName: 'prdrwdwebfa1404'
+- group: ServiceConnection-PRD1
+- name: docker.imageName
+  value: 'registrationvalidationrepository'
+- name: acr.azureContainerRegistryName
+  value: 'prdrwdinfac1401'
+- name: acr.repositoryName
+  value: 'registrationvalidationrepository'
+- name: serviceName
+  value: 'prdrwdwebfa1404'
