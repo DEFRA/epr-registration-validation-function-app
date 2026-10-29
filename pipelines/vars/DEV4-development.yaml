@@ -1,6 +1,12 @@
 variables:
-  azureSubscription: 'AZD-RWD-DEV4'
-  docker.imageName: 'registrationvalidation'
-  acr.azureContainerRegistryName: 'devrwdinfac1401'
-  acr.repositoryName: 'registrationvalidationrepository'
-  serviceName: 'devrwdwebfa4404'
+- group: ServiceConnections
+- name: azureSubscription
+  value: $(ServiceConnectionDEV4)
+- name: docker.imageName
+  value: 'registrationvalidation'
+- name: acr.azureContainerRegistryName
+  value: 'devrwdinfac1401'
+- name: acr.repositoryName
+  value: 'registrationvalidationrepository'
+- name: serviceName
+  value: 'devrwdwebfa4404'
